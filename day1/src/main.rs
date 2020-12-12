@@ -23,12 +23,27 @@ fn get_report_entries_from_file(file_name: &str) -> Vec<u16> {
 
 const SUM_SOLUTION: u16 = 2020;
 
-fn find_2020_sum_product_naive(entries: &[u16]) -> Option<(u16, u16)> {
+#[derive(Debug)]
+enum Solution {
+    Sum2(u16, u16),
+    Sum3(u16, u16, u16),
+}
+
+impl Solution {
+    fn product(&self) -> u64 {
+        match self {
+            Solution::Sum2(a, b) => *a as u64 * *b as u64,
+            Solution::Sum3(a, b, c) => *a as u64 * *b as u64 * *c as u64,
+        }
+    }
+}
+
+fn find_2020_sum_product_naive(entries: &[u16]) -> Option<Solution> {
     for i in 0..entries.len() {
         let a = entries[i];
         for b in &entries[i..] {
             if a + b == SUM_SOLUTION {
-                return Some((a, *b));
+                return Some(Solution::Sum2(a, *b));
             }
         }
     }
@@ -36,7 +51,7 @@ fn find_2020_sum_product_naive(entries: &[u16]) -> Option<(u16, u16)> {
     None
 }
 
-fn find_2020_sum_product_real(entries: &[u16]) -> Option<(u16, u16)> {
+fn find_2020_sum_product_real(entries: &[u16]) -> Option<Solution> {
     let tracker = {
         let mut mut_tracker = [false; SUM_SOLUTION as usize];
         for e in entries {
@@ -55,7 +70,52 @@ fn find_2020_sum_product_real(entries: &[u16]) -> Option<(u16, u16)> {
         let matching_record = SUM_SOLUTION - *e;
         let matching_record_exists = tracker[matching_record as usize];
         if matching_record_exists {
-            return Some((*e, matching_record));
+            return Some(Solution::Sum2(*e, matching_record));
+        }
+    }
+
+    None
+}
+
+fn find_2020_sum_product_naive3(entries: &[u16]) -> Option<Solution> {
+    for i in 0..entries.len() - 2 {
+        let a = entries[i];
+        for j in i + 1..entries.len() - 1 {
+            let b = entries[j];
+            for c in &entries[j..] {
+                if a + b + c == SUM_SOLUTION {
+                    return Some(Solution::Sum3(a, b, *c));
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn find_2020_sum_product_real3(entries: &[u16]) -> Option<Solution> {
+    let tracker = {
+        let mut mut_tracker = [false; SUM_SOLUTION as usize];
+        for e in entries {
+            if *e < SUM_SOLUTION {
+                mut_tracker[*e as usize] = true;
+            }
+        }
+        mut_tracker
+    };
+
+    for i in 0..entries.len() {
+        let a = entries[i];
+        for b in &entries[i..] {
+            if a + *b >= SUM_SOLUTION {
+                continue;
+            }
+
+            let matching_c = SUM_SOLUTION - (a + *b);
+            let matching_c_exists = tracker[matching_c as usize];
+            if matching_c_exists {
+                return Some(Solution::Sum3(a, *b, matching_c));
+            }
         }
     }
 
@@ -65,6 +125,8 @@ fn find_2020_sum_product_real(entries: &[u16]) -> Option<(u16, u16)> {
 enum SolutionType {
     Naive,
     Real,
+    Naive3,
+    Real3,
 }
 
 fn main() {
@@ -74,7 +136,9 @@ fn main() {
         match solution_type.as_str() {
             "real" => SolutionType::Real,
             "naive" => SolutionType::Naive,
-            _ => panic!("Bad arg! must be real or naive"),
+            "real3" => SolutionType::Real3,
+            "naive3" => SolutionType::Naive3,
+            _ => panic!("Bad arg! must be real|naive|real3|naive3"),
         }
     };
 
@@ -82,19 +146,21 @@ fn main() {
 
     let time_start = std::time::Instant::now();
 
-    let solution = match solution_type {
+    let maybe_solution = match solution_type {
         SolutionType::Naive => find_2020_sum_product_naive(&report_entries),
         SolutionType::Real => find_2020_sum_product_real(&report_entries),
+        SolutionType::Naive3 => find_2020_sum_product_naive3(&report_entries),
+        SolutionType::Real3 => find_2020_sum_product_real3(&report_entries),
     };
 
     let runtime = time_start.elapsed();
 
-    match solution {
-        Some(entries) => println!(
-            "Solved in {:?}! entries={:?}, product={}",
+    match maybe_solution {
+        Some(solution) => println!(
+            "Solved in {:?}! solution={:?}, product={}",
             runtime,
-            entries,
-            entries.0 as u64 * entries.1 as u64
+            solution,
+            solution.product(),
         ),
         None => println!("no solution found :("),
     }
