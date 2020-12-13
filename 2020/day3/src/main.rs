@@ -1,40 +1,44 @@
+use std::convert::TryFrom;
+
 #[derive(PartialEq)]
 enum MapCell {
     Free,
     Tree,
 }
 
+impl std::convert::TryFrom<char> for MapCell {
+    type Error = String;
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        match c {
+            '.' => Ok(MapCell::Free),
+            '#' => Ok(MapCell::Tree),
+            _ => Err(std::format!("Invalid map character! {}", c)),
+        }
+    }
+}
+
 struct TobagganMap {
     map: Vec<Vec<MapCell>>,
 }
 
-fn get_map_from_input(_file_name: &str) -> TobagganMap {
-    // input_helpers::read_lines("src/simple_input.txt");
+fn get_map_from_input(file_name: &str) -> TobagganMap {
     let mut rows = Vec::new();
-    rows.push(vec![
-        MapCell::Free,
-        MapCell::Free,
-        MapCell::Free,
-        MapCell::Free,
-    ]);
-    rows.push(vec![
-        MapCell::Free,
-        MapCell::Tree,
-        MapCell::Free,
-        MapCell::Free,
-    ]);
-    rows.push(vec![
-        MapCell::Free,
-        MapCell::Free,
-        MapCell::Free,
-        MapCell::Free,
-    ]);
-    rows.push(vec![
-        MapCell::Free,
-        MapCell::Free,
-        MapCell::Free,
-        MapCell::Tree,
-    ]);
+
+    let parse_map_row_from_line = |line: &String| {
+        let mut row = Vec::new();
+        for c in line.chars() {
+            assert!(c.is_ascii());
+            row.push(MapCell::try_from(c).unwrap());
+        }
+        row
+    };
+
+    for next_line in input_helpers::read_lines(file_name) {
+        match next_line {
+            Ok(line) => rows.push(parse_map_row_from_line(&line)),
+            Err(line_err) => println!("Bad line! {}", line_err),
+        }
+    }
 
     TobagganMap { map: rows }
 }
@@ -59,7 +63,7 @@ impl TobagganMap {
 }
 
 fn main() {
-    let map = get_map_from_input("src/simple_input.txt");
-    let tree_hits = map.calculate_tree_hits_from_slope(1);
+    let map = get_map_from_input("src/input.txt");
+    let tree_hits = map.calculate_tree_hits_from_slope(3);
     println!("Hit {} trees!", tree_hits.len());
 }
