@@ -132,7 +132,7 @@ fn main() {
         }
     };
 
-    let report_entries = get_report_entries_from_file("src\\input.txt");
+    let report_entries = get_report_entries_from_file("src/input.txt");
 
     let time_start = std::time::Instant::now();
 
