@@ -44,17 +44,22 @@ fn get_map_from_input(file_name: &str) -> TobagganMap {
 }
 
 impl TobagganMap {
-    fn calculate_tree_hits_from_slope(&self, x_slope: usize) -> Vec<(usize, usize)> {
+    fn calculate_tree_hits_from_slope(
+        &self,
+        x_slope: usize,
+        y_slope: usize,
+    ) -> Vec<(usize, usize)> {
         let num_rows = self.map.len();
         let num_cols = self.map[0].len();
 
         let calculate_coord_from_slope_and_row = |row| {
-            let col = (row * x_slope) % num_cols;
+            let col = (row * x_slope / y_slope) % num_cols;
             (row, col)
         };
 
         // for every row, calculate each (row, col) where the tobaggan will travel
-        let possible_hits = (0..num_rows).map(calculate_coord_from_slope_and_row);
+        let row_steps = (0..num_rows).step_by(y_slope);
+        let possible_hits = row_steps.map(calculate_coord_from_slope_and_row);
 
         // iterate over each cell traveled and return a hit if there was a tree there
         let hits = possible_hits.filter(|(row, col)| self.map[*row][*col] == MapCell::Tree);
@@ -63,7 +68,14 @@ impl TobagganMap {
 }
 
 fn main() {
-    let map = get_map_from_input("src/input.txt");
-    let tree_hits = map.calculate_tree_hits_from_slope(3);
-    println!("Hit {} trees!", tree_hits.len());
+    let treemap = get_map_from_input("src/input.txt");
+
+    let slopes_to_test = [(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)];
+    let tree_hit_counts_from_slopes = slopes_to_test
+        .iter()
+        .map(|(x_slope, y_slope)| treemap.calculate_tree_hits_from_slope(*x_slope, *y_slope))
+        .map(|tree_hits| tree_hits.len());
+
+    let product_of_tree_hits = tree_hit_counts_from_slopes.fold(1, |a, b| a * b);
+    println!("Product = {}", product_of_tree_hits);
 }
