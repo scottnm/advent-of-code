@@ -71,11 +71,14 @@ fn main() {
     let treemap = get_map_from_input("src/input.txt");
 
     let slopes_to_test = [(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)];
-    let tree_hit_counts_from_slopes = slopes_to_test
-        .iter()
-        .map(|(x_slope, y_slope)| treemap.calculate_tree_hits_from_slope(*x_slope, *y_slope))
-        .map(|tree_hits| tree_hits.len());
 
-    let product_of_tree_hits = tree_hit_counts_from_slopes.fold(1, |a, b| a * b);
+    let product_of_tree_hits = {
+        let mut product = 1;
+        for (x_slope, y_slope) in slopes_to_test.iter() {
+            let tree_hits = treemap.calculate_tree_hits_from_slope(*x_slope, *y_slope);
+            product *= tree_hits.len();
+        }
+        product
+    };
     println!("Product = {}", product_of_tree_hits);
 }
