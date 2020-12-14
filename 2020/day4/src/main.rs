@@ -1,3 +1,6 @@
+// TODO: it was a super copout to just use regex's all over the place here.
+// I'd like to see if there's a way to do this better using combinatoric parsers like nom
+
 #[macro_use]
 extern crate lazy_static;
 extern crate regex;
@@ -18,7 +21,7 @@ fn parse_height(input: &str) -> Option<Height> {
     lazy_static! {
         // 1-3 a: abcdef
         static ref HEIGHT_REGEX: regex::Regex =
-            regex::Regex::new(r"(\d+)((cm)|(in))").unwrap();
+            regex::Regex::new(r"\b(\d+)((cm)|(in))\b").unwrap();
     }
 
     HEIGHT_REGEX.captures(input).map(|captures| {
@@ -38,7 +41,7 @@ fn parse_hair_color(input: &str) -> Option<HairColor> {
     lazy_static! {
         // 1-3 a: abcdef
         static ref HAIR_COLOR_REGEX: regex::Regex =
-            regex::Regex::new(r"#([0-9||a-f]{6})").unwrap();
+            regex::Regex::new(r"#\b([0-9||a-f]{6})\b").unwrap();
     }
 
     HAIR_COLOR_REGEX
@@ -75,7 +78,7 @@ fn parse_passport_id(input: &str) -> Option<PassportId> {
     lazy_static! {
         // 1-3 a: abcdef
         static ref PASSPORT_ID_REGEX: regex::Regex =
-            regex::Regex::new(r"(\d{9})").unwrap();
+            regex::Regex::new(r"\b(\d{9})\b").unwrap();
     }
 
     PASSPORT_ID_REGEX
