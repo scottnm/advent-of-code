@@ -12,7 +12,7 @@ enum SeatBit {
     R,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 struct EncodedSeatBsp {
     row_code: [RowBit; 7],
     seat_code: [SeatBit; 7],
@@ -29,13 +29,13 @@ impl std::str::FromStr for EncodedSeatBsp {
 }
 
 fn get_seatings_from_input(file_name: &str) -> Vec<EncodedSeatBsp> {
-    let seatings = [
-        EncodedSeatBsp::from_str("BFFFBBFRRR").unwrap(),
-        EncodedSeatBsp::from_str("FFFBBBFRRR").unwrap(),
-        EncodedSeatBsp::from_str("BBFFBBFRLL").unwrap(),
-    ];
+    let mut seatings = Vec::new();
 
-    seatings.to_vec()
+    for line in input_helpers::read_lines(file_name) {
+        seatings.push(EncodedSeatBsp::from_str(&line).unwrap());
+    }
+
+    seatings
 }
 
 fn main() {
