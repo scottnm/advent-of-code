@@ -1,15 +1,31 @@
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum RowBit {
     F,
     B,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum SeatBit {
     L,
     R,
+}
+
+#[derive(Debug)]
+struct SeatInfo {
+    row: usize,
+    seat: usize,
+}
+
+impl SeatInfo {
+    fn new(row: usize, seat: usize) -> Self {
+        SeatInfo { row, seat }
+    }
+
+    fn seat_id(&self) -> usize {
+        self.row * 8 + self.seat
+    }
 }
 
 #[derive(Debug)]
@@ -67,6 +83,34 @@ impl std::str::FromStr for EncodedSeatBsp {
     }
 }
 
+impl EncodedSeatBsp {
+    fn calculate_seat_data(&self) -> SeatInfo {
+        fn as_binary<T>(arr: &[T], get_bit_func: fn(T) -> usize) -> usize
+        where
+            T: Copy,
+        {
+            let mut binary_val: usize = 0;
+            for (i, e) in arr.iter().rev().enumerate() {
+                let bit = get_bit_func(*e);
+                binary_val |= bit << i;
+            }
+            binary_val
+        }
+
+        let row = as_binary(&self.row_code, |rb: RowBit| match rb {
+            RowBit::F => 0,
+            RowBit::B => 1,
+        });
+
+        let seat = as_binary(&self.seat_code, |sb: SeatBit| match sb {
+            SeatBit::L => 0,
+            SeatBit::R => 1,
+        });
+
+        SeatInfo::new(row, seat)
+    }
+}
+
 fn get_seatings_from_input(file_name: &str) -> Vec<EncodedSeatBsp> {
     let mut seatings = Vec::new();
 
@@ -79,6 +123,7 @@ fn get_seatings_from_input(file_name: &str) -> Vec<EncodedSeatBsp> {
 
 fn main() {
     for seating in get_seatings_from_input("src/simple_input.txt") {
-        println!("{:?}", seating);
+        let seat_data = seating.calculate_seat_data();
+        println!("{:?} - {:?} - {}", seating, seat_data, seat_data.seat_id());
     }
 }
