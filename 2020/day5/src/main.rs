@@ -15,15 +15,54 @@ enum SeatBit {
 #[derive(Debug)]
 struct EncodedSeatBsp {
     row_code: [RowBit; 7],
-    seat_code: [SeatBit; 7],
+    seat_code: [SeatBit; 3],
 }
 
 impl std::str::FromStr for EncodedSeatBsp {
     type Err = String;
-    fn from_str(_s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 10 {
+            return Err(String::from("Invalid length of input!"));
+        }
+
+        let parse_row_input = |c: u8| -> Result<RowBit, Self::Err> {
+            match c as char {
+                'F' => Ok(RowBit::F),
+                'B' => Ok(RowBit::B),
+                _ => Err(String::from("Invalid row input!")),
+            }
+        };
+
+        let parse_seat_input = |c: u8| -> Result<SeatBit, Self::Err> {
+            match c as char {
+                'L' => Ok(SeatBit::L),
+                'R' => Ok(SeatBit::R),
+                _ => Err(String::from("Invalid seat input!")),
+            }
+        };
+
+        let row_input = &s.as_bytes()[0..7];
+        let seat_input = &s.as_bytes()[7..];
+
+        let row_code = [
+            parse_row_input(row_input[0])?,
+            parse_row_input(row_input[1])?,
+            parse_row_input(row_input[2])?,
+            parse_row_input(row_input[3])?,
+            parse_row_input(row_input[4])?,
+            parse_row_input(row_input[5])?,
+            parse_row_input(row_input[6])?,
+        ];
+
+        let seat_code = [
+            parse_seat_input(seat_input[0])?,
+            parse_seat_input(seat_input[1])?,
+            parse_seat_input(seat_input[2])?,
+        ];
+
         Ok(EncodedSeatBsp {
-            row_code: [RowBit::F; 7],
-            seat_code: [SeatBit::L; 7],
+            row_code,
+            seat_code,
         })
     }
 }
