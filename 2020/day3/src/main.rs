@@ -33,11 +33,8 @@ fn get_map_from_input(file_name: &str) -> TobagganMap {
         row
     };
 
-    for next_line in input_helpers::read_lines(file_name) {
-        match next_line {
-            Ok(line) => rows.push(parse_map_row_from_line(&line)),
-            Err(line_err) => println!("Bad line! {}", line_err),
-        }
+    for line in input_helpers::read_lines(file_name) {
+        rows.push(parse_map_row_from_line(&line));
     }
 
     TobagganMap { map: rows }

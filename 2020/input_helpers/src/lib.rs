@@ -1,15 +1,38 @@
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::io::Lines;
 use std::path::Path;
 
-pub fn read_lines<P>(file_name: P) -> Lines<BufReader<File>>
+pub fn read_lines_old<P>(file_name: P) -> std::io::Lines<BufReader<File>>
 where
     P: AsRef<Path>,
 {
     let file = File::open(file_name).unwrap();
     BufReader::new(file).lines()
+}
+
+pub struct Lines {
+    lines: std::io::Lines<BufReader<File>>,
+}
+
+impl Iterator for Lines {
+    type Item = String;
+
+    fn next(&mut self) -> Option<String> {
+        self.lines
+            .next()
+            .map(|result_string| result_string.unwrap())
+    }
+}
+
+pub fn read_lines<P>(file_name: P) -> Lines
+where
+    P: AsRef<Path>,
+{
+    let file = File::open(file_name).unwrap();
+    Lines {
+        lines: BufReader::new(file).lines(),
+    }
 }
 
 #[cfg(test)]
@@ -18,13 +41,11 @@ mod tests {
     fn it_works() {
         let mut lines = super::read_lines("src/test.txt");
         for i in 0..6 {
-            let line = lines.next();
-            assert!(line.is_some());
+            let maybe_line = lines.next();
+            assert!(maybe_line.is_some());
+            let line = maybe_line.unwrap();
 
-            let line = line.unwrap();
-            assert!(line.is_ok());
-
-            let line_value = line.unwrap().parse::<u8>();
+            let line_value = line.parse::<u8>();
             assert!(line_value.is_ok());
 
             let line_value = line_value.unwrap();

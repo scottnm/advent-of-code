@@ -77,11 +77,8 @@ impl std::str::FromStr for DatabaseRecord {
 fn get_database_from_file(file_name: &str) -> Vec<DatabaseRecord> {
     let mut database = Vec::<DatabaseRecord>::new();
 
-    for read_line in input_helpers::read_lines(file_name) {
-        match read_line {
-            Err(line_err) => println!("Bad line! {}", line_err),
-            Ok(line) => database.push(line.parse().unwrap()),
-        }
+    for line in input_helpers::read_lines(file_name) {
+        database.push(line.parse().unwrap());
     }
 
     database

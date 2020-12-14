@@ -1,11 +1,8 @@
 fn get_report_entries_from_file(file_name: &str) -> Vec<u16> {
     let mut report_entries = Vec::<u16>::new();
 
-    for read_line in input_helpers::read_lines(file_name) {
-        match read_line {
-            Err(line_err) => println!("Bad line! {}", line_err),
-            Ok(line) => report_entries.push(line.parse().unwrap()),
-        }
+    for line in input_helpers::read_lines(file_name) {
+        report_entries.push(line.parse().unwrap());
     }
 
     report_entries

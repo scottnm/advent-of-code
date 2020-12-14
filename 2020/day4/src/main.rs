@@ -123,18 +123,12 @@ impl PassportRecord {
 fn get_input_passports(file_name: &str) -> Vec<PassportRecord> {
     let mut passport_inputs = Vec::new();
     let mut next_passport_inputs = Vec::new();
-    for maybe_line in input_helpers::read_lines(file_name) {
-        match maybe_line {
-            Ok(line) => {
-                if line.is_empty() {
-                    passport_inputs.push(std::mem::replace(&mut next_passport_inputs, Vec::new()));
-                } else {
-                    let line_elements: Vec<String> =
-                        line.split(' ').map(|e| String::from(e)).collect();
-                    next_passport_inputs.extend(line_elements);
-                }
-            }
-            Err(line_err) => println!("Line err: {}", line_err),
+    for line in input_helpers::read_lines(file_name) {
+        if line.is_empty() {
+            passport_inputs.push(std::mem::replace(&mut next_passport_inputs, Vec::new()));
+        } else {
+            let line_elements: Vec<String> = line.split(' ').map(|e| String::from(e)).collect();
+            next_passport_inputs.extend(line_elements);
         }
     }
 
