@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 input_helpers = { path = "../input_helpers" }
+regex = "1.4.2"
+lazy_static = "1.4.0"
