@@ -1,3 +1,7 @@
+// TODO: there's implicit coupling between this and expecting 3 SeatBits as input.
+// Wonder if there's a way to remove that coupling
+const MAX_SEATS_IN_ROW: usize = 8;
+
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -12,7 +16,7 @@ enum SeatBit {
     R,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct SeatInfo {
     row: usize,
     seat: usize,
@@ -23,8 +27,30 @@ impl SeatInfo {
         SeatInfo { row, seat }
     }
 
+    fn next_seat(&self) -> Self {
+        if self.seat == MAX_SEATS_IN_ROW - 1 {
+            SeatInfo {
+                row: self.row + 1,
+                seat: 0,
+            }
+        } else {
+            SeatInfo {
+                row: self.row,
+                seat: self.seat + 1,
+            }
+        }
+    }
+
     fn seat_id(&self) -> usize {
         self.row * 8 + self.seat
+    }
+
+    fn cmp(a: &Self, b: &Self) -> std::cmp::Ordering {
+        let row_cmp = a.row.partial_cmp(&b.row).unwrap();
+        match row_cmp {
+            std::cmp::Ordering::Equal => a.seat.partial_cmp(&b.seat).unwrap(),
+            _ => row_cmp,
+        }
     }
 }
 
@@ -122,8 +148,34 @@ fn get_seatings_from_input(file_name: &str) -> Vec<EncodedSeatBsp> {
 }
 
 fn main() {
-    for seating in get_seatings_from_input("src/simple_input.txt") {
-        let seat_data = seating.calculate_seat_data();
-        println!("{:?} - {:?} - {}", seating, seat_data, seat_data.seat_id());
+    let seatings = get_seatings_from_input("src/input.txt");
+
+    let seat_data = {
+        let mut seat_data: Vec<SeatInfo> =
+            seatings.iter().map(|s| s.calculate_seat_data()).collect();
+        seat_data.sort_by(SeatInfo::cmp);
+        seat_data
+    };
+
+    for seat in &seat_data {
+        println!("{:?} - {}", seat, seat.seat_id());
     }
+
+    let largest_seat_id = seat_data.iter().map(|s| s.seat_id()).max().unwrap();
+    println!("largest seat id: {}", largest_seat_id);
+
+    let first_seat = seat_data.first().unwrap();
+
+    let mut my_seat = None;
+    let mut current_seat = *first_seat;
+    for seat in seat_data {
+        if seat != current_seat {
+            my_seat = Some(current_seat);
+            break;
+        }
+        current_seat = current_seat.next_seat();
+    }
+
+    let my_seat = my_seat.unwrap();
+    println!("My seat: {:?} - {}", my_seat, my_seat.seat_id());
 }
