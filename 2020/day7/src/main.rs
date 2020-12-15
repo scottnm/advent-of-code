@@ -1,4 +1,5 @@
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate lazy_static;
 extern crate regex;
 
 use std::collections::{HashMap, HashSet};
@@ -97,7 +98,10 @@ fn get_rules_from_input(file_name: &str) -> RulesMap {
 
         let containing_rules = match containing_rules_str {
             "no other bags" => vec![],
-            _ => containing_rules_str.split(',').map(|rule| parse_bag_from_containing_rule(rule)).collect(),
+            _ => containing_rules_str
+                .split(',')
+                .map(|rule| parse_bag_from_containing_rule(rule))
+                .collect(),
         };
 
         (String::from(dest_rule), containing_rules)
@@ -116,11 +120,17 @@ fn get_rules_from_input(file_name: &str) -> RulesMap {
                 bottom_up.insert(dest.clone(), HashSet::new());
             }
 
-            bottom_up.get_mut(dest).unwrap().insert(containing_bag.clone());
+            bottom_up
+                .get_mut(dest)
+                .unwrap()
+                .insert(containing_bag.clone());
         }
     }
 
-    RulesMap{ top_down, bottom_up }
+    RulesMap {
+        top_down,
+        bottom_up,
+    }
 }
 
 fn main() {

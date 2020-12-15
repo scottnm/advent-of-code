@@ -7,13 +7,19 @@ fn get_group_answers_from_input(file_name: &str) -> Vec<GroupAnswers> {
 
     for line in input_helpers::read_lines(file_name) {
         match line.as_str() {
-            "" => group_answers_list.push(std::mem::replace(&mut next_group_answers, GroupAnswers::new())),
+            "" => group_answers_list.push(std::mem::replace(
+                &mut next_group_answers,
+                GroupAnswers::new(),
+            )),
             _ => next_group_answers.push(line),
         }
     }
 
     if !next_group_answers.is_empty() {
-        group_answers_list.push(std::mem::replace(&mut next_group_answers, GroupAnswers::new()));
+        group_answers_list.push(std::mem::replace(
+            &mut next_group_answers,
+            GroupAnswers::new(),
+        ));
     }
 
     group_answers_list
@@ -43,7 +49,10 @@ fn count_questions_with_only_yes_answers(group_answers: &GroupAnswers) -> usize 
     }
 
     let member_count = group_answers.len();
-    yes_answers.iter().filter(|yes_answer_count| **yes_answer_count == member_count).count()
+    yes_answers
+        .iter()
+        .filter(|yes_answer_count| **yes_answer_count == member_count)
+        .count()
 }
 
 fn main() {
@@ -52,7 +61,10 @@ fn main() {
         println!("member count: {}", group_answers.len());
     }
 
-    let any_yes_answer_counts: Vec<usize> = group_answers_list.iter().map(|g| count_questions_with_only_yes_answers(g)).collect();
+    let any_yes_answer_counts: Vec<usize> = group_answers_list
+        .iter()
+        .map(|g| count_questions_with_only_yes_answers(g))
+        .collect();
     let total_any_yes_answer_count = any_yes_answer_counts.iter().fold(0, |a, b| a + b);
     println!("Answer: {}", total_any_yes_answer_count);
 }
