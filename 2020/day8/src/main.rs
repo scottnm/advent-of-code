@@ -72,7 +72,6 @@ impl Program {
             let instruction = &self.instructions[instr_index];
             self.instruction_tracker[instr_index] = true;
 
-            println!("Executing {:?}", instruction);
             let instr_inc = match instruction {
                 Instruction::Acc(arg) => {
                     self.accumulator += arg;
@@ -121,7 +120,7 @@ impl Program {
 }
 
 fn main() {
-    let mut program = Program::load("src/simple_input.txt");
+    let mut program = Program::load("src/input.txt");
 
     let (fixed_instruction, instruction_index) = program.find_corrupted_instruction().unwrap();
     println!(
