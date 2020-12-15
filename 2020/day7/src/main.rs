@@ -125,7 +125,7 @@ fn get_rules_from_input(file_name: &str) -> RulesMap {
 
 fn main() {
     let bag_type = "shiny gold";
-    let rules_map = get_rules_from_input("src/simple2_input.txt");
+    let rules_map = get_rules_from_input("src/input.txt");
 
     let cnt_to_dest = rules_map.count_to_dest(bag_type);
     println!("# routes to {}: {}", bag_type, cnt_to_dest);
