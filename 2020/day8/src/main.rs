@@ -84,7 +84,7 @@ impl Program {
 }
 
 fn main() {
-    let mut program = Program::load("src/simple_input.txt");
+    let mut program = Program::load("src/input.txt");
     program.run_until_loop();
     println!("Accumulator after loop: {}", program.acc());
 }
