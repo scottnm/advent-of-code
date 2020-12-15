@@ -3,7 +3,7 @@ extern crate regex;
 
 type RuleId = String;
 struct InvertedRulesMap{
-    map: std::collections::HashMap<RuleId, Vec<RuleId>>,
+    map: std::collections::HashMap<RuleId, std::collections::HashSet<RuleId>>,
 }
 
 impl InvertedRulesMap {
@@ -14,9 +14,9 @@ impl InvertedRulesMap {
         let mut route_set = std::collections::HashSet::new();
         let mut paths_to_check = Vec::new();
 
-        let empty_vec: Vec<RuleId> = vec![];
+        let empty_hashset = std::collections::HashSet::<RuleId>::new();
         loop {
-            let pathes_to_rule = self.map.get(&current_rule).unwrap_or(&empty_vec);
+            let pathes_to_rule = self.map.get(&current_rule).unwrap_or(&empty_hashset);
             for path in pathes_to_rule {
                 let is_new_route = route_set.insert(path.clone());
                 if is_new_route {
@@ -30,13 +30,12 @@ impl InvertedRulesMap {
             current_rule = paths_to_check.pop().unwrap().clone();
         }
 
+        println!("{:?}", route_set);
         route_set.len()
     }
 }
 
 fn get_rules_from_input(file_name: &str) -> InvertedRulesMap {
-    let mut map = std::collections::HashMap::<RuleId, Vec<RuleId>>::new();
-
     fn parse_bag_from_containing_rule(containing_rule_str: &str) -> RuleId {
         lazy_static! {
             // EXAMPLES:
@@ -75,10 +74,18 @@ fn get_rules_from_input(file_name: &str) -> InvertedRulesMap {
         (String::from(dest_rule), containing_rules)
     }
 
+    let mut map = std::collections::HashMap::<RuleId, std::collections::HashSet<RuleId>>::new();
+
     for line in input_helpers::read_lines(file_name) {
-        let (dest_rule, containing_rules) = parse_rule_from_line(&line);
-        println!("{} - {:?}", dest_rule, containing_rules);
-        map.insert(dest_rule, containing_rules);
+        let (containing_bag, dest_rules) = parse_rule_from_line(&line);
+        println!("{} - {:?}", containing_bag, dest_rules);
+        for dest in &dest_rules {
+            if !map.contains_key(dest) {
+                map.insert(dest.clone(), std::collections::HashSet::new());
+            }
+
+            map.get_mut(dest).unwrap().insert(containing_bag.clone());
+        }
     }
 
     InvertedRulesMap { map }
