@@ -2,14 +2,20 @@
 extern crate lazy_static;
 extern crate regex;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Instruction {
     Acc(isize),
     Jmp(isize),
-    Nop,
+    Nop(isize),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
+enum RunResult {
+    Corrupted,
+    Succeeded,
+}
+
+#[derive(Debug, Clone)]
 struct Program {
     accumulator: isize,
     instruction_tracker: Vec<bool>,
@@ -43,7 +49,7 @@ impl Program {
             let instruction = match &captures[1] {
                 "acc" => Instruction::Acc(argument),
                 "jmp" => Instruction::Jmp(argument),
-                "nop" => Instruction::Nop,
+                "nop" => Instruction::Nop(argument),
                 _ => panic!("Invalid instruction"),
             };
 
@@ -59,9 +65,10 @@ impl Program {
         }
     }
 
-    fn run_until_loop(&mut self) {
+    fn run(&mut self) -> RunResult {
         let mut instr_index: usize = 0;
-        while !self.instruction_tracker[instr_index] {
+        while instr_index < self.instruction_tracker.len() && !self.instruction_tracker[instr_index]
+        {
             let instruction = &self.instructions[instr_index];
             self.instruction_tracker[instr_index] = true;
 
@@ -72,10 +79,40 @@ impl Program {
                     1
                 }
                 Instruction::Jmp(arg) => *arg,
-                Instruction::Nop => 1,
+                Instruction::Nop(_) => 1,
             };
             instr_index = ((instr_index as isize) + instr_inc) as usize;
         }
+
+        if instr_index < self.instructions.len() {
+            RunResult::Corrupted // we looped
+        } else {
+            assert_eq!(instr_index, self.instructions.len());
+            RunResult::Succeeded // we completed the program
+        }
+    }
+
+    fn find_corrupted_instruction(&self) -> Option<(Instruction, usize)> {
+        for i in 0..self.instructions.len() {
+            let mut scratch_program = self.clone();
+            let new_instruction = match scratch_program.instructions[i] {
+                Instruction::Acc(_) => continue,
+                Instruction::Jmp(arg) => Instruction::Nop(arg),
+                Instruction::Nop(arg) => Instruction::Jmp(arg),
+            };
+
+            scratch_program.instructions[i] = new_instruction;
+            match scratch_program.run() {
+                RunResult::Corrupted => continue,
+                RunResult::Succeeded => return Some((new_instruction, i)),
+            }
+        }
+
+        None
+    }
+
+    fn fix_instruction(&mut self, fixed_instruction: Instruction, instruction_index: usize) {
+        self.instructions[instruction_index] = fixed_instruction;
     }
 
     fn acc(&self) -> isize {
@@ -84,7 +121,16 @@ impl Program {
 }
 
 fn main() {
-    let mut program = Program::load("src/input.txt");
-    program.run_until_loop();
+    let mut program = Program::load("src/simple_input.txt");
+
+    let (fixed_instruction, instruction_index) = program.find_corrupted_instruction().unwrap();
+    println!(
+        "Instruction fix: {:?},{}",
+        fixed_instruction, instruction_index
+    );
+
+    program.fix_instruction(fixed_instruction, instruction_index);
+    let run_result = program.run();
+    assert_eq!(run_result, RunResult::Succeeded);
     println!("Accumulator after loop: {}", program.acc());
 }
