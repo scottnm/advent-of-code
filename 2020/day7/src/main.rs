@@ -92,7 +92,7 @@ fn get_rules_from_input(file_name: &str) -> InvertedRulesMap {
 }
 
 fn main() {
-    let inverted_rules_map = get_rules_from_input("src/simple_input.txt");
+    let inverted_rules_map = get_rules_from_input("src/input.txt");
     let dest_rule = "shiny gold";
     let cnt = inverted_rules_map.count_to_dest(dest_rule);
     println!("# routes to {}: {}", dest_rule, cnt);
