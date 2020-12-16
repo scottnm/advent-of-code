@@ -12,6 +12,29 @@ fn main() {
         _ => panic!("USAGE: ./day10 [simple|real|"),
     };
 
-    let joltages = get_joltages_from_input(input_file);
-    dbg!(joltages);
+    let joltages = {
+        let mut joltages = get_joltages_from_input(input_file);
+        joltages.sort();
+        joltages.insert(0, 0); // the first "adapter" in the chain is the wall outlet of joltage 0
+        joltages.push(joltages.last().unwrap() + 3); // my personal adapter is always 3 higher than the highest adapter
+        joltages
+    };
+
+    dbg!(&joltages);
+
+    let joltage_differences: Vec<usize> = (0..joltages.len() - 1)
+        .map(|i| (&joltages[i], &joltages[i + 1]))
+        .map(|(a, b)| b - a)
+        .collect();
+
+    dbg!(&joltage_differences);
+
+    let one_jolt_diffs = joltage_differences.iter().filter(|j| **j == 1usize).count();
+    let three_jolt_diffs = joltage_differences.iter().filter(|j| **j == 3usize).count();
+    println!(
+        "1J diffs ({}) x 3J diffs ({}) = {}",
+        one_jolt_diffs,
+        three_jolt_diffs,
+        one_jolt_diffs * three_jolt_diffs
+    );
 }
