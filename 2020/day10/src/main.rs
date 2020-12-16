@@ -13,7 +13,13 @@ fn calculate_joltage_differences(joltages: &[Joltage]) -> Vec<usize> {
 }
 
 fn cnt_num_paths_to_joltage_adapter(joltages: &[Joltage], target_adapter_index: usize) -> usize {
+    // Create a cache to store the cnts to each adapter as we solve for them.
+    // This helps us significantly reduce recalculating this as we recursively check the various
+    // path permutations
     let mut path_cnts = vec![Option::<usize>::None; joltages.len()];
+
+    // the only path which ends at the first adapter is the path which only contain
+    path_cnts[0] = Some(1);
 
     fn cnt_num_paths_to_joltage_adapter_int(
         path_cnts: &mut [Option<usize>],
@@ -22,30 +28,22 @@ fn cnt_num_paths_to_joltage_adapter(joltages: &[Joltage], target_adapter_index: 
     ) -> usize {
         if path_cnts[target_adapter_index].is_some() {
             return path_cnts[target_adapter_index].unwrap();
+        } else {
+            // we initialize the 0th adapter cnt to 1 so it should never be a none value.
+            assert_ne!(target_adapter_index, 0);
         }
 
-        let cnt = {
-            if target_adapter_index == 0 {
-                1
+        let mut sum = 0;
+        for cmp_adapter_index in (0..target_adapter_index).rev() {
+            if joltages[target_adapter_index] - joltages[cmp_adapter_index] <= 3 {
+                sum += cnt_num_paths_to_joltage_adapter_int(path_cnts, joltages, cmp_adapter_index);
             } else {
-                let mut sum = 0;
-                for cmp_adapter_index in (0..target_adapter_index).rev() {
-                    if joltages[target_adapter_index] - joltages[cmp_adapter_index] <= 3 {
-                        sum += cnt_num_paths_to_joltage_adapter_int(
-                            path_cnts,
-                            joltages,
-                            cmp_adapter_index,
-                        );
-                    } else {
-                        break;
-                    }
-                }
-                sum
+                break;
             }
-        };
+        }
 
-        path_cnts[target_adapter_index] = Some(cnt);
-        cnt
+        path_cnts[target_adapter_index] = Some(sum);
+        sum
     }
 
     cnt_num_paths_to_joltage_adapter_int(&mut path_cnts, joltages, target_adapter_index)
