@@ -3,14 +3,6 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::path::Path;
 
-pub fn read_lines_old<P>(file_name: P) -> std::io::Lines<BufReader<File>>
-where
-    P: AsRef<Path>,
-{
-    let file = File::open(file_name).unwrap();
-    BufReader::new(file).lines()
-}
-
 pub struct Lines {
     lines: std::io::Lines<BufReader<File>>,
 }
@@ -33,6 +25,18 @@ where
     Lines {
         lines: BufReader::new(file).lines(),
     }
+}
+
+pub fn get_input_file_from_args(args: &mut std::env::Args) -> String {
+    let program_name = args.nth(0).unwrap();
+    let input_file = match args.nth(0).as_ref().map(|s| s.as_str()) {
+        Some("simple") => "src/simple_input.txt",
+        Some("simple2") => "src/simple2_input.txt",
+        Some("real") => "src/input.txt",
+        _ => panic!("USAGE: ./{} [simple|simple2|real]", &program_name),
+    };
+
+    String::from(input_file)
 }
 
 #[cfg(test)]

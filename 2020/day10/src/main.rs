@@ -50,15 +50,10 @@ fn cnt_num_paths_to_joltage_adapter(joltages: &[Joltage], target_adapter_index: 
 }
 
 fn main() {
-    let input_file = match std::env::args().nth(1).as_ref().map(|s| s.as_str()) {
-        Some("simple") => "src/simple_input.txt",
-        Some("simple2") => "src/simple2_input.txt",
-        Some("real") => "src/input.txt",
-        _ => panic!("USAGE: ./day10 [simple|real|"),
-    };
+    let input_file = input_helpers::get_input_file_from_args(&mut std::env::args());
 
     let joltages = {
-        let mut joltages = get_joltages_from_input(input_file);
+        let mut joltages = get_joltages_from_input(&input_file);
         joltages.sort();
         joltages.insert(0, 0); // the first "adapter" in the chain is the wall outlet of joltage 0
         joltages.push(joltages.last().unwrap() + 3); // my personal adapter is always 3 higher than the highest adapter
