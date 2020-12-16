@@ -77,8 +77,6 @@ fn main() {
         _ => panic!("USAGE: ./day9 [simple|real|"),
     };
 
-    // let inputs = ("src/input.txt", 25);
-
     let xmas_sequence = get_sequence_from_input(input_file);
     let rule_breaker = find_rule_breaker(&xmas_sequence, preamble_len).unwrap();
 
