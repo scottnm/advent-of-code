@@ -12,25 +12,43 @@ fn calculate_joltage_differences(joltages: &[Joltage]) -> Vec<usize> {
         .collect()
 }
 
-fn brute_force_solution(joltages: &mut [Joltage], from: usize) -> usize {
-    fn pop_n_squash(v: &mut [Joltage], i: usize) {
-        v[i..].rotate_left(1);
-    }
+fn cnt_num_paths_to_joltage_adapter(joltages: &[Joltage], target_adapter_index: usize) -> usize {
+    let mut path_cnts = vec![Option::<usize>::None; joltages.len()];
 
-    fn push_n_restore(v: &mut [Joltage], i: usize) {
-        v[i..].rotate_right(1);
-    }
-
-    let mut sum = 1;
-    let num_joltages = joltages.len();
-    for i in from..num_joltages - 1 {
-        if joltages[i + 1] - joltages[i - 1] <= 3 {
-            pop_n_squash(joltages, i);
-            sum += brute_force_solution(&mut joltages[0..num_joltages - 1], i);
-            push_n_restore(joltages, i);
+    fn cnt_num_paths_to_joltage_adapter_int(
+        path_cnts: &mut [Option<usize>],
+        joltages: &[Joltage],
+        target_adapter_index: usize,
+    ) -> usize {
+        if path_cnts[target_adapter_index].is_some() {
+            return path_cnts[target_adapter_index].unwrap();
         }
+
+        let cnt = {
+            if target_adapter_index == 0 {
+                1
+            } else {
+                let mut sum = 0;
+                for cmp_adapter_index in (0..target_adapter_index).rev() {
+                    if joltages[target_adapter_index] - joltages[cmp_adapter_index] <= 3 {
+                        sum += cnt_num_paths_to_joltage_adapter_int(
+                            path_cnts,
+                            joltages,
+                            cmp_adapter_index,
+                        );
+                    } else {
+                        break;
+                    }
+                }
+                sum
+            }
+        };
+
+        path_cnts[target_adapter_index] = Some(cnt);
+        cnt
     }
-    sum
+
+    cnt_num_paths_to_joltage_adapter_int(&mut path_cnts, joltages, target_adapter_index)
 }
 
 fn main() {
@@ -62,6 +80,6 @@ fn main() {
         one_jolt_diffs * three_jolt_diffs
     );
 
-    let sol = brute_force_solution(&mut joltages.clone(), 1);
+    let sol = cnt_num_paths_to_joltage_adapter(&joltages, joltages.len() - 1);
     println!("Sol: {}", sol);
 }
