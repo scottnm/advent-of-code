@@ -44,6 +44,32 @@ fn find_range_with_matching_sum(sequence: &[usize], sum: usize) -> Option<(usize
     None
 }
 
+fn collect_contiguous_ranges_helper(sequence: &[usize], max_value: usize) -> Vec<(usize, usize)> {
+    let mut next_range = (0, 0);
+    let mut growing_range = true;
+    let mut ranges = Vec::new();
+
+    let is_less_than_max_value = |n: usize| n < max_value;
+
+    for i in 0..sequence.len() {
+        if growing_range && !is_less_than_max_value(sequence[i]) {
+            next_range.1 = i;
+            ranges.push(next_range);
+            growing_range = false;
+        } else if !growing_range && is_less_than_max_value(sequence[i]) {
+            next_range.0 = i;
+            growing_range = true;
+        }
+    }
+
+    if growing_range {
+        next_range.1 = sequence.len();
+        ranges.push(next_range);
+    }
+
+    ranges
+}
+
 fn main() {
     let (input_file, preamble_len) = match std::env::args().nth(1).as_ref().map(|s| s.as_str()) {
         Some("simple") => ("src/simple_input.txt", 5),
@@ -61,14 +87,27 @@ fn main() {
         rule_breaker, xmas_sequence[rule_breaker]
     );
 
-    // TODO: optimization. subdivide the range into distinct sequence ranges which don't
-    // include any numbers large than what I'm looking for
-    // currently without this it takes ~5 secs
-    let (range_begin, range_end) =
-        find_range_with_matching_sum(&xmas_sequence, xmas_sequence[rule_breaker]).unwrap();
-    let range = &xmas_sequence[range_begin..range_end];
-    println!("sequence[{}..{}]", range_begin, range_end);
+    let ranges_to_test =
+        collect_contiguous_ranges_helper(&xmas_sequence, xmas_sequence[rule_breaker]);
 
+    let mut range = None;
+    for range_to_test in ranges_to_test {
+        range = find_range_with_matching_sum(
+            &xmas_sequence[range_to_test.0..range_to_test.1],
+            xmas_sequence[rule_breaker],
+        );
+        if range.is_some() {
+            break;
+        }
+    }
+    if range.is_none() {
+        panic!("Valid range not found!");
+    }
+
+    let range = range.unwrap();
+    println!("sequence[{}..{}]", range.0, range.1);
+
+    let range = &xmas_sequence[range.0..range.1];
     let min_in_range = range.iter().min().unwrap();
     let max_in_range = range.iter().max().unwrap();
     println!(
