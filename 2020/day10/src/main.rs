@@ -12,20 +12,22 @@ fn calculate_joltage_differences(joltages: &[Joltage]) -> Vec<usize> {
         .collect()
 }
 
-fn brute_force_solution(joltages: &[Joltage], from: usize) -> usize {
-    fn generate_vec_without_element(v: &[Joltage], i: usize) -> Vec<Joltage> {
-        use std::default::*;
-        let mut vec = vec![Default::default(); v.len() - 1];
-        vec[0..i].copy_from_slice(&v[0..i]);
-        vec[i..].copy_from_slice(&v[i + 1..v.len()]);
-        vec
+fn brute_force_solution(joltages: &mut [Joltage], from: usize) -> usize {
+    fn pop_n_squash(v: &mut [Joltage], i: usize) {
+        v[i..].rotate_left(1);
+    }
+
+    fn push_n_restore(v: &mut [Joltage], i: usize) {
+        v[i..].rotate_right(1);
     }
 
     let mut sum = 1;
-    for i in from..joltages.len() - 1 {
+    let num_joltages = joltages.len();
+    for i in from..num_joltages - 1 {
         if joltages[i + 1] - joltages[i - 1] <= 3 {
-            let next_joltage_permutation = generate_vec_without_element(&joltages, i);
-            sum += brute_force_solution(&next_joltage_permutation, i);
+            pop_n_squash(joltages, i);
+            sum += brute_force_solution(&mut joltages[0..num_joltages - 1], i);
+            push_n_restore(joltages, i);
         }
     }
     sum
@@ -60,6 +62,6 @@ fn main() {
         one_jolt_diffs * three_jolt_diffs
     );
 
-    let sol = brute_force_solution(&joltages, 1);
+    let sol = brute_force_solution(&mut joltages.clone(), 1);
     println!("Sol: {}", sol);
 }
