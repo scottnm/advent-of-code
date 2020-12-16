@@ -156,6 +156,14 @@ impl SeatGrid {
         self.grid.copy_from_slice(&self.grid_buffer);
         !updated
     }
+
+    fn get_occupied_seat_count(&self) -> usize {
+        debug_assert_eq!(self.grid, self.grid_buffer);
+        self.grid
+            .iter()
+            .filter(|seat| **seat == SeatCell::Occupied)
+            .count()
+    }
 }
 
 fn main() {
@@ -169,4 +177,7 @@ fn main() {
             break;
         }
     }
+
+    let occupied_seat_count = seat_grid.get_occupied_seat_count();
+    println!("Occupied: {}", occupied_seat_count);
 }
