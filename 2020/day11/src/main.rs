@@ -26,18 +26,18 @@ impl SeatCell {
         }
     }
 
-    fn get_update(&self, occupied_neighbor_count: usize) -> Self {
+    fn get_update(&self, occupied_seat_count: usize) -> Self {
         match self {
             SeatCell::Floor => SeatCell::Floor,
             SeatCell::Free => {
-                if occupied_neighbor_count == 0 {
+                if occupied_seat_count == 0 {
                     SeatCell::Occupied
                 } else {
                     SeatCell::Free
                 }
             }
             SeatCell::Occupied => {
-                if occupied_neighbor_count >= 4 {
+                if occupied_seat_count >= 5 {
                     SeatCell::Free
                 } else {
                     SeatCell::Occupied
@@ -114,22 +114,42 @@ impl SeatGrid {
         String::from_iter(char_vec.iter())
     }
 
-    fn get_occupied_neighbor_count(&self, padded_cell_index: usize) -> usize {
-        let padded_row_width = self.col_count + 2;
-        let neighbor_indices = [
-            padded_cell_index - padded_row_width - 1, // top-left
-            padded_cell_index - padded_row_width,     // top-mid
-            padded_cell_index - padded_row_width + 1, // top-right
-            padded_cell_index - 1,                    // mid-left
-            padded_cell_index + 1,                    // mid-right
-            padded_cell_index + padded_row_width - 1, // bottom-left
-            padded_cell_index + padded_row_width,     // bottom-mid
-            padded_cell_index + padded_row_width + 1, // bottom-right
+    fn search_for_seat<I1, I2>(&self, row_iter: I1, col_iter: I2) -> SeatCell
+    where
+        I1: Iterator<Item = usize>,
+        I2: Iterator<Item = usize>,
+    {
+        for (r, c) in row_iter.zip(col_iter) {
+            match self.grid[self.get_padded_grid_index(r, c)] {
+                SeatCell::Floor => (),
+                cell @ SeatCell::Occupied | cell @ SeatCell::Free => return cell,
+            }
+        }
+        SeatCell::Floor
+    }
+
+    fn get_visible_occupied_seat_count(&self, row: usize, col: usize) -> usize {
+        let row_down_iter = row + 1..self.row_count;
+        let row_same_iter = std::iter::repeat(row);
+        let row_up_iter = (0..row).rev();
+        let col_left_iter = (0..col).rev();
+        let col_same_iter = std::iter::repeat(col);
+        let col_right_iter = col + 1..self.col_count;
+
+        let neighbor_searches = [
+            self.search_for_seat(row_down_iter.clone(), col_same_iter.clone()), // down
+            self.search_for_seat(row_down_iter.clone(), col_left_iter.clone()), // down-left
+            self.search_for_seat(row_same_iter.clone(), col_left_iter.clone()), // left
+            self.search_for_seat(row_up_iter.clone(), col_left_iter.clone()),   // up-left
+            self.search_for_seat(row_up_iter.clone(), col_same_iter.clone()),   // up
+            self.search_for_seat(row_up_iter.clone(), col_right_iter.clone()),  // up-right
+            self.search_for_seat(row_same_iter.clone(), col_right_iter.clone()), // right
+            self.search_for_seat(row_down_iter.clone(), col_right_iter.clone()), // down-right
         ];
 
-        neighbor_indices
+        neighbor_searches
             .iter()
-            .filter(|i| self.grid[**i] == SeatCell::Occupied)
+            .filter(|neighbor| **neighbor == SeatCell::Occupied)
             .count()
     }
 
@@ -137,14 +157,13 @@ impl SeatGrid {
         debug_assert_eq!(self.grid, self.grid_buffer);
 
         let mut updated = false;
-        for row_index in 0..self.row_count {
-            let row_begin = self.get_padded_grid_index(row_index, 0);
-            let row_end = self.get_padded_grid_index(row_index, self.col_count);
-            for cell_index in row_begin..row_end {
-                let occupied_neighbor_count = self.get_occupied_neighbor_count(cell_index);
+        for row in 0..self.row_count {
+            for col in 0..self.col_count {
+                let cell_index = self.get_padded_grid_index(row, col);
+                let occupied_seat_count = self.get_visible_occupied_seat_count(row, col);
                 // Read the current cell from the frozen grid
                 let current_cell = self.grid[cell_index];
-                let updated_cell = current_cell.get_update(occupied_neighbor_count);
+                let updated_cell = current_cell.get_update(occupied_seat_count);
 
                 // Write the updated cell to the grid buffer
                 self.grid_buffer[cell_index] = updated_cell;
