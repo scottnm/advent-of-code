@@ -6,6 +6,18 @@ enum Direction {
     West,
 }
 
+impl Direction {
+    fn generate_move_offset(&self, movement: usize) -> (isize, isize) {
+        let signed_move = movement as isize;
+        match self {
+            Direction::North => (0, signed_move),
+            Direction::South => (0, signed_move * -1),
+            Direction::East => (signed_move, 0),
+            Direction::West => (signed_move * -1, 0),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 enum RelativeDirection {
     Left,
@@ -44,32 +56,20 @@ impl ShipData {
 
 impl ShipData {
     fn move_cardinal_ship(&mut self, direction: Direction, movement: usize) {
-        let signed_move = movement as isize;
-        let (x_move, y_move) = match direction {
-            Direction::North => (0, signed_move),
-            Direction::South => (0, signed_move * -1),
-            Direction::East => (signed_move, 0),
-            Direction::West => (signed_move * -1, 0),
-        };
-
+        let (x_move, y_move) = direction.generate_move_offset(movement);
         self.ship_pos.x += x_move;
         self.ship_pos.y += y_move;
     }
 
     fn move_cardinal_waypoint(&mut self, direction: Direction, movement: usize) {
-        unimplemented!();
-        /*
-        let signed_move = movement as isize;
-        let (x_move, y_move) = match direction {
-            Direction::North => (0, signed_move),
-            Direction::South => (0, signed_move * -1),
-            Direction::East => (signed_move, 0),
-            Direction::West => (signed_move * -1, 0),
-        };
+        let (x_move, y_move) = direction.generate_move_offset(movement);
+        self.waypoint_relative_pos.x += x_move;
+        self.waypoint_relative_pos.y += y_move;
+    }
 
-        self.ship_pos.x += x_move;
-        self.ship_pos.y += y_move;
-        */
+    fn move_to_waypoint(&mut self) {
+        self.ship_pos.x += self.waypoint_relative_pos.x;
+        self.ship_pos.y += self.waypoint_relative_pos.y;
     }
 
     fn turn_ship(&mut self, relative_direction: RelativeDirection, degrees: usize) {
@@ -91,8 +91,6 @@ impl ShipData {
     }
 
     fn turn_waypoint(&mut self, relative_direction: RelativeDirection, degrees: usize) {
-        unimplemented!();
-        /*
         assert!(degrees % 90 == 0); // the degrees are currently assumed to be in increments of 90
         let relative_turn_count = (degrees % 360) / 90;
         let abs_turn_count = match relative_direction {
@@ -101,14 +99,9 @@ impl ShipData {
         };
 
         for _ in 0..abs_turn_count {
-            self.direction = match self.direction {
-                Direction::North => Direction::East,
-                Direction::East => Direction::South,
-                Direction::South => Direction::West,
-                Direction::West => Direction::North,
-            };
+            let Pos { x, y } = self.waypoint_relative_pos;
+            self.waypoint_relative_pos = Pos { x: y, y: -x };
         }
-        */
     }
 
     fn run_navigation_abs(&self, navigation_instructions: &[Nav]) -> ShipData {
@@ -140,8 +133,9 @@ impl ShipData {
                     final_ship_data.turn_waypoint(*relative_direction, *degrees)
                 }
                 Nav::MoveForward(movement) => {
-                    unimplemented!(); // move forward moves to waypoint. it doesn't move the waypoint
-                                      //final_ship_data.move_cardinal_waypoint(final_ship_data.direction, *movement)
+                    for _ in 0..*movement {
+                        final_ship_data.move_to_waypoint();
+                    }
                 }
             }
         }
