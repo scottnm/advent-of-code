@@ -198,6 +198,7 @@ fn main() {
     println!("MemV2 sum: {}", initialized_memory_v2.sum_memory());
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
