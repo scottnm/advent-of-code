@@ -55,8 +55,37 @@ fn part_1(current_time: Timestamp, buses: &[Option<BusId>]) {
     );
 }
 
-fn part_2(current_time: Timestamp, buses: &[Option<BusId>]) {
-    println!("pt2:");
+fn does_bus_arrive_at_time(t: Timestamp, bus: BusId) -> bool {
+    t % get_bus_period(bus) == 0
+}
+
+fn find_earliest_timestamp_with_matching_pattern(buses: &[Option<BusId>]) -> Option<Timestamp> {
+    // the description for part 2, requires that the first bus on the schedule not be ignored.
+    assert!(buses[0].is_some());
+    let first_bus_period = get_bus_period(buses[0].unwrap());
+
+    for t in (0..).step_by(first_bus_period) {
+        let mut required_bus_times = buses
+            .iter()
+            .enumerate()
+            .map(|(i, opt_bus)| (t + i, opt_bus))
+            .filter(|(_, opt_bus)| opt_bus.is_some())
+            .map(|(t, opt_bus)| (t, opt_bus.unwrap()));
+
+        let bus_pattern_satisfied =
+            required_bus_times.all(|(time, bus)| does_bus_arrive_at_time(time, bus));
+
+        if bus_pattern_satisfied {
+            return Some(t);
+        }
+    }
+
+    None
+}
+
+fn part_2(buses: &[Option<BusId>]) {
+    let t = find_earliest_timestamp_with_matching_pattern(buses).unwrap();
+    println!("pt2: earliest timestamp={}", t);
 }
 
 fn main() {
@@ -65,5 +94,72 @@ fn main() {
     ));
 
     part_1(current_time, &buses);
-    part_2(current_time, &buses);
+    part_2(&buses);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn part_2_test_1() {
+        // 17,x,13,19 first occurs at timestamp 3417.
+        assert_eq!(
+            find_earliest_timestamp_with_matching_pattern(&[Some(17), None, Some(13), Some(19)]),
+            Some(3417),
+        );
+    }
+
+    #[test]
+    fn part_2_test_2() {
+        // 67,7,59,61 first occurs at timestamp 754018.
+        assert_eq!(
+            find_earliest_timestamp_with_matching_pattern(&[Some(67), Some(7), Some(59), Some(61)]),
+            Some(754018),
+        );
+    }
+
+    #[test]
+    fn part_2_test_3() {
+        // 67,x,7,59,61 first occurs at timestamp 779210.
+        assert_eq!(
+            find_earliest_timestamp_with_matching_pattern(&[
+                Some(67),
+                None,
+                Some(7),
+                Some(59),
+                Some(61)
+            ]),
+            Some(779210),
+        );
+    }
+
+    #[test]
+    fn part_2_test_4() {
+        // 67,7,x,59,61 first occurs at timestamp 1261476.
+        assert_eq!(
+            find_earliest_timestamp_with_matching_pattern(&[
+                Some(67),
+                Some(7),
+                None,
+                Some(59),
+                Some(61)
+            ]),
+            Some(1261476),
+        );
+    }
+
+    #[test]
+    fn part_2_test_5() {
+        // 1789,37,47,1889 first occurs at timestamp 1202161486
+        assert_eq!(
+            find_earliest_timestamp_with_matching_pattern(&[
+                Some(1789),
+                Some(37),
+                Some(47),
+                Some(1889)
+            ]),
+            Some(1202161486),
+        );
+    }
 }
