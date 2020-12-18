@@ -64,16 +64,18 @@ fn find_earliest_timestamp_with_matching_pattern(buses: &[Option<BusId>]) -> Opt
     assert!(buses[0].is_some());
     let first_bus_period = get_bus_period(buses[0].unwrap());
 
-    for t in (0..).step_by(first_bus_period) {
-        let mut required_bus_times = buses
-            .iter()
-            .enumerate()
-            .map(|(i, opt_bus)| (t + i, opt_bus))
-            .filter(|(_, opt_bus)| opt_bus.is_some())
-            .map(|(t, opt_bus)| (t, opt_bus.unwrap()));
+    let required_bus_times: Vec<(Timestamp, BusId)> = buses
+        .iter()
+        .enumerate()
+        .map(|(i, opt_bus)| (i, opt_bus))
+        .filter(|(_, opt_bus)| opt_bus.is_some())
+        .map(|(t_offset, opt_bus)| (t_offset, opt_bus.unwrap()))
+        .collect();
 
-        let bus_pattern_satisfied =
-            required_bus_times.all(|(time, bus)| does_bus_arrive_at_time(time, bus));
+    for t in (0..).step_by(first_bus_period) {
+        let bus_pattern_satisfied = required_bus_times
+            .iter()
+            .all(|(offset, bus)| does_bus_arrive_at_time(t + offset, *bus));
 
         if bus_pattern_satisfied {
             return Some(t);
