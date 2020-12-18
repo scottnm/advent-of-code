@@ -1,3 +1,9 @@
+// TODO: I am REALLY unsatisfied with how difficult it is to read this implementation (and likely how inefficient it is.)
+// I suspect solving the problems goes hand in hand and involves
+// 1. a better data representation
+// 2. while leads to clearer processing of data
+// 3. which leads to better names for variables
+ 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct IncRange {
     min: usize,
