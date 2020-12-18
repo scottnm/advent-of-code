@@ -34,14 +34,20 @@ impl TicketRule {
     }
 }
 
-fn is_ticket_completely_invalid(ticket_values: &[usize], ticket_rules: &[TicketRule]) -> bool {
+fn get_completely_invalid_ticket_value(ticket_values: &[usize], ticket_rules: &[TicketRule]) -> Option<usize> {
     for ticket_value in ticket_values {
         if ticket_rules.iter().all(|rule| rule.is_value_completely_invalid(*ticket_value)) {
-            return true;
+            return Some(*ticket_value);
         }
     }
 
-    false
+    None
+}
+
+type Ticket = Vec<usize>;
+
+fn get_ticket_scanning_error_rate(tickets: &[Ticket], ticket_rules: &[TicketRule]) -> usize {
+    tickets.iter().map(|ticket| get_completely_invalid_ticket_value(&ticket, ticket_rules).unwrap_or(0)).sum()
 }
 
 fn main() {
@@ -73,15 +79,16 @@ mod tests {
         ];
 
         let tickets = [
-            [7, 3, 47], // valid
-            [40, 4, 50], // invalid (4)
-            [55, 2, 20], // invalid (55)
-            [38, 6, 12], // invalid (12)
+            vec![7, 3, 47], // valid
+            vec![40, 4, 50], // invalid (4)
+            vec![55, 2, 20], // invalid (55)
+            vec![38, 6, 12], // invalid (12)
             ];
 
-        assert!(!is_ticket_completely_invalid(&tickets[0], &ticket_rules));
-        assert!(is_ticket_completely_invalid(&tickets[1], &ticket_rules));
-        assert!(is_ticket_completely_invalid(&tickets[2], &ticket_rules));
-        assert!(is_ticket_completely_invalid(&tickets[3], &ticket_rules));
+        assert_eq!(get_completely_invalid_ticket_value(&tickets[0], &ticket_rules), None);
+        assert_eq!(get_completely_invalid_ticket_value(&tickets[1], &ticket_rules), Some(4));
+        assert_eq!(get_completely_invalid_ticket_value(&tickets[2], &ticket_rules), Some(55));
+        assert_eq!(get_completely_invalid_ticket_value(&tickets[3], &ticket_rules), Some(12));
+        assert_eq!(get_ticket_scanning_error_rate(&tickets, &ticket_rules), 71);
     }
 }
