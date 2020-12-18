@@ -33,32 +33,45 @@ fn get_ticket_scanning_error_rate(tickets: &[Ticket], ticket_rules: &[TicketRule
     tickets.iter().map(|ticket| get_completely_invalid_ticket_value(&ticket, ticket_rules).unwrap_or(0)).sum()
 }
 
+fn discard_invalid_tickets(tickets: &[Ticket], ticket_rules: &[TicketRule]) -> Vec<Ticket> {
+    tickets.iter().filter(|&ticket| get_completely_invalid_ticket_value(ticket, ticket_rules).is_none()).map(|e| e.clone()).collect()
+}
+
 fn classify_ticket_values(tickets: &[Ticket], ticket_rules: &[TicketRule]) -> Vec<String> {
     let rule_count = ticket_rules.len();
-    let mut remaining_rules_to_classify = ticket_rules.to_vec();
 
-    let mut ordered_rule_names = Vec::new();
+    let mut ordered_rule_names = vec![String::new();rule_count];
     ordered_rule_names.reserve(ticket_rules.len());
 
+    let mut valid_rules_for_cols = Vec::new();
+
     for ticket_value_col in 0..rule_count { // there is one ticket_value_col for each rule
-        let mut possible_matching_rules = remaining_rules_to_classify.to_vec();
+        let mut possible_matching_rules = ticket_rules.to_vec();
         for ticket_val in tickets.iter().map(|ticket| ticket[ticket_value_col]) {
             for i in (0..possible_matching_rules.len()).rev() {
                 if possible_matching_rules[i].is_value_completely_invalid(ticket_val) {
-                    println!("Rule {} is invalid for ticket_val {}", possible_matching_rules[i].field_name, ticket_val);
                     possible_matching_rules.swap_remove(i);
                 }
             }
         }
 
-        // After process of elimination, there should only be one valid rule for any given column
-        assert!(possible_matching_rules.len() == 1);
-        let col_rule = possible_matching_rules.swap_remove(0);
-        remaining_rules_to_classify.swap_remove(remaining_rules_to_classify.iter().position(|r| *r == col_rule).unwrap());
-        ordered_rule_names.push(col_rule.field_name);
+        valid_rules_for_cols.push((ticket_value_col, possible_matching_rules));
     }
 
-    assert!(remaining_rules_to_classify.is_empty());
+    while !valid_rules_for_cols.is_empty() {
+        let complete_rule_index = valid_rules_for_cols.iter().position(|(_, rules)| rules.len() == 1).unwrap();
+        let (rule_index, mut complete_rule) = valid_rules_for_cols.swap_remove(complete_rule_index);
+        let complete_rule = complete_rule.swap_remove(0);
+
+        for (_, rules) in &mut valid_rules_for_cols {
+            if let Some(index) = rules.iter().position(|ticket_rule| ticket_rule.field_name == complete_rule.field_name) {
+                rules.swap_remove(index);
+            }
+        }
+
+        ordered_rule_names[rule_index] = complete_rule.field_name;
+    }
+
     ordered_rule_names
 }
 
@@ -155,9 +168,24 @@ impl TestInput {
 }
 
 fn main() {
-    let test_input = TestInput::from_file(&input_helpers::get_input_file_from_args(&mut std::env::args()));
+    let test_file_name = input_helpers::get_input_file_from_args(&mut std::env::args());
+    let test_input = TestInput::from_file(&test_file_name);
     let err_rate = get_ticket_scanning_error_rate(&test_input.nearby_tickets, &test_input.rules);
     println!("Ticket scanning err rate: {}", err_rate);
+
+    let filtered_tickets = discard_invalid_tickets(&test_input.nearby_tickets, &test_input.rules);
+    let ordered_rules = classify_ticket_values(&filtered_tickets, &test_input.rules);
+    println!("Each column's rule: {:?}", ordered_rules);
+
+    let departure_rules = ordered_rules.iter().enumerate().filter(|(_, rule_name)| rule_name.starts_with("departure"));
+    let mut departure_values = std::collections::HashMap::new();
+    for (rule_index, rule_name) in departure_rules {
+        departure_values.insert(rule_name, test_input.my_ticket[rule_index]);
+    }
+    println!("my ticket's departure rows: {:?}", departure_values);
+
+    let departure_values_product: usize = departure_values.iter().map(|(_, v)| v).product();
+    println!("Product of departure values: {}", departure_values_product);
 }
 
 #[cfg(test)]
