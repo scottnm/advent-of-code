@@ -21,9 +21,15 @@ fn play_memory_game(starting_numbers: &[usize], target_turn: usize) -> usize {
 }
 
 fn main() {
-    let pt1_input = ([0, 3, 1, 6, 7, 5], 2020);
-    let pt1_output = play_memory_game(&pt1_input.0, pt1_input.1);
-    println!("Pt1({:?}) => {}", pt1_input, pt1_output);
+    let input = [0, 3, 1, 6, 7, 5];
+    println!("Input: {:?}", input);
+
+    let pt1_output = play_memory_game(&input, 2020);
+    println!("Pt1 => {}", pt1_output);
+
+    // TODO: improve time to complete. this is SUPER slow, but it finishes
+    let pt2_output = play_memory_game(&input, 30000000);
+    println!("Pt2 => {}", pt2_output);
 }
 
 #[cfg(test)]
@@ -46,13 +52,19 @@ mod tests {
         assert_eq!(play_memory_game(&[0, 3, 1, 6, 7, 5], 2020), 852);
     }
 
-    /*
-    Given 0,3,6, the 30000000th number spoken is 175594.
-    Given 1,3,2, the 30000000th number spoken is 2578.
-    Given 2,1,3, the 30000000th number spoken is 3544142.
-    Given 1,2,3, the 30000000th number spoken is 261214.
-    Given 2,3,1, the 30000000th number spoken is 6895259.
-    Given 3,2,1, the 30000000th number spoken is 18.
-    Given 3,1,2, the 30000000th number spoken is 362.
-    */
+    #[test]
+    fn memory_game_pt2_samples() {
+        assert_eq!(play_memory_game(&[0, 3, 6], 30000000), 175594);
+        assert_eq!(play_memory_game(&[1, 3, 2], 30000000), 2578);
+        assert_eq!(play_memory_game(&[2, 1, 3], 30000000), 3544142);
+        assert_eq!(play_memory_game(&[1, 2, 3], 30000000), 261214);
+        assert_eq!(play_memory_game(&[2, 3, 1], 30000000), 6895259);
+        assert_eq!(play_memory_game(&[3, 2, 1], 30000000), 18);
+        assert_eq!(play_memory_game(&[3, 1, 2], 30000000), 362);
+    }
+
+    #[test]
+    fn memory_game_pt2() {
+        assert_eq!(play_memory_game(&[0, 3, 1, 6, 7, 5], 30000000), 6007666);
+    }
 }
