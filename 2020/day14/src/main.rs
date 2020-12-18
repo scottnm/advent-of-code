@@ -2,7 +2,15 @@
 extern crate lazy_static;
 use std::collections::HashMap;
 
-type Mask36 = [Option<bool>; 36];
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+enum TriBit {
+    O,
+    I,
+    X,
+}
+
+type Mask36 = [TriBit; 36];
 
 fn apply_mask(mask: &Mask36, value: usize) -> usize {
     fn set_bit(index: usize, value: usize) -> usize {
@@ -18,9 +26,9 @@ fn apply_mask(mask: &Mask36, value: usize) -> usize {
     let mut masked_value = value;
     for (i, mask_bit) in mask.iter().enumerate() {
         masked_value = match mask_bit {
-            Some(false) => clear_bit(i, masked_value),
-            Some(true) => set_bit(i, masked_value),
-            None => masked_value,
+            TriBit::O => clear_bit(i, masked_value),
+            TriBit::I => set_bit(i, masked_value),
+            TriBit::X => masked_value,
         };
     }
     masked_value
@@ -73,12 +81,12 @@ impl Program {
         }
 
         fn mask_from_str(mask_str: &str) -> Mask36 {
-            let mut mask = [None; 36];
+            let mut mask = [TriBit::X; 36];
             for (i, c) in mask_str.chars().rev().enumerate() {
                 mask[i] = match c {
-                    '0' => Some(false),
-                    '1' => Some(true),
-                    'X' => None,
+                    '0' => TriBit::O,
+                    '1' => TriBit::I,
+                    'X' => TriBit::X,
                     _ => panic!("Invalid character in mask: {}", c),
                 };
             }
@@ -103,7 +111,7 @@ impl Program {
 
     fn execute(&self) -> Memory {
         let mut mem = Memory::new();
-        let mut mask: Mask36 = [None; 36];
+        let mut mask: Mask36 = [TriBit::X; 36];
 
         for instruction in &self.instructions {
             match instruction {
