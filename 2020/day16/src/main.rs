@@ -4,7 +4,7 @@ struct IncRange {
     max: usize,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct TicketRule {
     field_name: String,
     valid_ranges: Vec<IncRange>,
@@ -31,6 +31,35 @@ fn get_completely_invalid_ticket_value(ticket_values: &[usize], ticket_rules: &[
 
 fn get_ticket_scanning_error_rate(tickets: &[Ticket], ticket_rules: &[TicketRule]) -> usize {
     tickets.iter().map(|ticket| get_completely_invalid_ticket_value(&ticket, ticket_rules).unwrap_or(0)).sum()
+}
+
+fn classify_ticket_values(tickets: &[Ticket], ticket_rules: &[TicketRule]) -> Vec<String> {
+    let rule_count = ticket_rules.len();
+    let mut remaining_rules_to_classify = ticket_rules.to_vec();
+
+    let mut ordered_rule_names = Vec::new();
+    ordered_rule_names.reserve(ticket_rules.len());
+
+    for ticket_value_col in 0..rule_count { // there is one ticket_value_col for each rule
+        let mut possible_matching_rules = remaining_rules_to_classify.to_vec();
+        for ticket_val in tickets.iter().map(|ticket| ticket[ticket_value_col]) {
+            for i in (0..possible_matching_rules.len()).rev() {
+                if possible_matching_rules[i].is_value_completely_invalid(ticket_val) {
+                    println!("Rule {} is invalid for ticket_val {}", possible_matching_rules[i].field_name, ticket_val);
+                    possible_matching_rules.swap_remove(i);
+                }
+            }
+        }
+
+        // After process of elimination, there should only be one valid rule for any given column
+        assert!(possible_matching_rules.len() == 1);
+        let col_rule = possible_matching_rules.swap_remove(0);
+        remaining_rules_to_classify.swap_remove(remaining_rules_to_classify.iter().position(|r| *r == col_rule).unwrap());
+        ordered_rule_names.push(col_rule.field_name);
+    }
+
+    assert!(remaining_rules_to_classify.is_empty());
+    ordered_rule_names
 }
 
 impl IncRange {
@@ -188,5 +217,12 @@ mod tests {
         let test_input = TestInput::from_file("src/simple_input.txt");
         let expected_test_input = get_simple_test_input();
         assert_eq!(test_input, expected_test_input);
+    }
+
+    #[test]
+    fn test_col_classification() {
+        let simple_test_input = TestInput::from_file("src/simple2_input.txt");
+        let ordered_rules = classify_ticket_values(&simple_test_input.nearby_tickets, &simple_test_input.rules);
+        assert_eq!(ordered_rules, ["row", "class", "seat"]);
     }
 }
