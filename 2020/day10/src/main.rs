@@ -50,7 +50,7 @@ fn cnt_num_paths_to_joltage_adapter(joltages: &[Joltage], target_adapter_index: 
 }
 
 fn main() {
-    let input_file = input_helpers::get_input_file_from_args(&mut std::env::args());
+    let input_file = input_helpers::get_input_file_from_args();
 
     let joltages = {
         let mut joltages = get_joltages_from_input(&input_file);

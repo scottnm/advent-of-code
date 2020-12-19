@@ -166,7 +166,7 @@ fn get_instructions_from_input(file_name: &str) -> Vec<Nav> {
 }
 
 fn main() {
-    let file_name = input_helpers::get_input_file_from_args(&mut std::env::args());
+    let file_name = input_helpers::get_input_file_from_args();
 
     let initial_ship_data = ShipData::default();
 

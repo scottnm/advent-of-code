@@ -91,9 +91,7 @@ fn part_2(buses: &[Option<BusId>]) {
 }
 
 fn main() {
-    let (current_time, buses) = get_input(&input_helpers::get_input_file_from_args(
-        &mut std::env::args(),
-    ));
+    let (current_time, buses) = get_input(&input_helpers::get_input_file_from_args());
 
     part_1(current_time, &buses);
     part_2(&buses);

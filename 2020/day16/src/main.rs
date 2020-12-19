@@ -3,7 +3,7 @@
 // 1. a better data representation
 // 2. while leads to clearer processing of data
 // 3. which leads to better names for variables
- 
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct IncRange {
     min: usize,
@@ -87,7 +87,7 @@ impl IncRange {
     }
 
     fn is_in_range(&self, v: usize) -> bool {
-        self.min <= v && v <= self.max 
+        self.min <= v && v <= self.max
     }
 }
 
@@ -170,11 +170,11 @@ impl TestInput {
             my_ticket,
             nearby_tickets,
         }
-    } 
+    }
 }
 
 fn main() {
-    let test_file_name = input_helpers::get_input_file_from_args(&mut std::env::args());
+    let test_file_name = input_helpers::get_input_file_from_args();
     let test_input = TestInput::from_file(&test_file_name);
     let err_rate = get_ticket_scanning_error_rate(&test_input.nearby_tickets, &test_input.rules);
     println!("Ticket scanning err rate: {}", err_rate);
@@ -202,10 +202,10 @@ mod tests {
         // class: 1-3 or 5-7
         // row: 6-11 or 33-44
         // seat: 13-40 or 45-50
-        // 
+        //
         // your ticket:
         // 7,1,14
-        // 
+        //
         // nearby tickets:
         // 7,3,47 (valid)
         // 40,**4**,50 (invalid)

@@ -186,7 +186,7 @@ impl SeatGrid {
 }
 
 fn main() {
-    let input_file = input_helpers::get_input_file_from_args(&mut std::env::args());
+    let input_file = input_helpers::get_input_file_from_args();
     let mut seat_grid = SeatGrid::from_file(&input_file);
     loop {
         println!("{}", &seat_grid.format_grid_as_str());

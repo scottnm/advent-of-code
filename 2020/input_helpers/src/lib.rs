@@ -27,7 +27,8 @@ where
     }
 }
 
-pub fn get_input_file_from_args(args: &mut std::env::Args) -> String {
+pub fn get_input_file_from_args() -> String {
+    let mut args = std::env::args();
     let program_name = args.nth(0).unwrap();
     let input_file = match args.nth(0).as_ref().map(|s| s.as_str()) {
         Some("simple") => "src/simple_input.txt",

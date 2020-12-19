@@ -185,9 +185,7 @@ impl Program {
 }
 
 fn main() {
-    let program = Program::from_file(&input_helpers::get_input_file_from_args(
-        &mut std::env::args(),
-    ));
+    let program = Program::from_file(&input_helpers::get_input_file_from_args());
 
     let initialized_memory_v1 = program.execute_v1();
     println!("MemV1: {:?}", initialized_memory_v1);

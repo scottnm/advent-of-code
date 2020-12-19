@@ -296,7 +296,7 @@ impl SeedGrid {
 }
 
 fn main() {
-    let file_name = input_helpers::get_input_file_from_args(&mut std::env::args());
+    let file_name = input_helpers::get_input_file_from_args();
     let seed = SeedGrid::from_file(&file_name);
 
     let simulation_count = 6;
