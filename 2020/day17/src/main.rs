@@ -12,7 +12,7 @@ enum CubeState {
 // sufficiently large but sparse spaces (i.e. the infinite void of the pocket dimension), if we can save some serious
 // time only iterating as far as the outermost shell.
 // TODO: I wonder if it's faster to make this more space compact and make this bitaddressible rather than byte addressable
-struct Cpd3d {
+struct Cpd4d {
     // Conway Pocket Dimension
     width: usize,  // addressable size of x-axis
     height: usize, // addressable size of y-axis
@@ -21,13 +21,20 @@ struct Cpd3d {
     grid_buffer: Vec<CubeState>,
 }
 
-type CellIterator = itertools::ConsTuples<
+struct Cpd3d {
+    cpd: Cpd4d, // we are effectively just providing a 3d interface to the 4d implementation
+}
+
+type CellIterator4d = itertools::ConsTuples<
     itertools::Product<
         itertools::Product<std::ops::Range<usize>, std::ops::Range<usize>>,
         std::ops::Range<usize>,
     >,
     ((usize, usize), usize),
 >;
+
+type CellIterator3d =
+    std::iter::Map<CellIterator4d, fn((usize, usize, usize)) -> (usize, usize, usize)>;
 
 #[derive(Debug, PartialEq, Eq)]
 struct SeedGrid {
@@ -36,7 +43,7 @@ struct SeedGrid {
     grid: Vec<CubeState>,
 }
 
-impl Cpd3d {
+impl Cpd4d {
     fn new(seed_grid: &SeedGrid, max_simulations: usize) -> Self {
         // each simulation could cause a new neighbor to pop into existence one layer outside
         // of our limit. Therefore we need to account an additional 2 units in each dimension
@@ -98,7 +105,7 @@ impl Cpd3d {
         self.grid[idx]
     }
 
-    fn each_cell(&self) -> CellIterator {
+    fn each_cell(&self) -> CellIterator4d {
         // we iterate starting at 1 and ending 1 before the width/height/depth because there's buffer shell
         // around the cube that should never be touched and is only intended for avoiding extra neighbor checks
         iproduct!(1..self.height - 1, 1..self.width - 1, 1..self.depth - 1)
@@ -137,6 +144,50 @@ impl Cpd3d {
         }
 
         self.commit_sets();
+    }
+}
+
+impl Cpd3d {
+    fn new(seed_grid: &SeedGrid, max_simulations: usize) -> Self {
+        Self {
+            cpd: Cpd4d::new(seed_grid, max_simulations),
+        }
+    }
+
+    fn get_cell_index(&self, row: usize, col: usize, layer: usize) -> usize {
+        self.cpd.get_cell_index(row, col, layer)
+    }
+
+    fn queue_set(&mut self, row: usize, col: usize, layer: usize, v: CubeState) {
+        self.cpd.queue_set(row, col, layer, v)
+    }
+
+    fn commit_sets(&mut self) {
+        self.cpd.commit_sets()
+    }
+
+    fn get(&self, row: usize, col: usize, layer: usize) -> CubeState {
+        self.cpd.get(row, col, layer)
+    }
+
+    fn each_cell(&self) -> CellIterator3d {
+        fn drop_4d((r, c, l): (usize, usize, usize)) -> (usize, usize, usize) {
+            (r, c, l)
+        }
+
+        self.cpd.each_cell().map(drop_4d)
+    }
+
+    fn get_active_neighbor_count(&self, row: usize, col: usize, layer: usize) -> usize {
+        self.cpd.get_active_neighbor_count(row, col, layer)
+    }
+
+    fn get_active_cell_count(&self) -> usize {
+        self.cpd.get_active_cell_count()
+    }
+
+    fn simulate(&mut self) {
+        self.cpd.simulate();
     }
 }
 
