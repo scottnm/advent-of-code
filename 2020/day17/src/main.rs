@@ -104,7 +104,45 @@ impl Cpd {
     }
 
     fn get_active_neighbor_count(&self, row: usize, col: usize, layer: usize) -> usize {
-        unimplemented!();
+        let neighbors = [
+            (row - 1, col - 1, layer - 1),
+            (row - 1, col - 1, layer),
+            (row - 1, col - 1, layer + 1),
+            (row - 1, col, layer - 1),
+            (row - 1, col, layer),
+            (row - 1, col, layer + 1),
+            (row - 1, col + 1, layer - 1),
+            (row - 1, col + 1, layer),
+            (row - 1, col + 1, layer + 1),
+            (row, col - 1, layer - 1),
+            (row, col - 1, layer),
+            (row, col - 1, layer + 1),
+            (row, col, layer - 1),
+            (row, col, layer + 1),
+            (row, col + 1, layer - 1),
+            (row, col + 1, layer),
+            (row, col + 1, layer + 1),
+            (row + 1, col - 1, layer - 1),
+            (row + 1, col - 1, layer),
+            (row + 1, col - 1, layer + 1),
+            (row + 1, col, layer - 1),
+            (row + 1, col, layer),
+            (row + 1, col, layer + 1),
+            (row + 1, col + 1, layer - 1),
+            (row + 1, col + 1, layer),
+            (row + 1, col + 1, layer + 1),
+        ];
+
+        neighbors
+            .iter()
+            .filter(|(r, c, l)| self.get(*r, *c, *l) == CubeState::Active)
+            .count()
+    }
+
+    fn get_active_cell_count(&self) -> usize {
+        self.each_cell()
+            .filter(|(r, c, l)| self.get(*r, *c, *l) == CubeState::Active)
+            .count()
     }
 
     fn simulate(&mut self) {
@@ -168,6 +206,8 @@ mod tests {
 
             assert_eq!(cpd.get(row, col, layer), expected_state);
         }
+
+        assert_eq!(cpd.get_active_cell_count(), 1);
     }
 
     #[test]
