@@ -1,0 +1,16 @@
+use std::str::FromStr;
+
+grammar;
+
+pub Expr: isize = {
+    <e:Expr> "+" <t:Term> => e + t,
+    <e:Expr> "*" <t:Term> => e * t,
+    Term,
+}
+
+Term: isize = {
+    Num,
+    "(" <Expr> ")",
+};
+
+Num: isize = <s:r"[0-9]+"> => isize::from_str(s).unwrap();

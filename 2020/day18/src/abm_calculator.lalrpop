@@ -1,0 +1,20 @@
+use std::str::FromStr;
+
+grammar;
+
+pub Expr: isize = {
+    <l:Expr> "*" <r:Sum> => l * r,
+    Sum,
+}
+
+Sum: isize = {
+    <l:Sum> "+" <r:Term> => l + r,
+    Term,
+}
+
+Term: isize = {
+    Num,
+    "(" <Expr> ")",
+};
+
+Num: isize = <s:r"[0-9]+"> => isize::from_str(s).unwrap();
