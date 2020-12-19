@@ -78,6 +78,11 @@ impl Cpd {
     }
 
     fn set(&mut self, row: usize, col: usize, layer: usize, v: CubeState) {
+        // assert we aren't trying to set anything in the outer shell of the cube which only exists to avoid special neighbor checks
+        assert!(row > 0 && row < self.height - 1);
+        assert!(col > 0 && col < self.width - 1);
+        assert!(layer > 0 && layer < self.depth - 1);
+
         let idx = self.get_cell_index(row, col, layer);
         self.grid[idx] = v;
     }
@@ -88,7 +93,9 @@ impl Cpd {
     }
 
     fn each_cell(&self) -> CellIterator {
-        iproduct!(1..self.height, 1..self.width, 1..self.depth)
+        // we iterate starting at 1 and ending 1 before the width/height/depth because there's buffer shell
+        // around the cube that should never be touched and is only intended for avoiding extra neighbor checks
+        iproduct!(1..self.height - 1, 1..self.width - 1, 1..self.depth - 1)
     }
 }
 
