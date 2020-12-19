@@ -12,7 +12,7 @@ enum CubeState {
 // sufficiently large but sparse spaces (i.e. the infinite void of the pocket dimension), if we can save some serious
 // time only iterating as far as the outermost shell.
 // TODO: I wonder if it's faster to make this more space compact and make this bitaddressible rather than byte addressable
-struct Cpd {
+struct Cpd3d {
     // Conway Pocket Dimension
     width: usize,  // addressable size of x-axis
     height: usize, // addressable size of y-axis
@@ -36,7 +36,7 @@ struct SeedGrid {
     grid: Vec<CubeState>,
 }
 
-impl Cpd {
+impl Cpd3d {
     fn new(seed_grid: &SeedGrid, max_simulations: usize) -> Self {
         // each simulation could cause a new neighbor to pop into existence one layer outside
         // of our limit. Therefore we need to account an additional 2 units in each dimension
@@ -178,7 +178,7 @@ fn main() {
     let seed = SeedGrid::from_file(&file_name);
 
     let simulation_count = 6;
-    let mut cpd = Cpd::new(&seed, simulation_count);
+    let mut cpd = Cpd3d::new(&seed, simulation_count);
     for _ in 0..simulation_count {
         cpd.simulate();
     }
@@ -195,9 +195,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn basic_setup_test() {
+    fn basic_3d_setup_test() {
         let seed = SeedGrid::new(&[vec![CubeState::Active; 1]]);
-        let cpd = Cpd::new(&seed, 1);
+        let cpd = Cpd3d::new(&seed, 1);
 
         let seed_cell = (2, 2, 2);
         assert_eq!(
@@ -218,7 +218,7 @@ mod tests {
     }
 
     #[test]
-    fn basic_simulation_test() {
+    fn basic_3d_simulation_test() {
         let seed = SeedGrid::new(&[
             vec![CubeState::Inactive, CubeState::Active, CubeState::Inactive],
             vec![CubeState::Inactive, CubeState::Inactive, CubeState::Active],
@@ -226,7 +226,7 @@ mod tests {
         ]);
 
         let simulation_count = 6;
-        let mut cpd = Cpd::new(&seed, simulation_count);
+        let mut cpd = Cpd3d::new(&seed, simulation_count);
         assert_eq!(cpd.get_active_cell_count(), 5);
 
         for _ in 0..simulation_count {
