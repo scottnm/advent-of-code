@@ -110,6 +110,17 @@ mod tests {
             CubeState::Active
         );
 
-        todo!("Check that the rest of the cells are inactive");
+        for row in 0..cpd.width {
+            for col in 0..cpd.height {
+                for layer in 0..cpd.depth {
+                    let expected_state = match (row, col, layer) {
+                        (1, 1, 1) => CubeState::Active,
+                        _ => CubeState::Inactive,
+                    };
+
+                    assert_eq!(cpd.get(row, col, layer), expected_state);
+                }
+            }
+        }
     }
 }
