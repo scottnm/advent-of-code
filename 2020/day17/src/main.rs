@@ -1,3 +1,6 @@
+// TODO: should definitely revisit doing this with a hashmap for 4d. The 4d impl is unfortunately super slow.
+// TODO: another option for optimizing this could be updating my each_cell iter to only iterate over 'known space'
+//       i.e. the furthest bounds that we know a cell could exist in.
 #[macro_use]
 extern crate itertools;
 
