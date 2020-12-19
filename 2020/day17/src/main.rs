@@ -297,7 +297,7 @@ fn main() {
     let seed = SeedGrid::from_file(&file_name);
 
     let simulation_count = 6;
-    let mut cpd = Cpd3d::new(&seed, simulation_count);
+    let mut cpd = Cpd4d::new(&seed, simulation_count);
     for _ in 0..simulation_count {
         cpd.simulate();
     }
