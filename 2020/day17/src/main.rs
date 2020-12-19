@@ -59,7 +59,7 @@ impl Cpd {
         let addr_offset = max_simulations + 1;
         for row in 0..seed_grid.height {
             for col in 0..seed_grid.width {
-                cpd.set(
+                cpd.queue_set(
                     row + addr_offset,
                     col + addr_offset,
                     addr_offset,
@@ -67,6 +67,7 @@ impl Cpd {
                 );
             }
         }
+        cpd.commit_sets();
 
         cpd
     }
@@ -77,14 +78,18 @@ impl Cpd {
         layer_offset + row_offset + col
     }
 
-    fn set(&mut self, row: usize, col: usize, layer: usize, v: CubeState) {
+    fn queue_set(&mut self, row: usize, col: usize, layer: usize, v: CubeState) {
         // assert we aren't trying to set anything in the outer shell of the cube which only exists to avoid special neighbor checks
         assert!(row > 0 && row < self.height - 1);
         assert!(col > 0 && col < self.width - 1);
         assert!(layer > 0 && layer < self.depth - 1);
 
         let idx = self.get_cell_index(row, col, layer);
-        self.grid[idx] = v;
+        self.grid_buffer[idx] = v;
+    }
+
+    fn commit_sets(&mut self) {
+        self.grid.copy_from_slice(&self.grid_buffer);
     }
 
     fn get(&self, row: usize, col: usize, layer: usize) -> CubeState {
@@ -96,6 +101,27 @@ impl Cpd {
         // we iterate starting at 1 and ending 1 before the width/height/depth because there's buffer shell
         // around the cube that should never be touched and is only intended for avoiding extra neighbor checks
         iproduct!(1..self.height - 1, 1..self.width - 1, 1..self.depth - 1)
+    }
+
+    fn get_active_neighbor_count(&self, row: usize, col: usize, layer: usize) -> usize {
+        unimplemented!();
+    }
+
+    fn simulate(&mut self) {
+        for cell in self.each_cell() {
+            let cell_state = self.get(cell.0, cell.1, cell.2);
+            let cell_active_neighbor_count = self.get_active_neighbor_count(cell.0, cell.1, cell.2);
+            let new_state = match (cell_state, cell_active_neighbor_count) {
+                (CubeState::Active, 2) => CubeState::Active,
+                (CubeState::Active, 3) => CubeState::Active,
+                (CubeState::Active, _) => CubeState::Inactive,
+                (CubeState::Inactive, 3) => CubeState::Active,
+                (CubeState::Inactive, _) => CubeState::Inactive,
+            };
+            self.queue_set(cell.0, cell.1, cell.2, new_state);
+        }
+
+        self.commit_sets();
     }
 }
 
@@ -142,5 +168,10 @@ mod tests {
 
             assert_eq!(cpd.get(row, col, layer), expected_state);
         }
+    }
+
+    #[test]
+    fn basic_simulation_test() {
+        todo!("write simulation test!");
     }
 }
