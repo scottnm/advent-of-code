@@ -29,6 +29,7 @@ type CellIterator = itertools::ConsTuples<
     ((usize, usize), usize),
 >;
 
+#[derive(Debug, PartialEq, Eq)]
 struct SeedGrid {
     width: usize,  // addressable size of x-axis
     height: usize, // addressable size of y-axis
@@ -174,13 +175,43 @@ impl SeedGrid {
         }
     }
 
+    fn from_file(file_name: &str) -> Self {
+        let mut grid_rows = Vec::new();
+        for line in input_helpers::read_lines(file_name) {
+            let grid_cols = line
+                .chars()
+                .map(|c| match c {
+                    '.' => CubeState::Inactive,
+                    '#' => CubeState::Active,
+                    _ => panic!("Invalid char! {}", c),
+                })
+                .collect();
+            grid_rows.push(grid_cols);
+        }
+
+        SeedGrid::new(&grid_rows)
+    }
+
     fn get(&self, row: usize, col: usize) -> CubeState {
         self.grid[row * self.width + col]
     }
 }
 
 fn main() {
-    println!("Hello, world!");
+    let file_name = input_helpers::get_input_file_from_args(&mut std::env::args());
+    let seed = SeedGrid::from_file(&file_name);
+
+    let simulation_count = 6;
+    let mut cpd = Cpd::new(&seed, simulation_count);
+    for _ in 0..simulation_count {
+        cpd.simulate();
+    }
+
+    println!(
+        "{} active cells after {} simulations.",
+        cpd.get_active_cell_count(),
+        simulation_count
+    );
 }
 
 #[cfg(test)]
@@ -227,5 +258,16 @@ mod tests {
         }
 
         assert_eq!(cpd.get_active_cell_count(), 112);
+    }
+
+    #[test]
+    fn build_seed_from_file_test() {
+        let seed = SeedGrid::from_file("src/simple_input.txt");
+        let expected_seed = SeedGrid::new(&[
+            vec![CubeState::Inactive, CubeState::Active, CubeState::Inactive],
+            vec![CubeState::Inactive, CubeState::Inactive, CubeState::Active],
+            vec![CubeState::Active, CubeState::Active, CubeState::Active],
+        ]);
+        assert_eq!(seed, expected_seed);
     }
 }
