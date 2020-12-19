@@ -212,6 +212,20 @@ mod tests {
 
     #[test]
     fn basic_simulation_test() {
-        todo!("write simulation test!");
+        let seed = SeedGrid::new(&[
+            vec![CubeState::Inactive, CubeState::Active, CubeState::Inactive],
+            vec![CubeState::Inactive, CubeState::Inactive, CubeState::Active],
+            vec![CubeState::Active, CubeState::Active, CubeState::Active],
+        ]);
+
+        let simulation_count = 6;
+        let mut cpd = Cpd::new(&seed, simulation_count);
+        assert_eq!(cpd.get_active_cell_count(), 5);
+
+        for _ in 0..simulation_count {
+            cpd.simulate();
+        }
+
+        assert_eq!(cpd.get_active_cell_count(), 112);
     }
 }
