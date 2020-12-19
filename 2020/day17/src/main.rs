@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate itertools;
+
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CubeState {
@@ -18,6 +21,14 @@ struct Cpd {
     grid_buffer: Vec<CubeState>,
 }
 
+type CellIterator = itertools::ConsTuples<
+    itertools::Product<
+        itertools::Product<std::ops::Range<usize>, std::ops::Range<usize>>,
+        std::ops::Range<usize>,
+    >,
+    ((usize, usize), usize),
+>;
+
 struct SeedGrid {
     width: usize,  // addressable size of x-axis
     height: usize, // addressable size of y-axis
@@ -29,8 +40,9 @@ impl Cpd {
         // each simulation could cause a new neighbor to pop into existence one layer outside
         // of our limit. Therefore we need to account an additional 2 units in each dimension
         // of our grid (2 units because a neighbor could pop up on either the positive or
-        // negative side)
-        let max_grid_growth = max_simulations * 2;
+        // negative side). We'll also add an additional layer so that we don't have to special
+        // case any of the neighbor checks at the edge of the cube space.
+        let max_grid_growth = (max_simulations + 1) * 2;
         let width = seed_grid.width + max_grid_growth;
         let height = seed_grid.height + max_grid_growth;
         let depth = 1 + max_grid_growth;
@@ -44,7 +56,7 @@ impl Cpd {
             grid_buffer: grid_buffer,
         };
 
-        let addr_offset = max_simulations;
+        let addr_offset = max_simulations + 1;
         for row in 0..seed_grid.height {
             for col in 0..seed_grid.width {
                 cpd.set(
@@ -71,7 +83,12 @@ impl Cpd {
     }
 
     fn get(&self, row: usize, col: usize, layer: usize) -> CubeState {
-        self.grid[self.get_cell_index(row, col, layer)]
+        let idx = self.get_cell_index(row, col, layer);
+        self.grid[idx]
+    }
+
+    fn each_cell(&self) -> CellIterator {
+        iproduct!(1..self.height, 1..self.width, 1..self.depth)
     }
 }
 
@@ -104,23 +121,19 @@ mod tests {
         let seed = SeedGrid::new(&[vec![CubeState::Active; 1]]);
         let cpd = Cpd::new(&seed, 1);
 
-        let seed_cell = (1, 1, 1);
+        let seed_cell = (2, 2, 2);
         assert_eq!(
             cpd.get(seed_cell.0, seed_cell.1, seed_cell.2),
             CubeState::Active
         );
 
-        for row in 0..cpd.width {
-            for col in 0..cpd.height {
-                for layer in 0..cpd.depth {
-                    let expected_state = match (row, col, layer) {
-                        (1, 1, 1) => CubeState::Active,
-                        _ => CubeState::Inactive,
-                    };
+        for (row, col, layer) in cpd.each_cell() {
+            let expected_state = match (row, col, layer) {
+                (2, 2, 2) => CubeState::Active,
+                _ => CubeState::Inactive,
+            };
 
-                    assert_eq!(cpd.get(row, col, layer), expected_state);
-                }
-            }
+            assert_eq!(cpd.get(row, col, layer), expected_state);
         }
     }
 }
