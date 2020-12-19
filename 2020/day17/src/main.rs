@@ -105,38 +105,14 @@ impl Cpd {
     }
 
     fn get_active_neighbor_count(&self, row: usize, col: usize, layer: usize) -> usize {
-        let neighbors = [
-            (row - 1, col - 1, layer - 1),
-            (row - 1, col - 1, layer),
-            (row - 1, col - 1, layer + 1),
-            (row - 1, col, layer - 1),
-            (row - 1, col, layer),
-            (row - 1, col, layer + 1),
-            (row - 1, col + 1, layer - 1),
-            (row - 1, col + 1, layer),
-            (row - 1, col + 1, layer + 1),
-            (row, col - 1, layer - 1),
-            (row, col - 1, layer),
-            (row, col - 1, layer + 1),
-            (row, col, layer - 1),
-            (row, col, layer + 1),
-            (row, col + 1, layer - 1),
-            (row, col + 1, layer),
-            (row, col + 1, layer + 1),
-            (row + 1, col - 1, layer - 1),
-            (row + 1, col - 1, layer),
-            (row + 1, col - 1, layer + 1),
-            (row + 1, col, layer - 1),
-            (row + 1, col, layer),
-            (row + 1, col, layer + 1),
-            (row + 1, col + 1, layer - 1),
-            (row + 1, col + 1, layer),
-            (row + 1, col + 1, layer + 1),
-        ];
+        let row_diffs = [row - 1, row, row + 1];
+        let col_diffs = [col - 1, col, col + 1];
+        let layer_diffs = [layer - 1, layer, layer + 1];
+        let neighbors = iproduct!(&row_diffs, &col_diffs, &layer_diffs)
+            .filter(|coord| *coord != (&row, &col, &layer));
 
         neighbors
-            .iter()
-            .filter(|(r, c, l)| self.get(*r, *c, *l) == CubeState::Active)
+            .filter(|(r, c, l)| self.get(**r, **c, **l) == CubeState::Active)
             .count()
     }
 
