@@ -1,4 +1,7 @@
+#!/bin/bash
+script_root=$(dirname $(realpath "${BASH_SOURCE:-$0}"))
+
 clear
-rm day_template.out
-clang day_template.c ../../../helpers/helpers.c -I ../../../helpers/ -o day_template.out -Wno-format-extra-args
-./day_template.out day_template_simple.txt
+rm "$script_root/day_template.out"
+clang "$script_root/day_template.c" "$script_root/../../../helpers/helpers.c" -I "$script_root/../../../helpers/" -o "$script_root/day_template.out" -Wno-format-extra-args
+"$script_root/day_template.out" "$script_root/day_template_simple.txt"
