@@ -1,2 +1,9 @@
+# Rust
 **/target
+
+# C (clang)
 *.out
+
+# Zig
+zig-out/
+zig-cache/
