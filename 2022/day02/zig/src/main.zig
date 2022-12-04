@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const RoundData = struct {};
+
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
     const args = try std.process.argsAlloc(allocator);
@@ -11,7 +13,8 @@ pub fn main() !void {
 
     var input_file_path: []const u8 = args[1];
     // FIXME: make this return the round data
-    getRoundDataFromFile(input_file_path);
+    var round_data = try getRoundDataFromFile(input_file_path);
+    std.debug.print("Received {d} rounds", .{round_data.len});
 }
 
 pub fn printUsageAndExit(prog_name: []const u8) noreturn {
@@ -19,8 +22,9 @@ pub fn printUsageAndExit(prog_name: []const u8) noreturn {
     std.process.exit(0);
 }
 
-pub fn getRoundDataFromFile(input_file_path: []const u8) void {
+pub fn getRoundDataFromFile(input_file_path: []const u8) ![]RoundData {
     _ = input_file_path;
+    return &[_]RoundData{};
 }
 
 // FIXME: old stub main
