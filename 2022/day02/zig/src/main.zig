@@ -1,20 +1,26 @@
 const std = @import("std");
 
-pub fn print_usage_and_exit(prog_name: []const u8) noreturn {
-    std.debug.print("USAGE: {s} [input_file]\n", .{prog_name});
-    std.process.exit(0);
-}
-
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
     if (args.len < 2) {
-        print_usage_and_exit(args[0]);
+        printUsageAndExit(args[0]);
     }
 
-    std.debug.print("Done\n", .{});
+    var input_file_path: []const u8 = args[1];
+    // FIXME: make this return the round data
+    getRoundDataFromFile(input_file_path);
+}
+
+pub fn printUsageAndExit(prog_name: []const u8) noreturn {
+    std.debug.print("USAGE: {s} [input_file]\n", .{prog_name});
+    std.process.exit(0);
+}
+
+pub fn getRoundDataFromFile(input_file_path: []const u8) void {
+    _ = input_file_path;
 }
 
 // FIXME: old stub main
