@@ -76,7 +76,7 @@ CalculateRoundScore(
             break;
     }
 
-    Log("choice=%i,resultScore=%u,choiceScore=%u", round.playerChoice, roundResultScore, choiceScore);
+    // Log("choice=%i,resultScore=%u,choiceScore=%u", round.playerChoice, roundResultScore, choiceScore);
     return roundResultScore + choiceScore;
 }
 
@@ -217,36 +217,13 @@ SumRoundScore(
 void
 PrintUsage(const char* prog)
 {
-    Log("%s [input_file] [pt1|pt2]", prog);
+    Log("%s [input_file]", prog);
 }
 
 int
 main(int argc, const char** argv)
 {
-    if (argc < 3)
-    {
-        PrintUsage(argv[0]);
-        return 1;
-    }
-
-    const char* inputFile = argv[1];
-
-    typedef enum INPUT_FORMAT {
-        INPUT_FORMAT_UNSET,
-        INPUT_FORMAT_1,
-        INPUT_FORMAT_2,
-    } INPUT_FORMAT;
-
-    INPUT_FORMAT inputFormat = INPUT_FORMAT_UNSET;
-    if (strcmp(argv[2], "pt1") == 0)
-    {
-        inputFormat = INPUT_FORMAT_1;
-    }
-    else if (strcmp(argv[2], "pt2") == 0)
-    {
-        inputFormat = INPUT_FORMAT_2;
-    }
-    else
+    if (argc < 2)
     {
         PrintUsage(argv[0]);
         return 1;
@@ -256,27 +233,44 @@ main(int argc, const char** argv)
     size_t inputLineCount;
     char** inputLines;
 
+    const char* inputFile = argv[1];
+
     Log("Reading inputing lines...");
     success = ReadInputLines(inputFile, &inputLineCount, &inputLines);
     if (success)
     {
-        Log("Converting lines to round data (format=%i)", inputFormat);
+        Log("Converting lines to round data");
         size_t roundCount;
         RpsRoundData* rounds;
 
-        success = inputFormat == INPUT_FORMAT_1 ?
-            GetRoundsFromLinesPt1(inputLineCount, (const char**)inputLines, &roundCount, &rounds) :
-            GetRoundsFromLinesPt2(inputLineCount, (const char**)inputLines, &roundCount, &rounds);
-
-        if (success)
+        Log("Pt1. ");
         {
-            Log("Processing rounds");
-            int totalScore = SumRoundScore(roundCount, rounds);
-            Log("Total score... %i\n", totalScore);
+            success = GetRoundsFromLinesPt1(inputLineCount, (const char**)inputLines, &roundCount, &rounds);
+            if (success)
+            {
+                Log("Processing %zu rounds", roundCount);
+                int totalScore = SumRoundScore(roundCount, rounds);
+                Log("Total score... %i\n", totalScore);
+            }
+            else
+            {
+                Log("Failed to GetRoundsFromLinesPt1!");
+            }
         }
-        else
+
+        Log("Pt2. ");
         {
-            Log("Failed to GetRoundsFromLinesPt1!");
+            success = GetRoundsFromLinesPt2(inputLineCount, (const char**)inputLines, &roundCount, &rounds);
+            if (success)
+            {
+                Log("Processing %zu rounds", roundCount);
+                int totalScore = SumRoundScore(roundCount, rounds);
+                Log("Total score... %i\n", totalScore);
+            }
+            else
+            {
+                Log("Failed to GetRoundsFromLinesPt2!");
+            }
         }
 
         free(inputLines);
