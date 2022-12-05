@@ -120,7 +120,7 @@ pub fn getRoundDataFromFilePart2(input_file_path: []const u8, alloc: std.mem.All
         }
 
         var opponent_choice_char = line[0];
-        var player_choice_char = line[2];
+        var required_result_char = line[2];
 
         var opponent_choice = switch (opponent_choice_char) {
             'A' => RpsChoice.rock,
@@ -132,13 +132,27 @@ pub fn getRoundDataFromFilePart2(input_file_path: []const u8, alloc: std.mem.All
             },
         };
 
-        var player_choice = switch (player_choice_char) {
-            'X' => RpsChoice.rock,
-            'Y' => RpsChoice.paper,
-            'Z' => RpsChoice.scissors,
+        var required_result = switch (required_result_char) {
+            'X' => RpsResult.lose,
+            'Y' => RpsResult.draw,
+            'Z' => RpsResult.win,
             else => {
                 std.debug.assert(false);
                 return ReadInputError.InvalidLineFormat;
+            },
+        };
+
+        var player_choice = switch (required_result) {
+            RpsResult.draw => opponent_choice,
+            RpsResult.lose => switch (opponent_choice) {
+                RpsChoice.rock => RpsChoice.scissors,
+                RpsChoice.paper => RpsChoice.rock,
+                RpsChoice.scissors => RpsChoice.paper,
+            },
+            RpsResult.win => switch (opponent_choice) {
+                RpsChoice.rock => RpsChoice.paper,
+                RpsChoice.paper => RpsChoice.scissors,
+                RpsChoice.scissors => RpsChoice.rock,
             },
         };
 
@@ -170,7 +184,7 @@ pub fn calculateRoundResult(round: RoundData) RpsResult {
         return switch (round.player_choice) {
             RpsChoice.rock => if (round.opponent_choice == RpsChoice.scissors) RpsResult.win else RpsResult.lose,
             RpsChoice.paper => if (round.opponent_choice == RpsChoice.rock) RpsResult.win else RpsResult.lose,
-            RpsChoice.scissors => if (round.opponent_choice == RpsChoice.rock) RpsResult.win else RpsResult.lose,
+            RpsChoice.scissors => if (round.opponent_choice == RpsChoice.paper) RpsResult.win else RpsResult.lose,
         };
     }
 }
