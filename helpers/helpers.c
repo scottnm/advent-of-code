@@ -63,7 +63,6 @@ bool ReadInputLines(
 
     char** serializedBufferLinesSection = (char**)serializedBuffer;
     char* serializedBufferContentPtr = serializedBuffer + linePtrsSize;
-    size_t serializedBufferContentSize = fileByteCount;
     memcpy(serializedBufferContentPtr, fileBytes, fileByteCount);
     serializedBufferContentPtr[fileByteCount] = '\0';
     free(fileBytes);
