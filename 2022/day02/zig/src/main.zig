@@ -16,10 +16,10 @@ pub fn main() !void {
     std.debug.print("Pt1. \n", .{});
     {
         std.debug.print("    Reading file for input data\n", .{});
-        var round_data = try getRoundDataFromFilePart1(input_file_path);
+        var round_data = try getRoundDataFromFilePart1(input_file_path, allocator);
 
-        std.debug.print("    Processing {d} rounds\n", .{round_data.len});
-        var total_score = sumRoundScore(round_data);
+        std.debug.print("    Processing {d} rounds\n", .{round_data.items.len});
+        var total_score = sumRoundScore(round_data.items);
 
         std.debug.print("    Total score! {d}\n", .{total_score});
     }
@@ -31,9 +31,10 @@ pub fn printUsageAndExit(prog_name: []const u8) noreturn {
     std.process.exit(0);
 }
 
-pub fn getRoundDataFromFilePart1(input_file_path: []const u8) ![]RoundData {
+pub fn getRoundDataFromFilePart1(input_file_path: []const u8, alloc: std.mem.Allocator) !std.ArrayList(RoundData) {
+    var rounds = std.ArrayList(RoundData).init(alloc);
     _ = input_file_path;
-    return &[_]RoundData{};
+    return rounds;
 }
 
 pub fn sumRoundScore(rounds: []const RoundData) u32 {
