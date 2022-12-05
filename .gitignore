@@ -1,9 +1,14 @@
 # Rust
 **/target
 
-# C (clang)
+# C (clang linux)
 *.out
+
+# C (clang win32)
+*.exe
 
 # Zig
 zig-out/
 zig-cache/
+*.exe.obj
+*.pdb
