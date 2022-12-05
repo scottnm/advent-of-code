@@ -1,6 +1,7 @@
 const std = @import("std");
 
-const RoundData = struct {};
+const RpsChoice = enum { rock, paper, scissors };
+const RoundData = struct { opponent_choice: RpsChoice, player_choice: RpsChoice };
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -19,9 +20,9 @@ pub fn main() !void {
         var round_data = try getRoundDataFromFilePart1(input_file_path, allocator);
 
         std.debug.print("    WARNING!!!!! TEMPORARILY ADDING ITEMS TO LIST FOR TEST PURPOSES\n", .{});
-        try round_data.append(.{});
-        try round_data.append(.{});
-        try round_data.append(.{});
+        try round_data.append(.{ .opponent_choice = RpsChoice.rock, .player_choice = RpsChoice.paper });
+        try round_data.append(.{ .opponent_choice = RpsChoice.paper, .player_choice = RpsChoice.rock });
+        try round_data.append(.{ .opponent_choice = RpsChoice.scissors, .player_choice = RpsChoice.scissors });
 
         std.debug.print("    Processing {d} rounds\n", .{round_data.items.len});
         var total_score = sumRoundScore(round_data.items);
