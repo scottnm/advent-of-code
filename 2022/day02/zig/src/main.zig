@@ -12,9 +12,18 @@ pub fn main() !void {
     }
 
     var input_file_path: []const u8 = args[1];
-    // FIXME: make this return the round data
-    var round_data = try getRoundDataFromFile(input_file_path);
-    std.debug.print("Received {d} rounds", .{round_data.len});
+
+    std.debug.print("Pt1. \n", .{});
+    {
+        std.debug.print("    Reading file for input data\n", .{});
+        var round_data = try getRoundDataFromFilePart1(input_file_path);
+
+        std.debug.print("    Processing {d} rounds\n", .{round_data.len});
+        var total_score = sumRoundScore(round_data);
+
+        std.debug.print("    Total score! {d}\n", .{total_score});
+    }
+    std.debug.print("\n", .{});
 }
 
 pub fn printUsageAndExit(prog_name: []const u8) noreturn {
@@ -22,9 +31,17 @@ pub fn printUsageAndExit(prog_name: []const u8) noreturn {
     std.process.exit(0);
 }
 
-pub fn getRoundDataFromFile(input_file_path: []const u8) ![]RoundData {
+pub fn getRoundDataFromFilePart1(input_file_path: []const u8) ![]RoundData {
     _ = input_file_path;
     return &[_]RoundData{};
+}
+
+pub fn sumRoundScore(rounds: []const RoundData) u32 {
+    var sum: u32 = 0;
+    for (rounds) |round| {
+        _ = round;
+    }
+    return sum;
 }
 
 // FIXME: old stub main
