@@ -28,6 +28,19 @@ pub fn main() !void {
         std.debug.print("    Total score! {d}\n", .{total_score});
     }
     std.debug.print("\n", .{});
+
+    std.debug.print("Pt2. \n", .{});
+    {
+        std.debug.print("    Reading file for input data\n", .{});
+        var round_data = try getRoundDataFromFilePart2(input_file_path, allocator);
+        defer round_data.deinit();
+
+        std.debug.print("    Processing {d} rounds\n", .{round_data.items.len});
+        var total_score = sumRoundScore(round_data.items);
+
+        std.debug.print("    Total score! {d}\n", .{total_score});
+    }
+    std.debug.print("\n", .{});
 }
 
 pub fn printUsageAndExit(prog_name: []const u8) noreturn {
@@ -36,6 +49,56 @@ pub fn printUsageAndExit(prog_name: []const u8) noreturn {
 }
 
 pub fn getRoundDataFromFilePart1(input_file_path: []const u8, alloc: std.mem.Allocator) !std.ArrayList(RoundData) {
+    const cwd = std.fs.cwd();
+
+    const input_file = try cwd.openFile(input_file_path, .{ .mode = std.fs.File.OpenMode.read_only });
+    defer input_file.close();
+
+    const input_file_reader = input_file.reader();
+    var read_buffer: [1024]u8 = undefined;
+
+    var rounds = std.ArrayList(RoundData).init(alloc);
+    errdefer rounds.deinit();
+
+    while (try input_file_reader.readUntilDelimiterOrEof(read_buffer[0..], '\n')) |line| {
+        if (line.len != 3) {
+            return ReadInputError.InvalidLineFormat;
+        }
+
+        if (line[1] != ' ') {
+            return ReadInputError.InvalidLineFormat;
+        }
+
+        var opponent_choice_char = line[0];
+        var player_choice_char = line[2];
+
+        var opponent_choice = switch (opponent_choice_char) {
+            'A' => RpsChoice.rock,
+            'B' => RpsChoice.paper,
+            'C' => RpsChoice.scissors,
+            else => {
+                std.debug.assert(false);
+                return ReadInputError.InvalidLineFormat;
+            },
+        };
+
+        var player_choice = switch (player_choice_char) {
+            'X' => RpsChoice.rock,
+            'Y' => RpsChoice.paper,
+            'Z' => RpsChoice.scissors,
+            else => {
+                std.debug.assert(false);
+                return ReadInputError.InvalidLineFormat;
+            },
+        };
+
+        try rounds.append(.{ .player_choice = player_choice, .opponent_choice = opponent_choice });
+    }
+
+    return rounds;
+}
+
+pub fn getRoundDataFromFilePart2(input_file_path: []const u8, alloc: std.mem.Allocator) !std.ArrayList(RoundData) {
     const cwd = std.fs.cwd();
 
     const input_file = try cwd.openFile(input_file_path, .{ .mode = std.fs.File.OpenMode.read_only });
