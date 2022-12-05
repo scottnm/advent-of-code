@@ -19,11 +19,7 @@ pub fn main() !void {
     {
         std.debug.print("    Reading file for input data\n", .{});
         var round_data = try getRoundDataFromFilePart1(input_file_path, allocator);
-
-        std.debug.print("    WARNING!!!!! TEMPORARILY ADDING ITEMS TO LIST FOR TEST PURPOSES\n", .{});
-        try round_data.append(.{ .opponent_choice = RpsChoice.rock, .player_choice = RpsChoice.paper });
-        try round_data.append(.{ .opponent_choice = RpsChoice.paper, .player_choice = RpsChoice.rock });
-        try round_data.append(.{ .opponent_choice = RpsChoice.scissors, .player_choice = RpsChoice.scissors });
+        defer round_data.deinit();
 
         std.debug.print("    Processing {d} rounds\n", .{round_data.items.len});
         var total_score = sumRoundScore(round_data.items);
@@ -87,27 +83,15 @@ pub fn calculateResultScore(round_result: RpsResult) u32 {
     }
 }
 
-// FIXME: old stub main
-// pub fn main() !void {
-//     // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-//     std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-//
-//     // stdout is for the actual output of your application, for example if you
-//     // are implementing gzip, then only the compressed bytes should be sent to
-//     // stdout, not any debugging messages.
-//     const stdout_file = std.io.getStdOut().writer();
-//     var bw = std.io.bufferedWriter(stdout_file);
-//     const stdout = bw.writer();
-//
-//     try stdout.print("Run `zig build test` to run the tests.\n", .{});
-//
-//     try bw.flush(); // don't forget to flush!
-// }
-
 // FIXME: stale test from the stub file creation
-// test "simple test" {
-//     var list = std.ArrayList(i32).init(std.testing.allocator);
-//     defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-//     try list.append(42);
-//     try std.testing.expectEqual(@as(i32, 42), list.pop());
-// }
+test "simple test round score" {
+    var round_data = std.ArrayList(RoundData).init(std.testing.allocator);
+    defer round_data.deinit(); // try commenting this out and see if zig detects the memory leak!
+
+    try round_data.append(.{ .opponent_choice = RpsChoice.rock, .player_choice = RpsChoice.paper });
+    try round_data.append(.{ .opponent_choice = RpsChoice.paper, .player_choice = RpsChoice.rock });
+    try round_data.append(.{ .opponent_choice = RpsChoice.scissors, .player_choice = RpsChoice.scissors });
+    var round_score = sumRoundScore(round_data.items);
+
+    try std.testing.expectEqual(round_score, 15);
+}
