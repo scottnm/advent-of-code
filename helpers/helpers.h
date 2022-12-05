@@ -1,6 +1,6 @@
 #pragma once
 
-#if   defined(__WIN32)
+#if   defined(_WIN32)
 #define Log(fmt, ...) printf(fmt, __VA_ARGS__)
 #elif defined(__linux__)
 #define Log(fmt, ...) printf(fmt "\n", ##__VA_ARGS__)
