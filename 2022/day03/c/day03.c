@@ -7,6 +7,10 @@
 #include <string.h>
 #include <helpers.h>
 
+// I use signed characters to index into this array so disable the char-subscripts warning.
+// I am well aware of the signedness of chars :)
+#pragma clang diagnostic ignored "-Wchar-subscripts"
+
 typedef struct compartment_t {
     // Each item is represented by an ascii character.
     // The key into this map is the ascii character itself.

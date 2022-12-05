@@ -70,7 +70,6 @@ GetElfPacksFromLines(
     int* nextItem = items;
 
     bool processingItems = false;
-    bool processingEmptyLines = true;
     for (size_t i = 0; i < lineCount; ++i)
     {
         const char* line = lines[i];
@@ -152,7 +151,7 @@ FindTotalCaloriesOfTopNElves(
     for (size_t elf_i = 0; elf_i < elfCount; ++elf_i)
     {
         const int elfCalorieLoad = SumElfCalorieLoad(elfPacks[elf_i]);
-        Log("checking elf %zu with load %i", elf_i, elfCalorieLoad);
+        // Log("checking elf %zu with load %i", elf_i, elfCalorieLoad);
 
         int* leastExceededCalorieLoadSlot = NULL;
         for (size_t i = 0; i < topN; ++i)
@@ -169,7 +168,7 @@ FindTotalCaloriesOfTopNElves(
 
         if (leastExceededCalorieLoadSlot != NULL)
         {
-            Log("replacing old load %i with %i", *leastExceededCalorieLoadSlot, elfCalorieLoad);
+            // Log("replacing old load %i with %i", *leastExceededCalorieLoadSlot, elfCalorieLoad);
             *leastExceededCalorieLoadSlot = elfCalorieLoad;
         }
     }
