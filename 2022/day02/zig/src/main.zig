@@ -18,6 +18,11 @@ pub fn main() !void {
         std.debug.print("    Reading file for input data\n", .{});
         var round_data = try getRoundDataFromFilePart1(input_file_path, allocator);
 
+        std.debug.print("    WARNING!!!!! TEMPORARILY ADDING ITEMS TO LIST FOR TEST PURPOSES\n", .{});
+        try round_data.append(.{});
+        try round_data.append(.{});
+        try round_data.append(.{});
+
         std.debug.print("    Processing {d} rounds\n", .{round_data.items.len});
         var total_score = sumRoundScore(round_data.items);
 
