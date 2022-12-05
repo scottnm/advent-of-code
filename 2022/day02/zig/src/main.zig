@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const RpsChoice = enum { rock, paper, scissors };
+const RpsResult = enum { lose, draw, win };
 const RoundData = struct { opponent_choice: RpsChoice, player_choice: RpsChoice };
 
 pub fn main() !void {
@@ -46,9 +47,50 @@ pub fn getRoundDataFromFilePart1(input_file_path: []const u8, alloc: std.mem.All
 pub fn sumRoundScore(rounds: []const RoundData) u32 {
     var sum: u32 = 0;
     for (rounds) |round| {
-        _ = round;
+        sum += calculateRoundScore(round);
     }
     return sum;
+}
+
+pub fn calculateRoundScore(round: RoundData) u32 {
+    const roundResult = calculateRoundResult(round);
+    const resultScore = calculateResultScore(roundResult);
+    const playerChoiceScore = calculateChoiceScore(round.player_choice);
+    return resultScore + playerChoiceScore;
+}
+
+pub fn calculateRoundResult(round: RoundData) RpsResult {
+    if (round.opponent_choice == round.player_choice) {
+        return RpsResult.draw;
+    } else {
+        switch (round.player_choice) {
+            RpsChoice.rock => {
+                return if (round.opponent_choice == RpsChoice.scissors) RpsResult.win else RpsResult.lose;
+            },
+            RpsChoice.paper => {
+                return if (round.opponent_choice == RpsChoice.rock) RpsResult.win else RpsResult.lose;
+            },
+            RpsChoice.scissors => {
+                return if (round.opponent_choice == RpsChoice.rock) RpsResult.win else RpsResult.lose;
+            },
+        }
+    }
+}
+
+pub fn calculateChoiceScore(player_choice: RpsChoice) u32 {
+    switch (player_choice) {
+        RpsChoice.rock => return 1,
+        RpsChoice.paper => return 2,
+        RpsChoice.scissors => return 3,
+    }
+}
+
+pub fn calculateResultScore(round_result: RpsResult) u32 {
+    switch (round_result) {
+        RpsResult.lose => return 0,
+        RpsResult.draw => return 3,
+        RpsResult.win => return 6,
+    }
 }
 
 // FIXME: old stub main
