@@ -64,15 +64,9 @@ pub fn calculateRoundResult(round: RoundData) RpsResult {
         return RpsResult.draw;
     } else {
         switch (round.player_choice) {
-            RpsChoice.rock => {
-                return if (round.opponent_choice == RpsChoice.scissors) RpsResult.win else RpsResult.lose;
-            },
-            RpsChoice.paper => {
-                return if (round.opponent_choice == RpsChoice.rock) RpsResult.win else RpsResult.lose;
-            },
-            RpsChoice.scissors => {
-                return if (round.opponent_choice == RpsChoice.rock) RpsResult.win else RpsResult.lose;
-            },
+            RpsChoice.rock => return if (round.opponent_choice == RpsChoice.scissors) RpsResult.win else RpsResult.lose,
+            RpsChoice.paper => return if (round.opponent_choice == RpsChoice.rock) RpsResult.win else RpsResult.lose,
+            RpsChoice.scissors => return if (round.opponent_choice == RpsChoice.rock) RpsResult.win else RpsResult.lose,
         }
     }
 }
