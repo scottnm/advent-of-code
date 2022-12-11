@@ -12,3 +12,6 @@ zig-out/
 zig-cache/
 *.exe.obj
 *.pdb
+
+# Odin
+*.bin
