@@ -35,6 +35,11 @@ MonkeyState :: struct {
     inspect_count: uint,
 }
 
+ReductionType :: enum {
+    Part1,
+    Part2,
+}
+
 main :: proc() {
     simple_input_file_contents := string(#load("day11_simple.txt"))
     simple_input_lines := strings.split_lines(simple_input_file_contents)
@@ -45,17 +50,27 @@ main :: proc() {
     real_input_lines := strings.split_lines(real_input_file_contents)
     defer delete(real_input_lines)
 
-    day11_solve("simple", simple_input_lines[:len(simple_input_lines)-1])
-    day11_solve("real", real_input_lines[:len(real_input_lines)-1])
+    day11_solve_pt1("simple pt1", simple_input_lines[:len(simple_input_lines)-1])
+    day11_solve_pt1("real pt1", real_input_lines[:len(real_input_lines)-1])
+
+    day11_solve_pt2("simple pt2", simple_input_lines[:len(simple_input_lines)-1])
+    day11_solve_pt2("real pt2", real_input_lines[:len(real_input_lines)-1])
 }
 
-day11_solve :: proc(title: string, input_lines: []string) {
+day11_solve_pt1 :: proc(title: string, input_lines: []string) {
+    day11_solve(title, input_lines, ReductionType.Part1, 20)
+}
+
+day11_solve_pt2 :: proc(title: string, input_lines: []string) {
+    day11_solve(title, input_lines, ReductionType.Part2, 10_000)
+}
+
+day11_solve :: proc(title: string, input_lines: []string, reduction_type: ReductionType, round_count: uint) {
     monkey_states := parse_initial_monkey_states(input_lines)
     defer delete(monkey_states)
 
-    // dbg_print_monkey_states(monkey_states, false)
+    simulate_keep_away(monkey_states[:], round_count, reduction_type)
 
-    simulate_keep_away(monkey_states[:], 20)
     monkey_business_lvl := calculate_monkey_business(monkey_states[:])
     fmt.printf("[%s] monkey business = %d\n", title, monkey_business_lvl)
 }
@@ -136,13 +151,14 @@ parse_initial_monkey_states :: proc(input_lines: []string) -> []MonkeyState {
 
 dbg_print_monkey_states :: proc(monkey_states: []MonkeyState, verbose: bool) {
     for monkey_state, i in monkey_states {
-        fmt.printf("Monkey %d: Items [", i)
-        for item,i in monkey_state.items {
-            if i != 0 do fmt.printf(", ")
-            fmt.print(item)
-        }
-        fmt.print("]\n")
+        fmt.printf("Monkey %d: (inspect=%10d)\n", i, monkey_state.inspect_count)
         if verbose {
+            fmt.print("\tItems: [")
+            for item,i in monkey_state.items {
+                if i != 0 do fmt.printf(", ")
+                fmt.print(item)
+            }
+            fmt.print("]\n")
             fmt.print("\tOption: new = old ")
             switch op in monkey_state.inspect_op {
                 case MulOp: fmt.printf("* %d\n", op.operand)
@@ -154,28 +170,42 @@ dbg_print_monkey_states :: proc(monkey_states: []MonkeyState, verbose: bool) {
             fmt.printf("\t\tIf true => monkey %d\n", monkey_state.throw_test.true_target)
             fmt.printf("\t\tIf false => monkey %d\n", monkey_state.throw_test.false_target)
         }
-
-        fmt.printf("\tInspect count: %d\n", monkey_state.inspect_count)
-        fmt.printf("\n")
     }
 }
 
-simulate_keep_away :: proc(monkey_states: []MonkeyState, round_count: uint) {
+simulate_keep_away :: proc(monkey_states: []MonkeyState, round_count: uint, reduction_type: ReductionType) {
+    // for pt2: keep track of the divisor product
+    divisor_product: uint = 1
+    for m in monkey_states {
+        divisor_product *= m.throw_test.divisor
+    }
+
     for round in 0 ..< round_count {
         for _,m in monkey_states {
+
+            // monkey inspects the item and our worry level changes
             for _,i in monkey_states[m].items {
-                // monkey inspects
                 switch op in monkey_states[m].inspect_op {
                     case MulOp: monkey_states[m].items[i] *= op.operand
                     case AddOp: monkey_states[m].items[i] += op.operand
                     case SquareSelfOp: monkey_states[m].items[i] *= monkey_states[m].items[i]
                 }
-
-                // monkey gets bored and our worry level drops
-                monkey_states[m].items[i] /= 3
-
-                monkey_states[m].inspect_count += 1
             }
+
+            switch reduction_type {
+                case ReductionType.Part1: {
+                    for _,i in monkey_states[m].items {
+                        monkey_states[m].items[i] /= 3
+                    }
+                }
+                case ReductionType.Part2: {
+                    for _,i in monkey_states[m].items {
+                        monkey_states[m].items[i] %= divisor_product
+                    }
+                }
+            }
+
+            monkey_states[m].inspect_count += len(monkey_states[m].items)
 
             for len(monkey_states[m].items) > 0 {
                 item := pop_front(&monkey_states[m].items)
