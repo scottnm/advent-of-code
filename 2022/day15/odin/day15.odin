@@ -5,10 +5,16 @@ import "core:strings"
 import "core:strconv"
 import "core:c/libc"
 import "core:testing"
+import "core:sort"
 
 vec2 :: struct {
     x: int,
     y: int,
+}
+
+row_span :: struct {
+    start: int,
+    end: int,
 }
 
 sensor_data_t :: struct {
@@ -46,7 +52,6 @@ day15_solve :: proc(title: string, input_lines: []string, row: int) {
     // FIXME: fmt.println("SENSOR READINGS [before]:")
     // FIXME: print_sensor_data(sensor_readings, false)
 
-    // FIXME: holy cow this is slow with the real data. I'd be surprised if this was purely caused by using a map. I should profile to see what's up.
     non_beacon_scanned_spaces := calc_row_non_beacon_scanned_spaces(sensor_readings, row)
     // FIXME: fmt.println("SENSOR READINGS [after]:")
     // FIXME: print_sensor_data(sensor_readings, false)
@@ -89,43 +94,94 @@ calc_row_non_beacon_scanned_spaces :: proc(sensor_readings: []sensor_data_t, row
     // time is being able to expand on both the left and right sides of the array. If this was C I'd just do some manually
     // mallocs + memcpys and keep track of where the buffer starts and ends but here I'm not ready to jump to that
 
+    coverage_spans := make([dynamic]row_span)
+    defer delete(coverage_spans)
     row_count_map := make(map[int]bool)
 
-    for s,i in sensor_readings {
+    for s in sensor_readings {
         max_dist := s.manhattan_dist
+        min_dist := calc_manhattan_dist(s.sensor_pos, vec2{s.sensor_pos.x, row})
 
-        // FIXME: set_read_pos := false
-        start_scan_dist := calc_manhattan_dist(s.sensor_pos, vec2{s.sensor_pos.x, row})
-        for offset := 0;
-            (start_scan_dist + offset) <= max_dist;
-            offset += 1
-        {
-            // FIXME: set_read_pos = true
-            row_count_map[s.sensor_pos.x + offset] = true
-            row_count_map[s.sensor_pos.x - offset] = true
-        }
+        // if this sensor's nearest beacon is closer than the distance from this sensor to the row, then this sensor
+        // can't see any positions on this row. Skip.
+        if min_dist > max_dist do continue
 
-        // FIXME:
-        // if set_read_pos {
-        //     // fmt.printf("sensor {} set read pos\n", i)
-        // } else {
-        //     fmt.printf("sensor {} did NOT set read pos! max_dist was {} start_scan_dist was {}\n", i, max_dist, start_scan_dist)
-        // }
+        remaining_sensor_range := max_dist - min_dist
+        sensor_row_coverage_span := row_span { s.sensor_pos.x - remaining_sensor_range, s.sensor_pos.x + remaining_sensor_range }
+        append(&coverage_spans, sensor_row_coverage_span)
     }
 
-    //FIXME: fmt.println("Old row count", len(row_count_map))
+    // combine any overlapping sensor ranges
 
-    // we need to ignore any beacons already registered in this row so delete their count values
-    for s in sensor_readings {
-        if s.closest_beacon_pos.y == row {
-            if s.closest_beacon_pos.x in row_count_map {
-                // FIXME: fmt.println("Deleting...", s.closest_beacon_pos.x)
-                delete_key(&row_count_map, s.closest_beacon_pos.x)
+    for i := 0; i < len(coverage_spans) - 1; i += 1 {
+        for j := i + 1; j < len(coverage_spans); j += 1 {
+        }
+    }
+
+    next_source_span_index := 0
+    for next_source_span_index < len(coverage_spans) {
+        source_span := coverage_spans[next_source_span_index]
+
+        merged := false
+
+        for next_merge_span_index := 0; next_merge_span_index < len(coverage_spans); next_merge_span_index += 1 {
+            if next_source_span_index == next_merge_span_index do continue
+
+            merge_span := coverage_spans[next_merge_span_index]
+            if are_row_spans_mergable(source_span, merge_span) {
+                coverage_spans[next_source_span_index] = merge_row_spans(source_span, merge_span)
+                unordered_remove(&coverage_spans, next_merge_span_index)
+                merged = true
+                break
             }
         }
+
+        if !merged {
+            next_source_span_index += 1
+        }
     }
 
-    return len(row_count_map)
+    sort.merge_sort_proc(coverage_spans[:], cmp_row_spans)
+
+    // count all of the cells covered by coverage spans
+    cells_covered := 0
+    for span in coverage_spans {
+        cells_covered += (span.end - span.start + 1)
+    }
+
+    // discount all of the known beacons
+    row_beacon_map := make(map[int]bool)
+    for s in sensor_readings {
+        if s.closest_beacon_pos.y == row {
+            row_beacon_map[s.closest_beacon_pos.x] = true
+        }
+    }
+
+    cells_covered -= len(row_beacon_map)
+
+    return cast(uint)cells_covered
+}
+
+are_row_spans_mergable :: proc(v1, v2: row_span) -> bool {
+    return (v1.start <= v2.start && v1.end >= v2.start-1) ||
+           (v2.start <= v1.start && v2.end >= v1.start-1)
+}
+
+merge_row_spans :: proc(v1, v2: row_span) -> row_span {
+    return row_span {
+        start=min(v1.start,v2.start),
+        end=max(v1.end,v2.end),
+    }
+}
+
+cmp_row_spans :: proc(v1, v2: row_span) -> int {
+    if (v1.start < v2.start) {
+        return -1
+    } else if (v1.start == v2.start) {
+        return 0
+    } else {
+        return 1
+    }
 }
 
 calc_manhattan_dist :: proc(v1, v2: vec2) -> int {
@@ -157,6 +213,73 @@ print_sensor_data :: proc(sensor_readings: []sensor_data_t, original_format: boo
 }
 
 @test
-odin_test_test :: proc(t: ^testing.T) {
-    testing.expect_value(t, false, true)
+test_row_span_merges :: proc(t: ^testing.T) {
+    {
+        r1 := row_span{1, 1}
+        r2 := row_span{1, 1}
+        testing.expect(t, are_row_spans_mergable(r1, r2))
+        testing.expect_value(t, merge_row_spans(r1, r2), r1)
+    }
+    {
+        r1 := row_span{1, 10}
+        r2 := row_span{2, 5}
+        testing.expect(t, are_row_spans_mergable(r1, r2))
+        testing.expect_value(t, merge_row_spans(r1, r2), r1)
+    }
+    {
+        r1 := row_span{2, 5}
+        r2 := row_span{1, 10}
+        testing.expect(t, are_row_spans_mergable(r1, r2))
+        testing.expect_value(t, merge_row_spans(r1, r2), r2)
+    }
+    {
+        r1 := row_span{-2, 5}
+        r2 := row_span{4, 10}
+        testing.expect(t, are_row_spans_mergable(r1, r2))
+        testing.expect_value(t, merge_row_spans(r1, r2), row_span{-2,10})
+    }
+    {
+        r1 := row_span{-2, 5}
+        r2 := row_span{5, 10}
+        testing.expect(t, are_row_spans_mergable(r1, r2))
+        testing.expect_value(t, merge_row_spans(r1, r2), row_span{-2,10})
+    }
+    {
+        r1 := row_span{-2, 5}
+        r2 := row_span{6, 10}
+        testing.expect(t, are_row_spans_mergable(r1, r2))
+        testing.expect_value(t, merge_row_spans(r1, r2), row_span{-2,10})
+    }
+    {
+        r1 := row_span{-2, 5}
+        r2 := row_span{7, 10}
+        testing.expect(t, !are_row_spans_mergable(r1, r2))
+    }
+    {
+        r1 := row_span{-200, -100}
+        r2 := row_span{-90, -50}
+        testing.expect(t, !are_row_spans_mergable(r1, r2))
+    }
+    {
+        r1 := row_span{100, 200}
+        r2 := row_span{201, 300}
+        testing.expect(t, are_row_spans_mergable(r1, r2))
+        testing.expect_value(t, merge_row_spans(r1, r2), row_span{100,300})
+    }
+    {
+        r1 := row_span{201, 300}
+        r2 := row_span{100, 200}
+        testing.expect(t, are_row_spans_mergable(r1, r2))
+        testing.expect_value(t, merge_row_spans(r1, r2), row_span{100,300})
+    }
+    {
+        r1 := row_span{100, 200}
+        r2 := row_span{202, 300}
+        testing.expect(t, !are_row_spans_mergable(r1, r2))
+    }
+    {
+        r1 := row_span{202, 300}
+        r2 := row_span{100, 200}
+        testing.expect(t, !are_row_spans_mergable(r1, r2))
+    }
 }
