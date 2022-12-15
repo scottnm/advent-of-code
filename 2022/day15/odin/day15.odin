@@ -35,13 +35,18 @@ main :: proc() {
 day15_solve :: proc(title: string, input_lines: []string, row: int) {
     // FIXME: tack this onto the odin template
     // set the main allocator to be the temp allocator and just free all memory at the end of this function
-    context.allocator = context.temp_allocator
-    defer free_all(context.temp_allocator)
+
+    // FIXME: WOOOOAHHHHHHH this seemed to be the main bug here. I guess I was exhausting all of the memory in the temp allocator.
+    // I thinkt there's probably a lesson worth learning about the temp allocator which I don't quite want to think about just yet. Something something, you can't just assign the temp allocator and be on your way. You probably still need to periodically clean things up.
+    // context.allocator = context.temp_allocator
+    defer free_all(context.allocator)
 
     sensor_readings := read_sensor_data_from_lines(input_lines)
-    fmt.println("DEBUG SENSOR READINGS:")
-    print_sensor_data(sensor_readings, false)
+    // FIXME: fmt.println("SENSOR READINGS [before]:")
+    // FIXME: print_sensor_data(sensor_readings, false)
     non_beacon_scanned_spaces := calc_row_non_beacon_scanned_spaces(sensor_readings, row)
+    // FIXME: fmt.println("SENSOR READINGS [after]:")
+    // FIXME: print_sensor_data(sensor_readings, false)
     fmt.printf("[{} pt1] non-beacon scanned spaces = {}\n", title, non_beacon_scanned_spaces)
     fmt.printf("[{}] TODO: impl pt2\n", title)
 }
@@ -85,31 +90,32 @@ calc_row_non_beacon_scanned_spaces :: proc(sensor_readings: []sensor_data_t, row
     for s,i in sensor_readings {
         max_dist := s.manhattan_dist
 
-        set_read_pos := false
+        // FIXME: set_read_pos := false
         start_scan_dist := calc_manhattan_dist(s.sensor_pos, vec2{s.sensor_pos.x, row})
         for offset := 0;
             (start_scan_dist + offset) <= max_dist;
             offset += 1
         {
-            set_read_pos = true
+            // FIXME: set_read_pos = true
             row_count_map[s.sensor_pos.x + offset] = true
             row_count_map[s.sensor_pos.x - offset] = true
         }
 
-        if set_read_pos {
-            // fmt.printf("sensor {} set read pos\n", i)
-        } else {
-            fmt.printf("sensor {} did NOT set read pos! max_dist was {} start_scan_dist was {}\n", i, max_dist, start_scan_dist)
-        }
+        // FIXME:
+        // if set_read_pos {
+        //     // fmt.printf("sensor {} set read pos\n", i)
+        // } else {
+        //     fmt.printf("sensor {} did NOT set read pos! max_dist was {} start_scan_dist was {}\n", i, max_dist, start_scan_dist)
+        // }
     }
 
-    fmt.println("Old row count", len(row_count_map))
+    //FIXME: fmt.println("Old row count", len(row_count_map))
 
     // we need to ignore any beacons already registered in this row so delete their count values
     for s in sensor_readings {
         if s.closest_beacon_pos.y == row {
             if s.closest_beacon_pos.x in row_count_map {
-                fmt.println("Deleting...", s.closest_beacon_pos.x)
+                // FIXME: fmt.println("Deleting...", s.closest_beacon_pos.x)
                 delete_key(&row_count_map, s.closest_beacon_pos.x)
             }
         }
