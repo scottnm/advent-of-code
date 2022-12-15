@@ -13,24 +13,8 @@ vec2 :: struct {
 sensor_data_t :: struct {
     sensor_pos: vec2,
     closest_beacon_pos: vec2,
+    manhattan_dist: int,
 }
-
-// FIXME: I almost started with a grid but after looking at the real problem data a grid wouldn't be feasible
-// e.g. the grid is nearly 4mil wide by 4mil tall which if I store at 1byte per cell is terabytes of data. haha no.
-// cell_type_t :: enum u8 {
-//     sensor = 'S',
-//     beacon = 'B',
-//     known_empty = '#',
-//     unknown = '.',
-// }
-//
-// grid_t :: struct {
-//     cells: []cell_type_t,
-//     width: int,
-//     height: int,
-//     origin: vec2,
-// }
-
 
 main :: proc() {
     simple_input_file_contents := string(#load("day15_simple.txt"))
@@ -81,18 +65,26 @@ read_sensor_data_from_line :: proc(line: string) -> sensor_data_t {
     libc.sscanf(line_cstr, "Sensor at x=%d, y=%d: closest beacon is at x=%d, y=%d",
         &sensor_x, &sensor_y, &beacon_x, &beacon_y)
 
-    return sensor_data_t {
-        vec2{ cast(int)sensor_x, cast(int)sensor_y, },
-        vec2{ cast(int)beacon_x, cast(int)beacon_y, },
-    }
+    sensor_pos := vec2{ cast(int)sensor_x, cast(int)sensor_y, }
+    beacon_pos := vec2{ cast(int)beacon_x, cast(int)beacon_y, }
+    manhattan_dist := calc_manhattan_dist(sensor_pos, beacon_pos)
+    return sensor_data_t { sensor_pos, beacon_pos, manhattan_dist, }
 }
 
 calc_row_non_beacon_scanned_spaces :: proc(sensor_readings: []sensor_data_t, row: int) -> uint {
     return 0
 }
 
+calc_manhattan_dist :: proc(v1, v2: vec2) -> int {
+    // manhattan distance is the "sum of the absolute differences of two points' cartesian coordinates"
+    xdelta := v1.x - v2.x
+    ydelta := v1.y - v2.y
+    return abs(xdelta) + abs(ydelta)
+}
+
 print_sensor_data :: proc(sensor_readings: []sensor_data_t) {
     for s,i in sensor_readings {
-        fmt.printf("{}: sensor@({},{}); beacon@({},{})\n", i, s.sensor_pos.x, s.sensor_pos.y, s.closest_beacon_pos.x, s.closest_beacon_pos.y)
+        fmt.printf("{}: sensor@({},{}); beacon@({},{}); dist={}\n",
+            i, s.sensor_pos.x, s.sensor_pos.y, s.closest_beacon_pos.x, s.closest_beacon_pos.y, s.manhattan_dist)
     }
 }
