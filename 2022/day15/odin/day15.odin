@@ -3,6 +3,7 @@ package main
 import "core:fmt"
 import "core:strings"
 import "core:strconv"
+import "core:c/libc"
 
 vec2 :: struct {
     x: int,
@@ -50,16 +51,48 @@ day15_solve :: proc(title: string, input_lines: []string, row: int) {
     context.allocator = context.temp_allocator
     defer free_all(context.temp_allocator)
 
-    sensor_readings := read_sensor_data_from_input(input_lines)
+    sensor_readings := read_sensor_data_from_lines(input_lines)
     non_beacon_scanned_spaces := calc_row_non_beacon_scanned_spaces(sensor_readings, row)
     fmt.printf("[{} pt1] non-beacon scanned spaces = {}\n", title, non_beacon_scanned_spaces)
+    fmt.println("DEBUG SENSOR READINGS:")
+    print_sensor_data(sensor_readings)
     fmt.printf("[{}] TODO: impl pt2\n", title)
 }
 
-read_sensor_data_from_input :: proc(input_lines: []string) -> []sensor_data_t {
-    return nil
+read_sensor_data_from_lines :: proc(input_lines: []string) -> []sensor_data_t {
+    sensor_readings := make([]sensor_data_t, len(input_lines))
+    for line,i in input_lines {
+        sensor_readings[i] = read_sensor_data_from_line(line)
+    }
+    return sensor_readings
+}
+
+read_sensor_data_from_line :: proc(line: string) -> sensor_data_t {
+    // FIXME: fuckkkkk I should really just write an sscanf wrapper that gives me back odin strings
+    line_cstr := strings.clone_to_cstring(line)
+
+    // N.B. odin's default int seems to be 64-bit. Passing that naively to sscanf across the FFI boundary seems to just
+    // fill the first 32-bits without any sign extension so negative numbers get messed up
+    sensor_x: i32
+    sensor_y: i32
+    beacon_x: i32
+    beacon_y: i32
+
+    libc.sscanf(line_cstr, "Sensor at x=%d, y=%d: closest beacon is at x=%d, y=%d",
+        &sensor_x, &sensor_y, &beacon_x, &beacon_y)
+
+    return sensor_data_t {
+        vec2{ cast(int)sensor_x, cast(int)sensor_y, },
+        vec2{ cast(int)beacon_x, cast(int)beacon_y, },
+    }
 }
 
 calc_row_non_beacon_scanned_spaces :: proc(sensor_readings: []sensor_data_t, row: int) -> uint {
     return 0
+}
+
+print_sensor_data :: proc(sensor_readings: []sensor_data_t) {
+    for s,i in sensor_readings {
+        fmt.printf("{}: sensor@({},{}); beacon@({},{})\n", i, s.sensor_pos.x, s.sensor_pos.y, s.closest_beacon_pos.x, s.closest_beacon_pos.y)
+    }
 }
