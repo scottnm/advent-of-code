@@ -26,7 +26,10 @@ main :: proc() {
     defer delete(real_input_lines)
 
     day15_solve("simple", simple_input_lines[:len(simple_input_lines)-1], 10)
-    // day15_solve("real", real_input_lines[:len(real_input_lines)-1])
+    fmt.println()
+    day15_solve("real", real_input_lines[:len(real_input_lines)-1], 2_000_000)
+
+
 }
 
 day15_solve :: proc(title: string, input_lines: []string, row: int) {
@@ -36,10 +39,10 @@ day15_solve :: proc(title: string, input_lines: []string, row: int) {
     defer free_all(context.temp_allocator)
 
     sensor_readings := read_sensor_data_from_lines(input_lines)
+    fmt.println("DEBUG SENSOR READINGS:")
+    print_sensor_data(sensor_readings, false)
     non_beacon_scanned_spaces := calc_row_non_beacon_scanned_spaces(sensor_readings, row)
     fmt.printf("[{} pt1] non-beacon scanned spaces = {}\n", title, non_beacon_scanned_spaces)
-    fmt.println("DEBUG SENSOR READINGS:")
-    print_sensor_data(sensor_readings)
     fmt.printf("[{}] TODO: impl pt2\n", title)
 }
 
@@ -72,7 +75,47 @@ read_sensor_data_from_line :: proc(line: string) -> sensor_data_t {
 }
 
 calc_row_non_beacon_scanned_spaces :: proc(sensor_readings: []sensor_data_t, row: int) -> uint {
-    return 0
+    // FIXME: a map of ints to ints is suboptimal. If I had more time to think about this I could make this likely
+    // much more performant by tracking these counts as an expanding array. The tricky part that I failed at the first
+    // time is being able to expand on both the left and right sides of the array. If this was C I'd just do some manually
+    // mallocs + memcpys and keep track of where the buffer starts and ends but here I'm not ready to jump to that
+
+    row_count_map := make(map[int]bool)
+
+    for s,i in sensor_readings {
+        max_dist := s.manhattan_dist
+
+        set_read_pos := false
+        start_scan_dist := calc_manhattan_dist(s.sensor_pos, vec2{s.sensor_pos.x, row})
+        for offset := 0;
+            (start_scan_dist + offset) <= max_dist;
+            offset += 1
+        {
+            set_read_pos = true
+            row_count_map[s.sensor_pos.x + offset] = true
+            row_count_map[s.sensor_pos.x - offset] = true
+        }
+
+        if set_read_pos {
+            // fmt.printf("sensor {} set read pos\n", i)
+        } else {
+            fmt.printf("sensor {} did NOT set read pos! max_dist was {} start_scan_dist was {}\n", i, max_dist, start_scan_dist)
+        }
+    }
+
+    fmt.println("Old row count", len(row_count_map))
+
+    // we need to ignore any beacons already registered in this row so delete their count values
+    for s in sensor_readings {
+        if s.closest_beacon_pos.y == row {
+            if s.closest_beacon_pos.x in row_count_map {
+                fmt.println("Deleting...", s.closest_beacon_pos.x)
+                delete_key(&row_count_map, s.closest_beacon_pos.x)
+            }
+        }
+    }
+
+    return len(row_count_map)
 }
 
 calc_manhattan_dist :: proc(v1, v2: vec2) -> int {
@@ -82,9 +125,23 @@ calc_manhattan_dist :: proc(v1, v2: vec2) -> int {
     return abs(xdelta) + abs(ydelta)
 }
 
-print_sensor_data :: proc(sensor_readings: []sensor_data_t) {
-    for s,i in sensor_readings {
-        fmt.printf("{}: sensor@({},{}); beacon@({},{}); dist={}\n",
-            i, s.sensor_pos.x, s.sensor_pos.y, s.closest_beacon_pos.x, s.closest_beacon_pos.y, s.manhattan_dist)
+print_sensor_data :: proc(sensor_readings: []sensor_data_t, original_format: bool = false) {
+    if (original_format) {
+        for s in sensor_readings {
+            fmt.printf("Sensor at x={}, y={}: closest beacon is at x={}, y={}\n",
+                s.sensor_pos.x, s.sensor_pos.y, s.closest_beacon_pos.x, s.closest_beacon_pos.y)
+        }
+    } else {
+        for s,i in sensor_readings {
+            can_reach_2mil := abs(s.sensor_pos.y - 2_000_000) <= s.manhattan_dist
+            fmt.printf("{}: sensor@({},{}); beacon@({},{}); dist={}; can reach 2mil: {}\n",
+                i,
+                s.sensor_pos.x,
+                s.sensor_pos.y,
+                s.closest_beacon_pos.x,
+                s.closest_beacon_pos.y,
+                s.manhattan_dist,
+                can_reach_2mil)
+        }
     }
 }
