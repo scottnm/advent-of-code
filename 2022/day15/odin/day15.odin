@@ -44,6 +44,8 @@ day15_solve :: proc(title: string, input_lines: []string, row: int) {
     sensor_readings := read_sensor_data_from_lines(input_lines)
     // FIXME: fmt.println("SENSOR READINGS [before]:")
     // FIXME: print_sensor_data(sensor_readings, false)
+
+    // FIXME: holy cow this is slow with the real data. I'd be surprised if this was purely caused by using a map. I should profile to see what's up.
     non_beacon_scanned_spaces := calc_row_non_beacon_scanned_spaces(sensor_readings, row)
     // FIXME: fmt.println("SENSOR READINGS [after]:")
     // FIXME: print_sensor_data(sensor_readings, false)
@@ -62,6 +64,7 @@ read_sensor_data_from_lines :: proc(input_lines: []string) -> []sensor_data_t {
 read_sensor_data_from_line :: proc(line: string) -> sensor_data_t {
     // FIXME: fuckkkkk I should really just write an sscanf wrapper that gives me back odin strings
     line_cstr := strings.clone_to_cstring(line)
+    defer delete(line_cstr)
 
     // N.B. odin's default int seems to be 64-bit. Passing that naively to sscanf across the FFI boundary seems to just
     // fill the first 32-bits without any sign extension so negative numbers get messed up
