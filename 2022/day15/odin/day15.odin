@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:strings"
 import "core:strconv"
 import "core:c/libc"
+import "core:testing"
 
 vec2 :: struct {
     x: int,
@@ -153,4 +154,9 @@ print_sensor_data :: proc(sensor_readings: []sensor_data_t, original_format: boo
                 can_reach_2mil)
         }
     }
+}
+
+@test
+odin_test_test :: proc(t: ^testing.T) {
+    testing.expect_value(t, false, true)
 }
