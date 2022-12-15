@@ -32,31 +32,37 @@ main :: proc() {
     real_input_lines := strings.split_lines(real_input_file_contents)
     defer delete(real_input_lines)
 
-    day15_solve("simple", simple_input_lines[:len(simple_input_lines)-1], 10)
+    day15_solve("simple", simple_input_lines[:len(simple_input_lines)-1], 10, {20,20})
     fmt.println()
-    day15_solve("real", real_input_lines[:len(real_input_lines)-1], 2_000_000)
-
-
+    day15_solve("real", real_input_lines[:len(real_input_lines)-1], 2_000_000, {4_000_000,4_000_000})
 }
 
-day15_solve :: proc(title: string, input_lines: []string, row: int) {
-    // FIXME: tack this onto the odin template
-    // set the main allocator to be the temp allocator and just free all memory at the end of this function
-
+day15_solve :: proc(title: string, input_lines: []string, pt1_row: int, grid_size: vec2) {
     // FIXME: WOOOOAHHHHHHH this seemed to be the main bug here. I guess I was exhausting all of the memory in the temp allocator.
     // I thinkt there's probably a lesson worth learning about the temp allocator which I don't quite want to think about just yet. Something something, you can't just assign the temp allocator and be on your way. You probably still need to periodically clean things up.
     // context.allocator = context.temp_allocator
     defer free_all(context.allocator)
 
     sensor_readings := read_sensor_data_from_lines(input_lines)
-    // FIXME: fmt.println("SENSOR READINGS [before]:")
-    // FIXME: print_sensor_data(sensor_readings, false)
+    coverage_spans_pt1 := build_row_sensor_coverage(sensor_readings, pt1_row)
+    defer delete(coverage_spans_pt1)
 
-    non_beacon_scanned_spaces := calc_row_non_beacon_scanned_spaces(sensor_readings, row)
-    // FIXME: fmt.println("SENSOR READINGS [after]:")
-    // FIXME: print_sensor_data(sensor_readings, false)
-    fmt.printf("[{} pt1] non-beacon scanned spaces = {}\n", title, non_beacon_scanned_spaces)
-    fmt.printf("[{}] TODO: impl pt2\n", title)
+    non_beacon_scanned_spaces_pt1 := calc_row_non_beacon_scanned_spaces(sensor_readings, pt1_row, coverage_spans_pt1)
+    fmt.printf("[{} pt1] non-beacon scanned spaces @ {} = {}\n", title, pt1_row, non_beacon_scanned_spaces_pt1)
+
+    for row in 0 ..= grid_size.y {
+        coverage_spans := build_row_sensor_coverage(sensor_readings, row)
+        defer delete(coverage_spans)
+
+        uncovered_cells := collect_uncovered_cells(coverage_spans, grid_size.x)
+        defer delete(uncovered_cells)
+
+        if len(uncovered_cells) == 1 {
+            uncovered_cell_pos := vec2{uncovered_cells[0], row}
+            frequency :=  uncovered_cell_pos.x * 4_000_000 + uncovered_cell_pos.y
+            fmt.printf("[{} pt2] frequent @ {},{} = {}\n", title, uncovered_cell_pos.x, uncovered_cell_pos.y, frequency)
+        }
+    }
 }
 
 read_sensor_data_from_lines :: proc(input_lines: []string) -> []sensor_data_t {
@@ -88,15 +94,46 @@ read_sensor_data_from_line :: proc(line: string) -> sensor_data_t {
     return sensor_data_t { sensor_pos, beacon_pos, manhattan_dist, }
 }
 
-calc_row_non_beacon_scanned_spaces :: proc(sensor_readings: []sensor_data_t, row: int) -> uint {
-    // FIXME: a map of ints to ints is suboptimal. If I had more time to think about this I could make this likely
-    // much more performant by tracking these counts as an expanding array. The tricky part that I failed at the first
-    // time is being able to expand on both the left and right sides of the array. If this was C I'd just do some manually
-    // mallocs + memcpys and keep track of where the buffer starts and ends but here I'm not ready to jump to that
+calc_row_non_beacon_scanned_spaces :: proc(sensor_readings: []sensor_data_t, row: int, coverage_spans: []row_span) -> uint {
+    // count all of the cells covered by coverage spans
+    cells_covered := 0
+    for span in coverage_spans {
+        cells_covered += (span.end - span.start + 1)
+    }
 
+    // discount all of the known beacons
+    row_beacon_map := make(map[int]bool)
+    for s in sensor_readings {
+        if s.closest_beacon_pos.y == row {
+            row_beacon_map[s.closest_beacon_pos.x] = true
+        }
+    }
+
+    cells_covered -= len(row_beacon_map)
+
+    return cast(uint)cells_covered
+}
+
+collect_uncovered_cells :: proc(coverage_spans: []row_span, grid_width: int) -> []int {
+    uncovered_cells := make([dynamic]int)
+
+    last_coverage_end := -1 // our grid starts at 0
+    for coverage_span in coverage_spans {
+        for i := last_coverage_end + 1; i < coverage_span.start; i += 1 {
+            append(&uncovered_cells, i)
+        }
+        last_coverage_end = coverage_span.end
+    }
+
+    for i := last_coverage_end + 1; i < grid_width; i += 1 {
+        append(&uncovered_cells, i)
+    }
+
+    return uncovered_cells[:]
+}
+
+build_row_sensor_coverage :: proc(sensor_readings: []sensor_data_t, row: int) -> []row_span {
     coverage_spans := make([dynamic]row_span)
-    defer delete(coverage_spans)
-    row_count_map := make(map[int]bool)
 
     for s in sensor_readings {
         max_dist := s.manhattan_dist
@@ -112,11 +149,6 @@ calc_row_non_beacon_scanned_spaces :: proc(sensor_readings: []sensor_data_t, row
     }
 
     // combine any overlapping sensor ranges
-
-    for i := 0; i < len(coverage_spans) - 1; i += 1 {
-        for j := i + 1; j < len(coverage_spans); j += 1 {
-        }
-    }
 
     next_source_span_index := 0
     for next_source_span_index < len(coverage_spans) {
@@ -143,23 +175,7 @@ calc_row_non_beacon_scanned_spaces :: proc(sensor_readings: []sensor_data_t, row
 
     sort.merge_sort_proc(coverage_spans[:], cmp_row_spans)
 
-    // count all of the cells covered by coverage spans
-    cells_covered := 0
-    for span in coverage_spans {
-        cells_covered += (span.end - span.start + 1)
-    }
-
-    // discount all of the known beacons
-    row_beacon_map := make(map[int]bool)
-    for s in sensor_readings {
-        if s.closest_beacon_pos.y == row {
-            row_beacon_map[s.closest_beacon_pos.x] = true
-        }
-    }
-
-    cells_covered -= len(row_beacon_map)
-
-    return cast(uint)cells_covered
+    return coverage_spans[:]
 }
 
 are_row_spans_mergable :: proc(v1, v2: row_span) -> bool {
