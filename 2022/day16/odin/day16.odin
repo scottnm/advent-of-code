@@ -155,7 +155,12 @@ find_max_possible_releasable_pressure_dfs_helper :: proc(
     current_valve, ok := valve_map[current_valve_name]
     assert(ok)
 
-    cumulative_pressures := make([dynamic]int, 0, 10)
+    pressure_data :: struct {
+        next: string,
+        value: int,
+    }
+
+    cumulative_pressures := make([dynamic]pressure_data, 0, 10)
     defer delete(cumulative_pressures)
 
     // Regardless of whether we open this valve or not, we still have to check what happens if we didn't open this
@@ -163,7 +168,7 @@ find_max_possible_releasable_pressure_dfs_helper :: proc(
     for dest_valve in current_valve.dest_valves {
         dest_max_pressure := find_max_possible_releasable_pressure_dfs_helper(
             dest_valve, valve_map, valves_open_map, valve_max_pressure_caches, min_remaining-1)
-        append(&cumulative_pressures, dest_max_pressure)
+        append(&cumulative_pressures, pressure_data{dest_valve, dest_max_pressure})
     }
 
     if (current_valve.flow_rate_ppm > 0 && !valves_open_map[current_valve_name]) {
@@ -175,16 +180,25 @@ find_max_possible_releasable_pressure_dfs_helper :: proc(
         for dest_valve in current_valve.dest_valves {
             dest_max_pressure := find_max_possible_releasable_pressure_dfs_helper(
                 dest_valve, valve_map, valves_open_map, valve_max_pressure_caches, min_remaining-2)
-            append(&cumulative_pressures, current_valve_cumulative_pressure + dest_max_pressure)
+            append(&cumulative_pressures, pressure_data{dest_valve, current_valve_cumulative_pressure + dest_max_pressure})
         }
+
         // reset the valve state afterwards
         valves_open_map[current_valve_name] = false
     }
 
     max_pressure := 0
+    max_name := ""
     for p in cumulative_pressures {
-        max_pressure = max(max_pressure, p)
+        if (max_pressure < p.value)
+        {
+            max_pressure = p.value
+            max_name = p.next
+        }
+        // FIXME: max_pressure = max(max_pressure, p)
     }
+    fmt.printf("max pressure from {} with %02d min remaining is {} by going to {}\n",
+        current_valve_name, min_remaining, max_pressure, max_name)
 
     valve_max_pressure_caches[current_valve_name][min_remaining] = max_pressure
     return max_pressure
