@@ -29,10 +29,12 @@ main :: proc() {
 day16_solve :: proc(title: string, input_lines: []string) {
     valve_map := read_valve_map_entries(input_lines)
     defer delete(valve_map)
+    // print_valve_entries("debug", valve_map)
 
-    print_valve_entries("debug", valve_map)
+    max_pressure := find_max_possible_releasable_pressure(valve_map, 30)
+    fmt.printf("[{} pt1] max pressure = {}\n", title, max_pressure)
 
-    fmt.printf("[{}] TODO: impl pt2\n", title)
+    // fmt.printf("[{}] TODO: impl pt2\n", title)
 }
 
 read_valve_map_entries :: proc(lines: []string) -> map[string]valve_data_t {
@@ -92,3 +94,10 @@ print_valve_entries :: proc(suffix: string, valve_map: map[string]valve_data_t) 
     }
 }
 
+find_max_possible_releasable_pressure :: proc(valve_map: map[string]valve_data_t, min_remaining: int) -> int {
+    return find_max_possible_releasable_pressure_dfs_helper("AA", valve_map, min_remaining)
+}
+
+find_max_possible_releasable_pressure_dfs_helper :: proc(current_valve: string, valve_map: map[string]valve_data_t, min_remaining: int) -> int {
+    return 0
+}
