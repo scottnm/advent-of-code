@@ -95,9 +95,56 @@ print_valve_entries :: proc(suffix: string, valve_map: map[string]valve_data_t) 
 }
 
 find_max_possible_releasable_pressure :: proc(valve_map: map[string]valve_data_t, min_remaining: int) -> int {
-    return find_max_possible_releasable_pressure_dfs_helper("AA", valve_map, min_remaining)
+    valves_open_map := make(map[string]bool)
+    defer delete(valves_open_map)
+
+    return find_max_possible_releasable_pressure_dfs_helper("AA", valve_map, valves_open_map, min_remaining)
 }
 
-find_max_possible_releasable_pressure_dfs_helper :: proc(current_valve: string, valve_map: map[string]valve_data_t, min_remaining: int) -> int {
-    return 0
+find_max_possible_releasable_pressure_dfs_helper :: proc(
+    current_valve_name: string,
+    valve_map: map[string]valve_data_t,
+    valves_open_map: map[string]bool,
+    min_remaining: int
+) -> int
+{
+    valves_open_map := valves_open_map // explicitly shadow the open_map to allow for mutation
+    if min_remaining <= 0 {
+        return 0
+    }
+
+    current_valve, ok := valve_map[current_valve_name]
+    assert(ok)
+
+    cumulative_pressures := make([dynamic]int, 0, 10)
+    defer delete(cumulative_pressures)
+
+    // Regardless of whether we open this valve or not, we still have to check what happens if we didn't open this
+    // valve and just moved on to one of the next valves. So calculate that unconditionally first
+    for dest_valve in current_valve.dest_valves {
+        cumulative_pressure := find_max_possible_releasable_pressure_dfs_helper(dest_valve, valve_map, valves_open_map, min_remaining-1)
+        append(&cumulative_pressures, cumulative_pressure)
+    }
+
+    if (current_valve.flow_rate_ppm > 0 && !valves_open_map[current_valve_name]) {
+        // if the valve wasn't open and has a flow rate, we also want to check what happens if we do open it.
+        valves_open_map[current_valve_name] = true
+
+        // It takes a minute to open the curent valve
+        current_valve_cumulative_pressure := (min_remaining-1)*current_valve.flow_rate_ppm
+        for dest_valve in current_valve.dest_valves {
+            cumulative_pressure := current_valve_cumulative_pressure +
+                find_max_possible_releasable_pressure_dfs_helper(dest_valve, valve_map, valves_open_map, min_remaining-2)
+            append(&cumulative_pressures, cumulative_pressure)
+        }
+        // reset the valve state afterwards
+        valves_open_map[current_valve_name] = false
+    }
+
+    max_pressure := 0
+    for p in cumulative_pressures {
+        max_pressure = max(max_pressure, p)
+    }
+
+    return max_pressure
 }
