@@ -98,13 +98,45 @@ find_max_possible_releasable_pressure :: proc(valve_map: map[string]valve_data_t
     valves_open_map := make(map[string]bool)
     defer delete(valves_open_map)
 
-    return find_max_possible_releasable_pressure_dfs_helper("AA", valve_map, valves_open_map, min_remaining)
+    valve_max_pressure_caches := make(map[string][]int)
+    defer delete(valve_max_pressure_caches)
+
+    for valve_name,_ in valve_map {
+        valves_open_map[valve_name] = false
+        cache := make([]int, min_remaining+1)
+        for i in 0 ..= min_remaining {
+            cache[i] = -1
+        }
+        valve_max_pressure_caches[valve_name] = cache
+    }
+
+    defer {
+        // FIXME: tmp
+        for valve_name,cache in valve_max_pressure_caches {
+            fmt.printf("[{} cache]:", valve_name)
+            for i in 0 ..= min(min_remaining,100) {
+                fmt.printf(" {}=%04d", i, cache[i])
+            }
+            fmt.print("\n")
+        }
+        for cache in valve_max_pressure_caches {
+            delete(cache)
+        }
+    }
+
+    return find_max_possible_releasable_pressure_dfs_helper(
+        "AA",
+        valve_map,
+        valves_open_map,
+        valve_max_pressure_caches,
+        min_remaining)
 }
 
 find_max_possible_releasable_pressure_dfs_helper :: proc(
     current_valve_name: string,
     valve_map: map[string]valve_data_t,
     valves_open_map: map[string]bool,
+    valve_max_pressure_caches: map[string][]int,
     min_remaining: int
 ) -> int
 {
@@ -112,6 +144,13 @@ find_max_possible_releasable_pressure_dfs_helper :: proc(
     if min_remaining <= 0 {
         return 0
     }
+
+    cached_valve_max_pressure := valve_max_pressure_caches[current_valve_name][min_remaining]
+    if cached_valve_max_pressure != -1 {
+        return cached_valve_max_pressure
+    }
+
+    valve_max_pressure_caches := valve_max_pressure_caches // explicit shadow to allow for mutation after this point
 
     current_valve, ok := valve_map[current_valve_name]
     assert(ok)
@@ -122,8 +161,9 @@ find_max_possible_releasable_pressure_dfs_helper :: proc(
     // Regardless of whether we open this valve or not, we still have to check what happens if we didn't open this
     // valve and just moved on to one of the next valves. So calculate that unconditionally first
     for dest_valve in current_valve.dest_valves {
-        cumulative_pressure := find_max_possible_releasable_pressure_dfs_helper(dest_valve, valve_map, valves_open_map, min_remaining-1)
-        append(&cumulative_pressures, cumulative_pressure)
+        dest_max_pressure := find_max_possible_releasable_pressure_dfs_helper(
+            dest_valve, valve_map, valves_open_map, valve_max_pressure_caches, min_remaining-1)
+        append(&cumulative_pressures, dest_max_pressure)
     }
 
     if (current_valve.flow_rate_ppm > 0 && !valves_open_map[current_valve_name]) {
@@ -133,9 +173,9 @@ find_max_possible_releasable_pressure_dfs_helper :: proc(
         // It takes a minute to open the curent valve
         current_valve_cumulative_pressure := (min_remaining-1)*current_valve.flow_rate_ppm
         for dest_valve in current_valve.dest_valves {
-            cumulative_pressure := current_valve_cumulative_pressure +
-                find_max_possible_releasable_pressure_dfs_helper(dest_valve, valve_map, valves_open_map, min_remaining-2)
-            append(&cumulative_pressures, cumulative_pressure)
+            dest_max_pressure := find_max_possible_releasable_pressure_dfs_helper(
+                dest_valve, valve_map, valves_open_map, valve_max_pressure_caches, min_remaining-2)
+            append(&cumulative_pressures, current_valve_cumulative_pressure + dest_max_pressure)
         }
         // reset the valve state afterwards
         valves_open_map[current_valve_name] = false
@@ -146,5 +186,6 @@ find_max_possible_releasable_pressure_dfs_helper :: proc(
         max_pressure = max(max_pressure, p)
     }
 
+    valve_max_pressure_caches[current_valve_name][min_remaining] = max_pressure
     return max_pressure
 }
