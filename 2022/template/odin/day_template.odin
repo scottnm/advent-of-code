@@ -14,16 +14,13 @@ main :: proc() {
     defer delete(real_input_lines)
 
     day_template_solve("simple", simple_input_lines[:len(simple_input_lines)-1])
-    day_template_solve("real", real_input_lines[:len(real_input_lines)-1])
+    // day_template_solve("real", real_input_lines[:len(real_input_lines)-1])
 }
 
 day_template_solve :: proc(title: string, input_lines: []string) {
-    fmt.printf("[{}] TODO: impl pt1\n", title)
-    fmt.printf("[{}] TODO: impl pt2\n", title)
-    // foo := parse_foo_from_input(input_lines)
-    // defer delete(foo)
-}
+    pt1_result := 0
+    pt2_result := 0
 
-// parse_foo_from_input :: proc(input_lines: []string) -> ^foo_t {
-//     return new(foo_t)
-// }
+    fmt.printf("[{} pt1] result = {}\n", title, pt1_result)
+    fmt.printf("[{} pt2] result = {}\n", title, pt2_result)
+}

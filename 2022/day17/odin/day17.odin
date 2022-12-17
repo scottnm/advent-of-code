@@ -29,10 +29,6 @@ rock_t :: enum {
                // ##
 }
 
-vec2 :: struct {
-    x, y: int,
-}
-
 main :: proc() {
     simple_input_file_contents := string(#load("day17_simple.txt"))
     simple_input_lines := strings.split_lines(simple_input_file_contents)
@@ -330,23 +326,3 @@ get_rock_cells :: proc(rock_pos: vec2, rock_type: rock_t) -> ([5]vec2, int) {
 //     )
 // {
 // }
-
-// FIXME: add this to odin common lib
-vec2_add :: proc(lhs: vec2, rhs: vec2) -> vec2 {
-    x := lhs.x + rhs.x
-    y := lhs.y + rhs.y
-    return vec2 {x,y}
-}
-
-vec2_sub :: proc(lhs: vec2, rhs: vec2) -> vec2 {
-    x := lhs.x - rhs.x
-    y := lhs.y - rhs.y
-    return vec2 {x,y}
-}
-
-vec2_in_bounds :: proc(v: vec2, lower_bound: vec2, upper_bound: vec2) -> bool {
-        return (v.x >= lower_bound.x) &&
-               (v.x < upper_bound.x) &&
-               (v.y >= lower_bound.y) &&
-               (v.y < upper_bound.y)
-}
