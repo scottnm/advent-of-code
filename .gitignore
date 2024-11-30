@@ -1,5 +1,7 @@
 # Rust
-**/target
+**/target/
+**/debug/
+Cargo.lock
 
 # C (clang linux)
 *.out
