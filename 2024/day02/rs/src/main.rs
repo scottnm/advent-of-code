@@ -33,7 +33,8 @@ fn read_report_data_from_input(filename: &str) -> Result<Vec<ReportData>, String
 fn is_report_data_safe(report_data: &[isize]) -> bool {
     // N.B. Should have already been validated when input was parsed.
     // FIXME: Maybe there's a more clever way to require the caller conform to this without making the function handle a potential error case.
-    assert!(report_data.len() >= 2);
+    // FIXME: maybe I don't even care here
+    // assert!(report_data.len() >= 2);
 
     let mut all_data_increasing: Option<bool> = None;
 
@@ -118,6 +119,33 @@ fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
     report_safe
 }
 
+fn is_dampened_report_data_safe_brute(report_data: &[isize]) -> bool {
+    // N.B. Should have already been validated when input was parsed.
+    // FIXME: Maybe there's a more clever way to require the caller conform to this without making the function handle a potential error case.
+    // assert!(report_data.len() >= 2);
+
+    if !is_report_data_safe(report_data) {
+        let mut tmpbuf = Vec::with_capacity(report_data.len());
+
+        for i in 0..report_data.len() {
+            tmpbuf.clear();
+            for j in 0..report_data.len() {
+                if j != i {
+                    tmpbuf.push(report_data[j]);
+                }
+            }
+
+            if is_report_data_safe(&tmpbuf) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    true
+}
+
 /*
 fn calculate_similarity_score(input_pairs: &[InputPair]) -> usize {
     let mut second_list_counts = std::collections::HashMap::<isize, usize>::new();
@@ -169,6 +197,22 @@ fn main() -> ExitCode {
     println!("--------------------------");
     println!("Safe report count: {}", adj_safe_report_count);
     println!("Unsafe report count: {}", reports.len() - adj_safe_report_count);
+    println!("");
+
+    let adj_safe_report_count: usize = reports.iter().filter(|r| is_dampened_report_data_safe_brute(&r)).count();
+    println!("DAMPENED BRUTE:");
+    println!("--------------------------");
+    println!("Safe report count: {}", adj_safe_report_count);
+    println!("Unsafe report count: {}", reports.len() - adj_safe_report_count);
+
+    for (i,report) in reports.iter().enumerate() {
+        let safe_res = is_dampened_report_data_safe(report);
+        let safe_res_brute = is_dampened_report_data_safe_brute(report);
+        if safe_res != safe_res_brute {
+            println!("Report {:02} safety results differed! Expected {}. Got {}.", i, safe_res_brute, safe_res);
+            println!("    report = {:#?}", report);
+        }
+    }
 
     /*
     let similarity_score = calculate_similarity_score(&input_pairs);
