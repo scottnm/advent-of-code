@@ -38,7 +38,7 @@ fn is_report_data_safe(report_data: &[isize]) -> bool {
     let mut all_data_increasing: Option<bool> = None;
 
     for i in 1..report_data.len() {
-        let diff = report_data[i - 1] - report_data[i];
+        let diff = report_data[i] - report_data[i - 1];
         let abs_diff = diff.abs();
         if abs_diff > 3 || 1 > abs_diff {
             return false;
@@ -53,6 +53,41 @@ fn is_report_data_safe(report_data: &[isize]) -> bool {
             }
         } else {
             all_data_increasing = Some(diff_increasing);
+        }
+    }
+
+    true
+}
+
+// FIXME: refactor to share this helper between two impls
+fn is_data_pair_safe(d1: isize, d2: isize, data_trend_increasing: Option<bool>) -> bool {
+    let diff = d2 - d1;
+    let abs_diff = diff.abs();
+    if abs_diff > 3 || 1 > abs_diff {
+        return false;
+    }
+    
+    let diff_increasing = diff > 0;
+    assert!(diff != 0);
+
+    data_trend_increasing.is_none() || data_trend_increasing == Some(diff_increasing)
+}
+
+fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
+    // N.B. Should have already been validated when input was parsed.
+    // FIXME: Maybe there's a more clever way to require the caller conform to this without making the function handle a potential error case.
+    assert!(report_data.len() >= 2);
+
+    let mut all_data_increasing: Option<bool> = None;
+
+    
+
+    for i in 1..report_data.len() {
+        if is_data_pair_safe(report_data[i - 1], report_data[i], all_data_increasing) {
+            all_data_increasing = Some(report_data[i] > report_data[i - 1]);
+        } else {
+            // FIXME: try with new dampener
+            return false;
         }
     }
 
@@ -99,8 +134,17 @@ fn main() -> ExitCode {
     };
 
     let safe_report_count: usize = reports.iter().filter(|r| is_report_data_safe(&r)).count();
+    println!("RAW:");
+    println!("--------------------------");
     println!("Safe report count: {}", safe_report_count);
     println!("Unsafe report count: {}", reports.len() - safe_report_count);
+    println!("");
+
+    let adj_safe_report_count: usize = reports.iter().filter(|r| is_dampened_report_data_safe(&r)).count();
+    println!("DAMPENED:");
+    println!("--------------------------");
+    println!("Safe report count: {}", adj_safe_report_count);
+    println!("Unsafe report count: {}", reports.len() - adj_safe_report_count);
 
     /*
     let similarity_score = calculate_similarity_score(&input_pairs);
