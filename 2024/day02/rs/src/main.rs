@@ -155,27 +155,6 @@ fn is_dampened_report_data_safe_brute(report_data: &[isize]) -> bool {
     true
 }
 
-/*
-fn calculate_similarity_score(input_pairs: &[InputPair]) -> usize {
-    let mut second_list_counts = std::collections::HashMap::<isize, usize>::new();
-    for (_, v2) in input_pairs {
-        if let Some(v) = second_list_counts.get_mut(v2) {
-            *v += 1;
-        } else {
-            second_list_counts.insert(*v2, 1);
-        }
-    }
-
-    let mut total_similarity_score = 0;
-    for (v1, _) in input_pairs.iter().cloned() {
-        let similarity_score = (v1 as usize) * second_list_counts.get(&v1).unwrap_or(&0);
-        total_similarity_score += similarity_score;
-    }
-
-    total_similarity_score
-}
-    */
-
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
