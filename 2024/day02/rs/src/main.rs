@@ -98,6 +98,10 @@ fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
                 all_data_increasing = Some(report_data[i + 1] > report_data[i - 1]);
                 i += 2;
                 has_skipped_report = true;
+            } else if i >= 2 && is_data_pair_safe(report_data[i - 2], report_data[i], all_data_increasing) {
+                all_data_increasing = Some(report_data[i] > report_data[i - 2]);
+                i += 1;
+                has_skipped_report = true;
             } else {
                 report_safe = false;
                 break;
