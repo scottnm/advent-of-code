@@ -3,6 +3,8 @@ use std::process::ExitCode;
 
 type InputPair = (isize, isize);
 
+type ReportData = Vec<isize>;
+
 fn read_input_pairs_from_file(filename: &str) -> Result<Vec<InputPair>, String> {
     let lines = input_helpers::read_lines(filename);
     let mut pairs: Vec<InputPair> = Vec::new();
