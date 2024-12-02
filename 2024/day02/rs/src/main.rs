@@ -1,56 +1,65 @@
 use input_helpers;
 use std::process::ExitCode;
 
-type InputPair = (isize, isize);
-
 type ReportData = Vec<isize>;
 
-fn read_input_pairs_from_file(filename: &str) -> Result<Vec<InputPair>, String> {
+fn read_report_data_from_input(filename: &str) -> Result<Vec<ReportData>, String> {
     let lines = input_helpers::read_lines(filename);
-    let mut pairs: Vec<InputPair> = Vec::new();
+    let mut reports: Vec<ReportData> = Vec::new();
     for line in lines {
         let values: Vec<&str> = line.split_ascii_whitespace().collect();
-        if values.len() != 2 {
+        if values.len() < 2 {
             return Err(format!(
-                "Invalid number of values on line. Expected 2 found {}. line={}",
+                "Invalid number of values on line. Expected at least 2 found {}. line={}",
                 values.len(),
                 line
             ));
         }
 
-        fn parse_pair_value(v: &str, line: &str) -> Result<isize, String> {
+        let mut report: ReportData = ReportData::new();
+        for v in values {
             match v.parse() {
-                Ok(value) => Ok(value),
-                Err(e) => Err(format!("Invalid value: {}! '{}' line={}", e, v, line)),
+                Ok(value) => report.push(value),
+                Err(e) => return Err(format!("Invalid value: {}! '{}' line={}", e, v, line)),
             }
         }
 
-        let v1 = parse_pair_value(values[0], &line)?;
-        let v2 = parse_pair_value(values[1], &line)?;
-        pairs.push((v1, v2));
+        reports.push(report);
     }
 
-    Ok(pairs)
+    Ok(reports)
 }
 
-fn calculate_total_input_pair_distance(input_pairs: &[InputPair]) -> usize {
-    let mut first_list: Vec<isize> = input_pairs.iter().map(|(v1, _)| *v1).collect();
-    first_list.sort();
-    let first_list = first_list;
+fn is_report_data_safe(report_data: &[isize]) -> bool {
+    // N.B. Should have already been validated when input was parsed.
+    // FIXME: Maybe there's a more clever way to require the caller conform to this without making the function handle a potential error case.
+    assert!(report_data.len() >= 2);
 
-    let mut second_list: Vec<isize> = input_pairs.iter().map(|(_, v2)| *v2).collect();
-    second_list.sort();
-    let second_list = second_list;
+    let mut all_data_increasing: Option<bool> = None;
 
-    let mut total_dist = 0;
-    for (v1, v2) in first_list.iter().zip(second_list.iter()) {
-        let dist = (v1 - v2).abs() as usize;
-        total_dist += dist;
+    for i in 1..report_data.len() {
+        let diff = report_data[i - 1] - report_data[i];
+        let abs_diff = diff.abs();
+        if abs_diff > 3 || 1 > abs_diff {
+            return false;
+        }
+        
+        let diff_increasing = diff > 0;
+        assert!(diff != 0);
+
+        if let Some(all_data_increasing) = all_data_increasing {
+            if all_data_increasing != diff_increasing {
+                return false;
+            }
+        } else {
+            all_data_increasing = Some(diff_increasing);
+        }
     }
 
-    total_dist
+    true
 }
 
+/*
 fn calculate_similarity_score(input_pairs: &[InputPair]) -> usize {
     let mut second_list_counts = std::collections::HashMap::<isize, usize>::new();
     for (_, v2) in input_pairs {
@@ -69,6 +78,7 @@ fn calculate_similarity_score(input_pairs: &[InputPair]) -> usize {
 
     total_similarity_score
 }
+    */
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -79,20 +89,23 @@ fn main() -> ExitCode {
 
     let filename: &str = &args[0];
 
-    let parse_result = read_input_pairs_from_file(filename);
-    let input_pairs = match parse_result {
-        Ok(parsed_pairs) => parsed_pairs,
+    let parse_result = read_report_data_from_input(filename);
+    let reports = match parse_result {
+        Ok(parsed_reports) => parsed_reports,
         Err(e) => {
             println!("Invalid input! {}", e);
             return ExitCode::FAILURE;
         }
     };
 
-    let total_distance = calculate_total_input_pair_distance(&input_pairs);
-    println!("Total distance: {}", total_distance);
+    let safe_report_count: usize = reports.iter().filter(|r| is_report_data_safe(&r)).count();
+    println!("Safe report count: {}", safe_report_count);
+    println!("Unsafe report count: {}", reports.len() - safe_report_count);
 
+    /*
     let similarity_score = calculate_similarity_score(&input_pairs);
     println!("Similarity score: {}", similarity_score);
+    */
 
     return ExitCode::SUCCESS;
 }
