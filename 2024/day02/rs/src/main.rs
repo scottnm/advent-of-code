@@ -65,28 +65,36 @@ fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
     let mut report_safe = true;
     let mut i = 1;
     while i < report_data.len() {
+        // if we're still safe keep moving
         if is_data_pair_safe(report_data[i - 1], report_data[i], all_data_increasing) {
             all_data_increasing = Some(report_data[i] > report_data[i - 1]);
             i += 1;
-        } else if !has_skipped_report {
+        } 
+        // if this data point would make us unsafe, try to dampen either the data point at position i or i - 1
+        else if !has_skipped_report {
             if i == report_data.len() - 1 {
                 // we can just remove the last data point and be safe
                 i += 2;
                 has_skipped_report = true;
             } else if is_data_pair_safe(report_data[i - 1], report_data[i + 1], all_data_increasing) {
-                // we can just skip the ith report and be safe
+                // we can just skip the ith data point and be safe
                 all_data_increasing = Some(report_data[i + 1] > report_data[i - 1]);
                 i += 2;
                 has_skipped_report = true;
-            } else if i > 2 && is_data_pair_safe(report_data[i - 2], report_data[i], all_data_increasing) {
+            } else if i == 2 && is_data_pair_safe(report_data[i - 2], report_data[i], None) {
+                // skip the 1st data point and be safe.
+                // N.B. if we're skipping the first data point we HAVE to re-calculate the all_data_increasing value
                 all_data_increasing = Some(report_data[i] > report_data[i - 2]);
                 i += 1;
                 has_skipped_report = true;
-            } else if i == 2 && is_data_pair_safe(report_data[i - 2], report_data[i], None) {
+            } else if i > 2 && is_data_pair_safe(report_data[i - 2], report_data[i], all_data_increasing) {
+                // skip the i-1th data point and be safe.
                 all_data_increasing = Some(report_data[i] > report_data[i - 2]);
                 i += 1;
                 has_skipped_report = true;
             } else {
+                // even after skipping all of our candidate data points we're still not safe so just mark the
+                // report as not safe and move on
                 report_safe = false;
                 break;
             }
@@ -101,7 +109,7 @@ fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
     // we might still be a safe report if we try dampening the first value. Special case this check to simplify loop logic above
     if !report_safe {
         if report_data.len() >= 3 {
-            report_safe = is_report_data_safe(&report_data[1..]) || is_report_data_safe(&report_data[..report_data.len()-1]);
+            report_safe = is_report_data_safe(&report_data[1..])
         }
     }
 
@@ -109,10 +117,15 @@ fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
 }
 
 fn is_dampened_report_data_safe_brute(report_data: &[isize]) -> bool {
+    // Check if our report data is safe without dampening
     if !is_report_data_safe(report_data) {
         let mut tmpbuf = Vec::with_capacity(report_data.len());
 
+        // Brute force. Iterate over the report data and try to check if removing each
+        // data point in isolation makes us safe.
         for i in 0..report_data.len() {
+            // Copy dampened report data to a tmp buffer to make reusing the is_report_data_safe
+            // helper easier
             tmpbuf.clear();
             for j in 0..report_data.len() {
                 if j != i {
