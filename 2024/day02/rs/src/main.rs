@@ -78,20 +78,44 @@ fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
     // FIXME: Maybe there's a more clever way to require the caller conform to this without making the function handle a potential error case.
     assert!(report_data.len() >= 2);
 
+    let mut has_skipped_report = false;
     let mut all_data_increasing: Option<bool> = None;
 
-    
-
-    for i in 1..report_data.len() {
+    let mut report_safe = true;
+    let mut i = 1;
+    while i < report_data.len() {
         if is_data_pair_safe(report_data[i - 1], report_data[i], all_data_increasing) {
             all_data_increasing = Some(report_data[i] > report_data[i - 1]);
+            i += 1;
+        } else if !has_skipped_report {
+            if i == report_data.len() - 1 {
+                // we can just remove the last data point and be safe
+                i += 1;
+                has_skipped_report = true;
+            } else if is_data_pair_safe(report_data[i - 1], report_data[i + 1], all_data_increasing) {
+                // we can just skip the ith report and be safe
+                i += 1;
+                has_skipped_report = true;
+            } else {
+                report_safe = false;
+                break;
+            }
         } else {
-            // FIXME: try with new dampener
-            return false;
+            // N.B. we've already skipped one report which was unsafe. Another unsafe report means this report can't be dampened to safety.
+            report_safe = false;
+            break;
         }
     }
 
-    true
+    // N.B. if the report isn't safe after attempting to dampen any of the values AFTER the first value,
+    // we might still be a safe report if we try dampening the first value. Special case this check to simplify loop logic above
+    if !report_safe {
+        if report_data.len() >= 3 {
+            report_safe = is_report_data_safe(&report_data[1..]) || is_report_data_safe(&report_data[..report_data.len()-1]);
+        }
+    }
+
+    report_safe
 }
 
 /*
