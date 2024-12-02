@@ -205,10 +205,5 @@ fn main() -> ExitCode {
         }
     }
 
-    /*
-    let similarity_score = calculate_similarity_score(&input_pairs);
-    println!("Similarity score: {}", similarity_score);
-    */
-
     return ExitCode::SUCCESS;
 }
