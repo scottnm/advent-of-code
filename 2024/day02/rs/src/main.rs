@@ -173,22 +173,25 @@ fn main() -> ExitCode {
         }
     };
 
+    let raw_start_time = std::time::Instant::now();
     let safe_report_count: usize = reports.iter().filter(|r| is_report_data_safe(&r)).count();
-    println!("RAW:");
+    println!("RAW: ({:0.06}s)", raw_start_time.elapsed().as_secs_f64());
     println!("--------------------------");
     println!("Safe report count: {}", safe_report_count);
     println!("Unsafe report count: {}", reports.len() - safe_report_count);
     println!("");
 
+    let dampened_start_time = std::time::Instant::now();
     let adj_safe_report_count: usize = reports.iter().filter(|r| is_dampened_report_data_safe(&r)).count();
-    println!("DAMPENED:");
+    println!("DAMPENED: ({:0.06}s)", dampened_start_time.elapsed().as_secs_f64());
     println!("--------------------------");
     println!("Safe report count: {}", adj_safe_report_count);
     println!("Unsafe report count: {}", reports.len() - adj_safe_report_count);
     println!("");
 
+    let dampened_brute_start_time = std::time::Instant::now();
     let adj_safe_report_count: usize = reports.iter().filter(|r| is_dampened_report_data_safe_brute(&r)).count();
-    println!("DAMPENED BRUTE:");
+    println!("DAMPENED BRUTE: ({:0.06}s)", dampened_brute_start_time.elapsed().as_secs_f64());
     println!("--------------------------");
     println!("Safe report count: {}", adj_safe_report_count);
     println!("Unsafe report count: {}", reports.len() - adj_safe_report_count);
