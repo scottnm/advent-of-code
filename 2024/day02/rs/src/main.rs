@@ -36,13 +36,12 @@ fn is_data_pair_safe(d1: isize, d2: isize, data_trend_increasing: Option<bool>) 
     if abs_diff > 3 || 1 > abs_diff {
         return false;
     }
-    
+
     let diff_increasing = diff > 0;
     assert!(diff != 0);
 
     data_trend_increasing.is_none() || data_trend_increasing == Some(diff_increasing)
 }
-
 
 fn is_report_data_safe(report_data: &[isize]) -> bool {
     let mut all_data_increasing: Option<bool> = None;
@@ -69,14 +68,15 @@ fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
         if is_data_pair_safe(report_data[i - 1], report_data[i], all_data_increasing) {
             all_data_increasing = Some(report_data[i] > report_data[i - 1]);
             i += 1;
-        } 
+        }
         // if this data point would make us unsafe, try to dampen either the data point at position i or i - 1
         else if !has_skipped_report {
             if i == report_data.len() - 1 {
                 // we can just remove the last data point and be safe
                 i += 2;
                 has_skipped_report = true;
-            } else if is_data_pair_safe(report_data[i - 1], report_data[i + 1], all_data_increasing) {
+            } else if is_data_pair_safe(report_data[i - 1], report_data[i + 1], all_data_increasing)
+            {
                 // we can just skip the ith data point and be safe
                 all_data_increasing = Some(report_data[i + 1] > report_data[i - 1]);
                 i += 2;
@@ -87,7 +87,9 @@ fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
                 all_data_increasing = Some(report_data[i] > report_data[i - 2]);
                 i += 1;
                 has_skipped_report = true;
-            } else if i > 2 && is_data_pair_safe(report_data[i - 2], report_data[i], all_data_increasing) {
+            } else if i > 2
+                && is_data_pair_safe(report_data[i - 2], report_data[i], all_data_increasing)
+            {
                 // skip the i-1th data point and be safe.
                 all_data_increasing = Some(report_data[i] > report_data[i - 2]);
                 i += 1;
@@ -164,32 +166,50 @@ fn main() -> ExitCode {
 
     let raw_start_time = std::time::Instant::now();
     let safe_report_count: usize = reports.iter().filter(|r| is_report_data_safe(&r)).count();
+    let unsafe_report_count = reports.len() - safe_report_count;
     println!("RAW: ({:0.06}s)", raw_start_time.elapsed().as_secs_f64());
     println!("--------------------------");
     println!("Safe report count: {}", safe_report_count);
-    println!("Unsafe report count: {}", reports.len() - safe_report_count);
+    println!("Unsafe report count: {}", unsafe_report_count);
     println!("");
 
     let dampened_start_time = std::time::Instant::now();
-    let adj_safe_report_count: usize = reports.iter().filter(|r| is_dampened_report_data_safe(&r)).count();
-    println!("DAMPENED: ({:0.06}s)", dampened_start_time.elapsed().as_secs_f64());
+    let adj_safe_report_count: usize = reports
+        .iter()
+        .filter(|r| is_dampened_report_data_safe(&r))
+        .count();
+    let adj_unsafe_report_count = reports.len() - adj_safe_report_count;
+    println!(
+        "DAMPENED: ({:0.06}s)",
+        dampened_start_time.elapsed().as_secs_f64()
+    );
     println!("--------------------------");
     println!("Safe report count: {}", adj_safe_report_count);
-    println!("Unsafe report count: {}", reports.len() - adj_safe_report_count);
+    println!("Unsafe report count: {}", adj_unsafe_report_count);
     println!("");
 
     let dampened_brute_start_time = std::time::Instant::now();
-    let adj_safe_report_count: usize = reports.iter().filter(|r| is_dampened_report_data_safe_brute(&r)).count();
-    println!("DAMPENED BRUTE: ({:0.06}s)", dampened_brute_start_time.elapsed().as_secs_f64());
+    let adj_safe_report_count: usize = reports
+        .iter()
+        .filter(|r| is_dampened_report_data_safe_brute(&r))
+        .count();
+    let adj_unsafe_report_count = reports.len() - adj_safe_report_count;
+    println!(
+        "DAMPENED BRUTE: ({:0.06}s)",
+        dampened_brute_start_time.elapsed().as_secs_f64()
+    );
     println!("--------------------------");
     println!("Safe report count: {}", adj_safe_report_count);
-    println!("Unsafe report count: {}", reports.len() - adj_safe_report_count);
+    println!("Unsafe report count: {}", adj_unsafe_report_count);
 
-    for (i,report) in reports.iter().enumerate() {
+    for (i, report) in reports.iter().enumerate() {
         let safe_res = is_dampened_report_data_safe(report);
         let safe_res_brute = is_dampened_report_data_safe_brute(report);
         if safe_res != safe_res_brute {
-            println!("Report {:02} safety results differed! Expected {}. Got {}.", i, safe_res_brute, safe_res);
+            println!(
+                "Report {:02} safety results differed! Expected {}. Got {}.",
+                i, safe_res_brute, safe_res
+            );
             println!("    report = {:#?}", report);
         }
     }
