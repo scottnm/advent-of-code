@@ -95,6 +95,7 @@ fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
                 has_skipped_report = true;
             } else if is_data_pair_safe(report_data[i - 1], report_data[i + 1], all_data_increasing) {
                 // we can just skip the ith report and be safe
+                all_data_increasing = Some(report_data[i + 1] > report_data[i - 1]);
                 i += 2;
                 has_skipped_report = true;
             } else {
