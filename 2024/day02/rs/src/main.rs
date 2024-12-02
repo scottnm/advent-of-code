@@ -30,37 +30,6 @@ fn read_report_data_from_input(filename: &str) -> Result<Vec<ReportData>, String
     Ok(reports)
 }
 
-fn is_report_data_safe(report_data: &[isize]) -> bool {
-    // N.B. Should have already been validated when input was parsed.
-    // FIXME: Maybe there's a more clever way to require the caller conform to this without making the function handle a potential error case.
-    // FIXME: maybe I don't even care here
-    // assert!(report_data.len() >= 2);
-
-    let mut all_data_increasing: Option<bool> = None;
-
-    for i in 1..report_data.len() {
-        let diff = report_data[i] - report_data[i - 1];
-        let abs_diff = diff.abs();
-        if abs_diff > 3 || 1 > abs_diff {
-            return false;
-        }
-        
-        let diff_increasing = diff > 0;
-        assert!(diff != 0);
-
-        if let Some(all_data_increasing) = all_data_increasing {
-            if all_data_increasing != diff_increasing {
-                return false;
-            }
-        } else {
-            all_data_increasing = Some(diff_increasing);
-        }
-    }
-
-    true
-}
-
-// FIXME: refactor to share this helper between two impls
 fn is_data_pair_safe(d1: isize, d2: isize, data_trend_increasing: Option<bool>) -> bool {
     let diff = d2 - d1;
     let abs_diff = diff.abs();
@@ -74,11 +43,22 @@ fn is_data_pair_safe(d1: isize, d2: isize, data_trend_increasing: Option<bool>) 
     data_trend_increasing.is_none() || data_trend_increasing == Some(diff_increasing)
 }
 
-fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
-    // N.B. Should have already been validated when input was parsed.
-    // FIXME: Maybe there's a more clever way to require the caller conform to this without making the function handle a potential error case.
-    assert!(report_data.len() >= 2);
 
+fn is_report_data_safe(report_data: &[isize]) -> bool {
+    let mut all_data_increasing: Option<bool> = None;
+
+    for i in 1..report_data.len() {
+        if is_data_pair_safe(report_data[i - 1], report_data[i], all_data_increasing) {
+            all_data_increasing = Some(report_data[i] > report_data[i - 1]);
+        } else {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
     let mut has_skipped_report = false;
     let mut all_data_increasing: Option<bool> = None;
 
@@ -129,10 +109,6 @@ fn is_dampened_report_data_safe(report_data: &[isize]) -> bool {
 }
 
 fn is_dampened_report_data_safe_brute(report_data: &[isize]) -> bool {
-    // N.B. Should have already been validated when input was parsed.
-    // FIXME: Maybe there's a more clever way to require the caller conform to this without making the function handle a potential error case.
-    // assert!(report_data.len() >= 2);
-
     if !is_report_data_safe(report_data) {
         let mut tmpbuf = Vec::with_capacity(report_data.len());
 
