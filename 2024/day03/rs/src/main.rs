@@ -1,22 +1,13 @@
 use input_helpers;
-use std::{io::Read, process::ExitCode};
+use std::process::ExitCode;
 
 type MemoryLine = String;
 
 type MulOp = (isize, isize);
 
 fn read_memory_line(filename: &str) -> Result<MemoryLine, String> {
-    let mut memory_line = String::new();
-
-    // let lines = input_helpers::read_lines(filename);
-    // for line in lines {
-    //     memory_line.push_str(&line);
-    // }
-
-    let mut file = std::fs::File::open(filename).unwrap();
-    let res = file.read_to_string(&mut memory_line);
-    match res {
-        Ok(_) => Ok(memory_line),
+    match input_helpers::read_file_to_string(filename) {
+        Ok(data) => Ok(data),
         Err(e) => Err(format!("Failed to read file! {}", e)),
     }
 }
