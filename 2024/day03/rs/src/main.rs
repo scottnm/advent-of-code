@@ -53,6 +53,8 @@ fn main() -> ExitCode {
         }
     };
 
+    let start_time = std::time::Instant::now();
+
     let mul_ops = extract_mul_ops(&memory_line);
     let mul_sum = mul_ops.iter().map(|mul_op| mul_op.0 * mul_op.1).fold(0, |acc, v| acc + v);
     // for mul_op in mul_ops.iter() {
@@ -68,5 +70,6 @@ fn main() -> ExitCode {
     // }
     println!("= {} [filtered]", filtered_mul_sum);
 
+    println!("TIME: ({:0.06}s)", start_time.elapsed().as_secs_f64());
     return ExitCode::SUCCESS;
 }
