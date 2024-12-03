@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::Read;
 use std::path::Path;
 
 pub struct Lines {
@@ -24,6 +25,17 @@ where
     let file = File::open(file_name).unwrap();
     Lines {
         lines: BufReader::new(file).lines(),
+    }
+}
+
+pub fn read_file_to_string<P>(file_name: P) -> Result<String, std::io::Error>
+where
+    P: AsRef<Path>,
+{
+    let mut file_data = String::new();
+    match File::open(file_name)?.read_to_string(&mut file_data) {
+        Ok(_) => Ok(file_data),
+        Err(e) => Err(e), 
     }
 }
 
