@@ -3,7 +3,13 @@ use std::process::ExitCode;
 
 type MemoryLine = String;
 
-type MulOp = (isize, isize);
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum ProcessorState {
+    OpsEnabled,
+    OpsDisabled
+}
+
+type MulOp = (isize, isize, ProcessorState);
 
 fn read_memory_line(filename: &str) -> Result<MemoryLine, String> {
     match input_helpers::read_file_to_string(filename) {
@@ -12,25 +18,20 @@ fn read_memory_line(filename: &str) -> Result<MemoryLine, String> {
     }
 }
 
-fn filter_out_disabled_ops(memory_line: &str) -> String {
-    let mut filtered_memory_line = String::new();
-    let dont_splits: Vec<&str> = memory_line.split("don't").collect();
-    if !dont_splits.is_empty() {
-        filtered_memory_line.push_str(dont_splits[0]);
-    }
-    for dont_chunk in dont_splits.iter().skip(1) {
-        if let Some(do_chunk_index) = dont_chunk.find("do") {
-            filtered_memory_line.push_str(&dont_chunk[do_chunk_index..]);
-        }
-    }
-    filtered_memory_line
-}
-
 fn extract_mul_ops(memory_line: &str) -> Vec<MulOp> {
-    let re = regex::Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap();
+    let re = regex::Regex::new(r"(don't)|(do)|(mul\((\d{1,3}),(\d{1,3})\))").unwrap();
     let mut results: Vec<MulOp> = vec![];
-    for (_, [op1, op2]) in re.captures_iter(memory_line).map(|c| c.extract()) {
-        results.push((op1.parse().unwrap(), op2.parse().unwrap()))
+    let mut processor_state = ProcessorState::OpsEnabled;
+    for caps in re.captures_iter(memory_line) {
+        if caps.get(1).is_some() /* don't capture group */ {
+            processor_state = ProcessorState::OpsDisabled;
+        } else if caps.get(2).is_some() /* do capture group */ {
+            processor_state = ProcessorState::OpsEnabled;
+        } else {
+            let op1: isize = caps.get(4).unwrap().as_str().parse().unwrap();
+            let op2: isize = caps.get(5).unwrap().as_str().parse().unwrap();
+            results.push((op1, op2, processor_state));
+        }
     }
     results
 }
@@ -56,18 +57,20 @@ fn main() -> ExitCode {
     let start_time = std::time::Instant::now();
 
     let mul_ops = extract_mul_ops(&memory_line);
-    let mul_sum = mul_ops.iter().map(|mul_op| mul_op.0 * mul_op.1).fold(0, |acc, v| acc + v);
+    println!("EXTRACT TIME: ({:0.06}s)", start_time.elapsed().as_secs_f64());
+
     // for mul_op in mul_ops.iter() {
     //     println!("+ ({} * {})", mul_op.0, mul_op.1)
     // }
+    let mul_sum = mul_ops.iter().map(|mul_op| mul_op.0 * mul_op.1).fold(0, |acc, v| acc + v);
     println!("= {} [unfiltered]", mul_sum);
 
-    let filtered_memory_line = filter_out_disabled_ops(&memory_line);
-    let filtered_mul_ops = extract_mul_ops(&filtered_memory_line);
-    let filtered_mul_sum = filtered_mul_ops.iter().map(|mul_op| mul_op.0 * mul_op.1).fold(0, |acc, v| acc + v);
-    // for mul_op in filtered_mul_ops.iter() {
-    //     println!("+ ({} * {})", mul_op.0, mul_op.1)
+    // for mul_op in mul_ops.iter() {
+    //     if mul_op.2 == ProcessorState::OpsEnabled {
+    //         println!("+ ({} * {})", mul_op.0, mul_op.1)
+    //     }
     // }
+    let filtered_mul_sum = mul_ops.iter().filter(|mul_op| mul_op.2 == ProcessorState::OpsEnabled).map(|mul_op| mul_op.0 * mul_op.1).fold(0, |acc, v| acc + v);
     println!("= {} [filtered]", filtered_mul_sum);
 
     println!("TIME: ({:0.06}s)", start_time.elapsed().as_secs_f64());
