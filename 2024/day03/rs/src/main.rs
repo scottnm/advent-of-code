@@ -6,7 +6,7 @@ type MemoryLine = String;
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum ProcessorState {
     OpsEnabled,
-    OpsDisabled
+    OpsDisabled,
 }
 
 type MulOp = (isize, isize, ProcessorState);
@@ -23,11 +23,16 @@ fn extract_mul_ops(memory_line: &str) -> Vec<MulOp> {
     let mut results: Vec<MulOp> = vec![];
     let mut processor_state = ProcessorState::OpsEnabled;
     for caps in re.captures_iter(memory_line) {
-        if caps.get(1).is_some() /* don't capture group */ {
+        // "don't" capture group
+        if caps.get(1).is_some() {
             processor_state = ProcessorState::OpsDisabled;
-        } else if caps.get(2).is_some() /* do capture group */ {
+        }
+        // "do" capture group
+        else if caps.get(2).is_some() {
             processor_state = ProcessorState::OpsEnabled;
-        } else {
+        }
+        // "mul(X,Y)" capture group
+        else {
             let op1: isize = caps.get(4).unwrap().as_str().parse().unwrap();
             let op2: isize = caps.get(5).unwrap().as_str().parse().unwrap();
             results.push((op1, op2, processor_state));
@@ -57,12 +62,18 @@ fn main() -> ExitCode {
     let start_time = std::time::Instant::now();
 
     let mul_ops = extract_mul_ops(&memory_line);
-    println!("EXTRACT TIME: ({:0.06}s)", start_time.elapsed().as_secs_f64());
+    println!(
+        "EXTRACT TIME: ({:0.06}s)",
+        start_time.elapsed().as_secs_f64()
+    );
 
     // for mul_op in mul_ops.iter() {
     //     println!("+ ({} * {})", mul_op.0, mul_op.1)
     // }
-    let mul_sum = mul_ops.iter().map(|mul_op| mul_op.0 * mul_op.1).fold(0, |acc, v| acc + v);
+    let mul_sum = mul_ops
+        .iter()
+        .map(|mul_op| mul_op.0 * mul_op.1)
+        .fold(0, |acc, v| acc + v);
     println!("= {} [unfiltered]", mul_sum);
 
     // for mul_op in mul_ops.iter() {
@@ -70,7 +81,11 @@ fn main() -> ExitCode {
     //         println!("+ ({} * {})", mul_op.0, mul_op.1)
     //     }
     // }
-    let filtered_mul_sum = mul_ops.iter().filter(|mul_op| mul_op.2 == ProcessorState::OpsEnabled).map(|mul_op| mul_op.0 * mul_op.1).fold(0, |acc, v| acc + v);
+    let filtered_mul_sum = mul_ops
+        .iter()
+        .filter(|mul_op| mul_op.2 == ProcessorState::OpsEnabled)
+        .map(|mul_op| mul_op.0 * mul_op.1)
+        .fold(0, |acc, v| acc + v);
     println!("= {} [filtered]", filtered_mul_sum);
 
     println!("TIME: ({:0.06}s)", start_time.elapsed().as_secs_f64());
