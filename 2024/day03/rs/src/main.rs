@@ -19,27 +19,18 @@ fn read_memory_line(filename: &str) -> Result<MemoryLine, String> {
 }
 
 fn extract_mul_ops(memory_line: &str) -> Vec<MulOp> {
-    let re = regex::Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap();
+    let re = regex::Regex::new(r"(don't)|(do)|(mul\((\d{1,3}),(\d{1,3})\))").unwrap();
     let mut results: Vec<MulOp> = vec![];
-    
-    fn extract_mul_ops_chunk(re: &regex::Regex, chunk: &str, processor_state: ProcessorState, ops_list: &mut Vec<MulOp>) {
-        for (_, [op1_cap, op2_cap]) in re.captures_iter(chunk).map(|c| c.extract()) {
-            let op1: isize = op1_cap.parse().unwrap();
-            let op2: isize = op2_cap.parse().unwrap();
-            ops_list.push((op1, op2, processor_state))
-        }
-    }
-
-    let dont_splits: Vec<&str> = memory_line.split("don't").collect();
-    if !dont_splits.is_empty() {
-        extract_mul_ops_chunk(&re, dont_splits[0], ProcessorState::OpsEnabled, &mut results);
-    }
-    for dont_chunk in dont_splits.iter().skip(1) {
-        if let Some(do_chunk_index) = dont_chunk.find("do") {
-            extract_mul_ops_chunk(&re, &dont_chunk[..do_chunk_index], ProcessorState::OpsDisabled, &mut results);
-            extract_mul_ops_chunk(&re, &dont_chunk[do_chunk_index..], ProcessorState::OpsEnabled, &mut results);
+    let mut processor_state = ProcessorState::OpsEnabled;
+    for caps in re.captures_iter(memory_line) {
+        if caps.get(1).is_some() /* don't capture group */ {
+            processor_state = ProcessorState::OpsDisabled;
+        } else if caps.get(2).is_some() /* do capture group */ {
+            processor_state = ProcessorState::OpsEnabled;
         } else {
-            extract_mul_ops_chunk(&re, &dont_chunk, ProcessorState::OpsDisabled, &mut results);
+            let op1: isize = caps.get(4).unwrap().as_str().parse().unwrap();
+            let op2: isize = caps.get(5).unwrap().as_str().parse().unwrap();
+            results.push((op1, op2, processor_state));
         }
     }
     results
