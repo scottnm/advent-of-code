@@ -21,8 +21,21 @@ fn read_memory_line(filename: &str) -> Result<MemoryLine, String> {
     }
 }
 
+fn filter_out_disabled_ops(memory_line: &str) -> String {
+    let mut filtered_memory_line = String::new();
+    let dont_splits: Vec<&str> = memory_line.split("don't").collect();
+    if !dont_splits.is_empty() {
+        filtered_memory_line.push_str(dont_splits[0]);
+    }
+    for dont_chunk in dont_splits.iter().skip(1) {
+        if let Some(do_chunk_index) = dont_chunk.find("do") {
+            filtered_memory_line.push_str(&dont_chunk[do_chunk_index..]);
+        }
+    }
+    filtered_memory_line
+}
+
 fn extract_mul_ops(memory_line: &str) -> Vec<MulOp> {
-    
     let re = regex::Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap();
     let mut results: Vec<MulOp> = vec![];
     for (_, [op1, op2]) in re.captures_iter(memory_line).map(|c| c.extract()) {
@@ -51,10 +64,18 @@ fn main() -> ExitCode {
 
     let mul_ops = extract_mul_ops(&memory_line);
     let mul_sum = mul_ops.iter().map(|mul_op| mul_op.0 * mul_op.1).fold(0, |acc, v| acc + v);
-    for mul_op in mul_ops.iter() {
-        println!("+ ({} * {})", mul_op.0, mul_op.1)
-    }
-    println!("= {}", mul_sum);
+    // for mul_op in mul_ops.iter() {
+    //     println!("+ ({} * {})", mul_op.0, mul_op.1)
+    // }
+    println!("= {} [unfiltered]", mul_sum);
+
+    let filtered_memory_line = filter_out_disabled_ops(&memory_line);
+    let filtered_mul_ops = extract_mul_ops(&filtered_memory_line);
+    let filtered_mul_sum = filtered_mul_ops.iter().map(|mul_op| mul_op.0 * mul_op.1).fold(0, |acc, v| acc + v);
+    // for mul_op in filtered_mul_ops.iter() {
+    //     println!("+ ({} * {})", mul_op.0, mul_op.1)
+    // }
+    println!("= {} [filtered]", filtered_mul_sum);
 
     return ExitCode::SUCCESS;
 }
