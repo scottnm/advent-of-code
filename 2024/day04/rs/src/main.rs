@@ -1,14 +1,6 @@
 use input_helpers;
 use std::process::ExitCode;
 
-type MemoryLine = String;
-
-#[derive(PartialEq, Eq, Clone, Copy)]
-enum ProcessorState {
-    OpsEnabled,
-    OpsDisabled,
-}
-
 enum Direction {
     N,
     NE,
@@ -20,8 +12,16 @@ enum Direction {
     NW,
 }
 
-struct AnswerEntry {
-    start_pos: (isize, isize),
+#[derive(Clone, Copy)]
+struct GridPos {
+    row: usize,
+    col: usize,
+}
+
+struct WordSearchSolution {
+    #[allow(dead_code)] // FIXME: not using these fields yet
+    start_pos: GridPos,
+    #[allow(dead_code)] // FIXME: not using these fields yet
     dir: Direction,
 }
 
@@ -31,43 +31,152 @@ struct Grid {
     cells: Vec<char>,
 }
 
-type MulOp = (isize, isize, ProcessorState);
+impl Grid {
+    fn get_cell(&self, row: usize, col: usize) -> char {
+        assert!(row < self.height);
+        assert!(col < self.width);
+        self.cells[(row * self.width) + col]
+    }
+}
 
 fn read_grid(filename: &str) -> Result<Grid, String> {
-    let lines = input_helpers::read_lines(filename);
-    let mut width: Option<usize> = None;
-    let mut height = 0;
+    let lines: Vec<String> = input_helpers::read_lines(filename).collect();
+
+    if lines.len() == 0 {
+        return Ok(Grid{width: 0, height: 0, cells: vec![]});
+    }
+    
+    let height = lines.len();
+    let width = lines[0].len();
 
     let mut cells: Vec<char> = vec![];
     for line in lines {
-        println!("line: {} {}", line, line.len());
-        height += 1;
+        if line.len() != width {
+            return Err(format!("Grid must have consistent line widths! Expected {} found {}", width, line.len()));
+        }
+
+        for c in line.chars() {
+            cells.push(c);
+        }
     }
 
-    Err(format!("Test123"))
+    Ok(Grid{width: width, height: height, cells: cells})
 }
 
-fn extract_mul_ops(memory_line: &str) -> Vec<MulOp> {
-    let re = regex::Regex::new(r"(don't)|(do)|(mul\((\d{1,3}),(\d{1,3})\))").unwrap();
-    let mut results: Vec<MulOp> = vec![];
-    let mut processor_state = ProcessorState::OpsEnabled;
-    for caps in re.captures_iter(memory_line) {
-        // "don't" capture group
-        if caps.get(1).is_some() {
-            processor_state = ProcessorState::OpsDisabled;
-        }
-        // "do" capture group
-        else if caps.get(2).is_some() {
-            processor_state = ProcessorState::OpsEnabled;
-        }
-        // "mul(X,Y)" capture group
-        else {
-            let op1: isize = caps.get(4).unwrap().as_str().parse().unwrap();
-            let op2: isize = caps.get(5).unwrap().as_str().parse().unwrap();
-            results.push((op1, op2, processor_state));
+fn find_word_search_solutions(grid: &Grid) -> Vec<WordSearchSolution> {
+    let mut solutions: Vec<WordSearchSolution> = vec![];
+
+    fn has_north_solution(grid: &Grid, start_pos: GridPos) -> bool {
+        grid.height >= 4 &&
+        start_pos.row >= 3 &&
+        grid.get_cell(start_pos.row - 0, start_pos.col) == 'X' &&
+        grid.get_cell(start_pos.row - 1, start_pos.col) == 'M' &&
+        grid.get_cell(start_pos.row - 2, start_pos.col) == 'A' &&
+        grid.get_cell(start_pos.row - 3, start_pos.col) == 'S'
+    }
+
+    fn has_north_east_solution(grid: &Grid, start_pos: GridPos) -> bool {
+        grid.height >= 4 &&
+        grid.width >= 4 &&
+        start_pos.row >= 3 &&
+        start_pos.col <= (grid.width - 4) &&
+        grid.get_cell(start_pos.row - 0, start_pos.col + 0) == 'X' &&
+        grid.get_cell(start_pos.row - 1, start_pos.col + 1) == 'M' &&
+        grid.get_cell(start_pos.row - 2, start_pos.col + 2) == 'A' &&
+        grid.get_cell(start_pos.row - 3, start_pos.col + 3) == 'S'
+    }
+
+    fn has_east_solution(grid: &Grid, start_pos: GridPos) -> bool {
+        grid.width >= 4 &&
+        start_pos.col <= (grid.width - 4) &&
+        grid.get_cell(start_pos.row, start_pos.col + 0) == 'X' &&
+        grid.get_cell(start_pos.row, start_pos.col + 1) == 'M' &&
+        grid.get_cell(start_pos.row, start_pos.col + 2) == 'A' &&
+        grid.get_cell(start_pos.row, start_pos.col + 3) == 'S'
+    }
+
+    fn has_south_east_solution(grid: &Grid, start_pos: GridPos) -> bool {
+        grid.height >= 4 &&
+        grid.width >= 4 &&
+        start_pos.row <= (grid.height - 4) &&
+        start_pos.col <= (grid.width - 4) &&
+        grid.get_cell(start_pos.row + 0, start_pos.col + 0) == 'X' &&
+        grid.get_cell(start_pos.row + 1, start_pos.col + 1) == 'M' &&
+        grid.get_cell(start_pos.row + 2, start_pos.col + 2) == 'A' &&
+        grid.get_cell(start_pos.row + 3, start_pos.col + 3) == 'S'
+    }
+
+    fn has_south_solution(grid: &Grid, start_pos: GridPos) -> bool {
+        grid.height >= 4 &&
+        start_pos.row <= (grid.height - 4) &&
+        grid.get_cell(start_pos.row + 0, start_pos.col) == 'X' &&
+        grid.get_cell(start_pos.row + 1, start_pos.col) == 'M' &&
+        grid.get_cell(start_pos.row + 2, start_pos.col) == 'A' &&
+        grid.get_cell(start_pos.row + 3, start_pos.col) == 'S'
+    }
+
+    fn has_south_west_solution(grid: &Grid, start_pos: GridPos) -> bool {
+        grid.height >= 4 &&
+        grid.width >= 4 &&
+        start_pos.row <= (grid.height - 4) &&
+        start_pos.col >= 3 &&
+        grid.get_cell(start_pos.row + 0, start_pos.col - 0) == 'X' &&
+        grid.get_cell(start_pos.row + 1, start_pos.col - 1) == 'M' &&
+        grid.get_cell(start_pos.row + 2, start_pos.col - 2) == 'A' &&
+        grid.get_cell(start_pos.row + 3, start_pos.col - 3) == 'S'
+    }
+
+    fn has_west_solution(grid: &Grid, start_pos: GridPos) -> bool {
+        grid.width >= 4 &&
+        start_pos.col >= 3 &&
+        grid.get_cell(start_pos.row, start_pos.col - 0) == 'X' &&
+        grid.get_cell(start_pos.row, start_pos.col - 1) == 'M' &&
+        grid.get_cell(start_pos.row, start_pos.col - 2) == 'A' &&
+        grid.get_cell(start_pos.row, start_pos.col - 3) == 'S'
+    }
+
+    fn has_north_west_solution(grid: &Grid, start_pos: GridPos) -> bool {
+        grid.height >= 4 &&
+        grid.width >= 4 &&
+        start_pos.row >= 3 &&
+        start_pos.col >= 3 &&
+        grid.get_cell(start_pos.row - 0, start_pos.col - 0) == 'X' &&
+        grid.get_cell(start_pos.row - 1, start_pos.col - 1) == 'M' &&
+        grid.get_cell(start_pos.row - 2, start_pos.col - 2) == 'A' &&
+        grid.get_cell(start_pos.row - 3, start_pos.col - 3) == 'S'
+    }
+
+    for r in 0..grid.height {
+        for c in 0..grid.width {
+            let start_pos = GridPos {row: r, col: c};
+            if has_north_solution(&grid, start_pos) {
+                solutions.push(WordSearchSolution{start_pos: start_pos, dir: Direction::N});
+            }
+            if has_north_east_solution(&grid, start_pos) {
+                solutions.push(WordSearchSolution{start_pos: start_pos, dir: Direction::NE});
+            }
+            if has_east_solution(&grid, start_pos) {
+                solutions.push(WordSearchSolution{start_pos: start_pos, dir: Direction::E});
+            }
+            if has_south_east_solution(&grid, start_pos) {
+                solutions.push(WordSearchSolution{start_pos: start_pos, dir: Direction::SE});
+            }
+            if has_south_solution(&grid, start_pos) {
+                solutions.push(WordSearchSolution{start_pos: start_pos, dir: Direction::S});
+            }
+            if has_south_west_solution(&grid, start_pos) {
+                solutions.push(WordSearchSolution{start_pos: start_pos, dir: Direction::SW});
+            }
+            if has_west_solution(&grid, start_pos) {
+                solutions.push(WordSearchSolution{start_pos: start_pos, dir: Direction::W});
+            }
+            if has_north_west_solution(&grid, start_pos) {
+                solutions.push(WordSearchSolution{start_pos: start_pos, dir: Direction::NW});
+            }
         }
     }
-    results
+
+    solutions
 }
 
 fn main() -> ExitCode {
@@ -88,37 +197,12 @@ fn main() -> ExitCode {
         }
     };
 
-    /*
     let start_time = std::time::Instant::now();
-
-    let mul_ops = extract_mul_ops(&memory_line);
+    let solutions = find_word_search_solutions(&grid);
+    println!("Found {} solutions", solutions.len());
     println!(
-        "EXTRACT TIME: ({:0.06}s)",
+        "TIME: ({:0.06}s)",
         start_time.elapsed().as_secs_f64()
     );
-
-    // for mul_op in mul_ops.iter() {
-    //     println!("+ ({} * {})", mul_op.0, mul_op.1)
-    // }
-    let mul_sum = mul_ops
-        .iter()
-        .map(|mul_op| mul_op.0 * mul_op.1)
-        .fold(0, |acc, v| acc + v);
-    println!("= {} [unfiltered]", mul_sum);
-
-    // for mul_op in mul_ops.iter() {
-    //     if mul_op.2 == ProcessorState::OpsEnabled {
-    //         println!("+ ({} * {})", mul_op.0, mul_op.1)
-    //     }
-    // }
-    let filtered_mul_sum = mul_ops
-        .iter()
-        .filter(|mul_op| mul_op.2 == ProcessorState::OpsEnabled)
-        .map(|mul_op| mul_op.0 * mul_op.1)
-        .fold(0, |acc, v| acc + v);
-    println!("= {} [filtered]", filtered_mul_sum);
-
-    println!("TIME: ({:0.06}s)", start_time.elapsed().as_secs_f64());
-    */
     return ExitCode::SUCCESS;
 }
