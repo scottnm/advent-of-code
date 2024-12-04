@@ -17,3 +17,6 @@ zig-cache/
 
 # Odin
 *.bin
+
+# MacOS
+.DS_Store
