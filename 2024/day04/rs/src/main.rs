@@ -9,13 +9,42 @@ enum ProcessorState {
     OpsDisabled,
 }
 
+enum Direction {
+    N,
+    NE,
+    E,
+    SE,
+    S,
+    SW,
+    W,
+    NW,
+}
+
+struct AnswerEntry {
+    start_pos: (isize, isize),
+    dir: Direction,
+}
+
+struct Grid {
+    width: usize,
+    height: usize,
+    cells: Vec<char>,
+}
+
 type MulOp = (isize, isize, ProcessorState);
 
-fn read_memory_line(filename: &str) -> Result<MemoryLine, String> {
-    match input_helpers::read_file_to_string(filename) {
-        Ok(data) => Ok(data),
-        Err(e) => Err(format!("Failed to read file! {}", e)),
+fn read_grid(filename: &str) -> Result<Grid, String> {
+    let lines = input_helpers::read_lines(filename);
+    let mut width: Option<usize> = None;
+    let mut height = 0;
+
+    let mut cells: Vec<char> = vec![];
+    for line in lines {
+        println!("line: {} {}", line, line.len());
+        height += 1;
     }
+
+    Err(format!("Test123"))
 }
 
 fn extract_mul_ops(memory_line: &str) -> Vec<MulOp> {
@@ -50,15 +79,16 @@ fn main() -> ExitCode {
 
     let filename: &str = &args[0];
 
-    let parse_result = read_memory_line(filename);
-    let memory_line = match parse_result {
-        Ok(parsed_memory_line) => parsed_memory_line,
+    let parse_result = read_grid(filename);
+    let grid = match parse_result {
+        Ok(grid) => grid,
         Err(e) => {
             println!("Invalid input! {}", e);
             return ExitCode::FAILURE;
         }
     };
 
+    /*
     let start_time = std::time::Instant::now();
 
     let mul_ops = extract_mul_ops(&memory_line);
@@ -89,5 +119,6 @@ fn main() -> ExitCode {
     println!("= {} [filtered]", filtered_mul_sum);
 
     println!("TIME: ({:0.06}s)", start_time.elapsed().as_secs_f64());
+    */
     return ExitCode::SUCCESS;
 }
