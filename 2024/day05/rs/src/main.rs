@@ -128,9 +128,7 @@ fn main() -> ExitCode {
 
     println!("middle page sum is: {}", middle_page_sum);
 
-    let pt1_time_end = pt1_start_time.elapsed();
-
-    println!("TIME: ({:0.06}s) / ({:0.06}s)", pt1_time.as_secs_f64(), pt1_time_end.as_secs_f64());
+    println!("TIME: ({:0.06}s)", pt1_time.as_secs_f64());
 
     println!("");
 
@@ -162,9 +160,7 @@ fn main() -> ExitCode {
     }
     println!("corrections middle page sum is: {}", corrections_middle_page_sum);
 
-    let pt2_time_end = pt2_start_time.elapsed();
-
-    println!("TIME: ({:0.06}s) / ({:0.06}s)", pt2_time.as_secs_f64(), pt2_time_end.as_secs_f64());
+    println!("TIME: ({:0.06}s)", pt2_time.as_secs_f64());
 
     return ExitCode::SUCCESS;
 }
