@@ -5,8 +5,7 @@ type UpdateRuleSet = std::collections::HashMap<usize, std::collections::HashSet<
 
 type ManualUpdate = Vec<usize>;
 
-struct ManualUpdateRequest
-{
+struct ManualUpdateRequest {
     rules: UpdateRuleSet,
     updates: Vec<ManualUpdate>,
 }
@@ -20,7 +19,7 @@ fn read_manual_update_request(filename: &str) -> Result<ManualUpdateRequest, Str
     };
 
     let rule_lines = &lines[..input_separator_line_idx];
-    let update_lines = &lines[input_separator_line_idx+1..];
+    let update_lines = &lines[input_separator_line_idx + 1..];
 
     let mut rules = UpdateRuleSet::new();
     for rule_line in rule_lines {
@@ -42,11 +41,14 @@ fn read_manual_update_request(filename: &str) -> Result<ManualUpdateRequest, Str
     let mut updates: Vec<ManualUpdate> = Vec::with_capacity(update_lines.len());
     for update_line in update_lines {
         // FIXME: validate parse correctly
-        let update: ManualUpdate = update_line.split(',').map(|page_num_str| page_num_str.parse().unwrap()).collect();
+        let update: ManualUpdate = update_line
+            .split(',')
+            .map(|page_num_str| page_num_str.parse().unwrap())
+            .collect();
         updates.push(update);
     }
 
-    Ok(ManualUpdateRequest{rules, updates})
+    Ok(ManualUpdateRequest { rules, updates })
 }
 
 fn is_update_in_correct_order(rules: &UpdateRuleSet, update: &ManualUpdate) -> bool {
@@ -66,28 +68,21 @@ fn is_update_in_correct_order(rules: &UpdateRuleSet, update: &ManualUpdate) -> b
 }
 
 fn correct_update_ordering(rules: &UpdateRuleSet, update: &ManualUpdate) -> ManualUpdate {
-    let mut new_update = update.clone();
+    let mut new_update = Vec::with_capacity(update.len());
 
-    let mut page_idx: usize = 0;
-    while page_idx < new_update.len() {
-        let mut cmp_page_idx: usize = 0;
-        while cmp_page_idx < page_idx {
-            let page = new_update[page_idx];
-            if let Some(page_follow_rules) = rules.get(&page) {
-                let cmp_page = new_update[cmp_page_idx];
-                if page_follow_rules.contains(&cmp_page) {
-                    new_update.remove(cmp_page_idx);
-                    new_update.insert(page_idx, cmp_page);
-                    page_idx -= 1;
-                } else {
-                    cmp_page_idx += 1
-                }
-            } else {
-                // if the page doesn't have any rules there's nothing to check in the previous cmp pages
-                break;
-            }
+    for page in update {
+        let queried_insert_position: Option<usize> = if let Some(follow_pages) = rules.get(page) {
+            new_update
+                .iter()
+                .position(|new_update_page| follow_pages.contains(new_update_page))
+        } else {
+            None
+        };
+
+        match queried_insert_position {
+            Some(insert_pos) => new_update.insert(insert_pos, *page),
+            None => new_update.push(*page),
         }
-        page_idx += 1;
     }
 
     new_update
@@ -113,55 +108,99 @@ fn main() -> ExitCode {
 
     let pt1_start_time = std::time::Instant::now();
 
-    let correctly_ordered_updates: Vec<(usize, ManualUpdate)> = manual_update_request.updates
+    let correctly_ordered_updates: Vec<(usize, ManualUpdate)> = manual_update_request
+        .updates
         .iter()
         .enumerate()
         .filter(|(_i, update)| is_update_in_correct_order(&manual_update_request.rules, update))
         .map(|(i, update)| (i, update.clone()))
         .collect();
 
-    let middle_page_sum: usize = correctly_ordered_updates.iter().map(|(_i, update)| update[update.len()/2]).sum();
+    let middle_page_sum: usize = correctly_ordered_updates
+        .iter()
+        .map(|(_i, update)| update[update.len() / 2])
+        .sum();
 
     let pt1_time = pt1_start_time.elapsed();
 
-    println!("{} updates correctly ordered", correctly_ordered_updates.len());
-    for (update_idx,update) in &correctly_ordered_updates {
-        println!(" - Update {:03} is correctly ordered! {:?}", update_idx, update);
+    println!(
+        "{} updates correctly ordered",
+        correctly_ordered_updates.len()
+    );
+
+    // Only log more details about the updates when it won't bloat our output.
+    // Useful for checking the sample_input.txt
+    if correctly_ordered_updates.len() < 10 {
+        for (update_idx, update) in &correctly_ordered_updates {
+            println!(
+                " - Update {:03} is correctly ordered! {:?}",
+                update_idx, update
+            );
+        }
     }
 
     println!("middle page sum is: {}", middle_page_sum);
 
-    let pt1_time_end = pt1_start_time.elapsed();
-
-    println!("TIME: ({:0.06}s) / ({:0.06}s)", pt1_time.as_secs_f64(), pt1_time_end.as_secs_f64());
+    println!("TIME: ({:0.06}s)", pt1_time.as_secs_f64());
 
     println!("");
 
     let pt2_start_time = std::time::Instant::now();
 
-    let incorrectly_ordered_updates: Vec<(usize, ManualUpdate)> = manual_update_request.updates
+    let incorrectly_ordered_updates: Vec<(usize, ManualUpdate)> = manual_update_request
+        .updates
         .iter()
         .enumerate()
-        .filter(|(i, _update)| !correctly_ordered_updates.iter().any(|(j, _correct_update)| i == j))
+        .filter(|(i, _update)| {
+            !correctly_ordered_updates
+                .iter()
+                .any(|(j, _correct_update)| i == j)
+        })
         .map(|(i, update)| (i, update.clone()))
         .collect();
 
-    let corrected_updates: Vec<ManualUpdate> = incorrectly_ordered_updates.iter().map(|(_i, update)| correct_update_ordering(&manual_update_request.rules, update)).collect();
-    let corrections_middle_page_sum: usize = corrected_updates.iter().map(|update| update[update.len()/2]).sum();
+    let corrected_updates: Vec<ManualUpdate> = incorrectly_ordered_updates
+        .iter()
+        .map(|(_i, update)| correct_update_ordering(&manual_update_request.rules, update))
+        .collect();
+
+    let corrections_middle_page_sum: usize = corrected_updates
+        .iter()
+        .map(|update| update[update.len() / 2])
+        .sum();
 
     let pt2_time = pt2_start_time.elapsed();
-    println!("{} updates incorrectly ordered", incorrectly_ordered_updates.len());
-    for ((update_idx, incorrect_update), corrected_update) in incorrectly_ordered_updates.iter().zip(corrected_updates.iter()) {
 
-        println!(" - Update {:03} incorrect: {:?}", update_idx, incorrect_update);
-        println!(" - Update {:03} corrected: {:?}", update_idx, corrected_update);
-        println!("");
+    println!(
+        "{} updates incorrectly ordered",
+        incorrectly_ordered_updates.len()
+    );
+
+    // Only log more details about the updates when it won't bloat our output.
+    // Useful for checking the sample_input.txt
+    if incorrectly_ordered_updates.len() < 10 {
+        for ((update_idx, incorrect_update), corrected_update) in incorrectly_ordered_updates
+            .iter()
+            .zip(corrected_updates.iter())
+        {
+            println!(
+                " - Update {:03} incorrect: {:?}",
+                update_idx, incorrect_update
+            );
+            println!(
+                " - Update {:03} corrected: {:?}",
+                update_idx, corrected_update
+            );
+            println!("");
+        }
     }
-    println!("corrections middle page sum is: {}", corrections_middle_page_sum);
 
-    let pt2_time_end = pt2_start_time.elapsed();
+    println!(
+        "corrections middle page sum is: {}",
+        corrections_middle_page_sum
+    );
 
-    println!("TIME: ({:0.06}s) / ({:0.06}s)", pt2_time.as_secs_f64(), pt2_time_end.as_secs_f64());
+    println!("TIME: ({:0.06}s)", pt2_time.as_secs_f64());
 
     return ExitCode::SUCCESS;
 }
