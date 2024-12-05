@@ -93,6 +93,26 @@ fn correct_update_ordering(rules: &UpdateRuleSet, update: &ManualUpdate) -> Manu
     new_update
 }
 
+fn correct_update_ordering_try2(rules: &UpdateRuleSet, update: &ManualUpdate) -> ManualUpdate {
+    let mut new_update = Vec::with_capacity(update.len());
+
+    for page in update {
+        let queried_insert_position: Option<usize> = 
+            if let Some(follow_pages) = rules.get(page) {
+                new_update.iter().position(|new_update_page| follow_pages.contains(new_update_page))
+            } else {
+                None
+            };
+
+        match queried_insert_position {
+            Some(insert_pos) => new_update.insert(insert_pos, *page),
+            None => new_update.push(*page),
+        }
+    }
+
+    new_update
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
@@ -125,9 +145,9 @@ fn main() -> ExitCode {
     let pt1_time = pt1_start_time.elapsed();
 
     println!("{} updates correctly ordered", correctly_ordered_updates.len());
-    for (update_idx,update) in &correctly_ordered_updates {
-        println!(" - Update {:03} is correctly ordered! {:?}", update_idx, update);
-    }
+    // for (update_idx,update) in &correctly_ordered_updates {
+    //     println!(" - Update {:03} is correctly ordered! {:?}", update_idx, update);
+    // }
 
     println!("middle page sum is: {}", middle_page_sum);
 
@@ -137,8 +157,6 @@ fn main() -> ExitCode {
 
     println!("");
 
-    let pt2_start_time = std::time::Instant::now();
-
     let incorrectly_ordered_updates: Vec<(usize, ManualUpdate)> = manual_update_request.updates
         .iter()
         .enumerate()
@@ -146,22 +164,49 @@ fn main() -> ExitCode {
         .map(|(i, update)| (i, update.clone()))
         .collect();
 
-    let corrected_updates: Vec<ManualUpdate> = incorrectly_ordered_updates.iter().map(|(_i, update)| correct_update_ordering(&manual_update_request.rules, update)).collect();
-    let corrections_middle_page_sum: usize = corrected_updates.iter().map(|update| update[update.len()/2]).sum();
+    {
+        let pt2_start_time = std::time::Instant::now();
 
-    let pt2_time = pt2_start_time.elapsed();
-    println!("{} updates incorrectly ordered", incorrectly_ordered_updates.len());
-    for ((update_idx, incorrect_update), corrected_update) in incorrectly_ordered_updates.iter().zip(corrected_updates.iter()) {
+        let corrected_updates: Vec<ManualUpdate> = incorrectly_ordered_updates.iter().map(|(_i, update)| correct_update_ordering(&manual_update_request.rules, update)).collect();
+        let corrections_middle_page_sum: usize = corrected_updates.iter().map(|update| update[update.len()/2]).sum();
 
-        println!(" - Update {:03} incorrect: {:?}", update_idx, incorrect_update);
-        println!(" - Update {:03} corrected: {:?}", update_idx, corrected_update);
-        println!("");
+        let pt2_time = pt2_start_time.elapsed();
+        println!("{} updates incorrectly ordered", incorrectly_ordered_updates.len());
+        // for ((update_idx, incorrect_update), corrected_update) in incorrectly_ordered_updates.iter().zip(corrected_updates.iter()) {
+
+        //     println!(" - Update {:03} incorrect: {:?}", update_idx, incorrect_update);
+        //     println!(" - Update {:03} corrected: {:?}", update_idx, corrected_update);
+        //     println!("");
+        // }
+        println!("corrections middle page sum is: {}", corrections_middle_page_sum);
+
+        let pt2_time_end = pt2_start_time.elapsed();
+
+        println!("TIME: ({:0.06}s) / ({:0.06}s)", pt2_time.as_secs_f64(), pt2_time_end.as_secs_f64());
     }
-    println!("corrections middle page sum is: {}", corrections_middle_page_sum);
 
-    let pt2_time_end = pt2_start_time.elapsed();
+    println!("");
 
-    println!("TIME: ({:0.06}s) / ({:0.06}s)", pt2_time.as_secs_f64(), pt2_time_end.as_secs_f64());
+    {
+        let pt2_start_time = std::time::Instant::now();
+
+        let corrected_updates: Vec<ManualUpdate> = incorrectly_ordered_updates.iter().map(|(_i, update)| correct_update_ordering_try2(&manual_update_request.rules, update)).collect();
+        let corrections_middle_page_sum: usize = corrected_updates.iter().map(|update| update[update.len()/2]).sum();
+
+        let pt2_time = pt2_start_time.elapsed();
+        println!("{} updates incorrectly ordered", incorrectly_ordered_updates.len());
+        // for ((update_idx, incorrect_update), corrected_update) in incorrectly_ordered_updates.iter().zip(corrected_updates.iter()) {
+
+        //     println!(" - Update {:03} incorrect: {:?}", update_idx, incorrect_update);
+        //     println!(" - Update {:03} corrected: {:?}", update_idx, corrected_update);
+        //     println!("");
+        // }
+        println!("corrections middle page sum is: {}", corrections_middle_page_sum);
+
+        let pt2_time_end = pt2_start_time.elapsed();
+
+        println!("TIME: ({:0.06}s) / ({:0.06}s)", pt2_time.as_secs_f64(), pt2_time_end.as_secs_f64());
+    }
 
     return ExitCode::SUCCESS;
 }
