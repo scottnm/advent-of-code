@@ -1,12 +1,13 @@
 use input_helpers;
 use std::process::ExitCode;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Equation {
     result: isize,
     operands: Vec<isize>,
 }
 
+#[derive(Clone, Copy)]
 enum Operation {
     Add,
     Mul,
@@ -44,6 +45,45 @@ fn parse_equation_from_line(line: &str) -> Result<Equation, String> {
     Ok(Equation{result, operands})
 }
 
+fn solve_recursive_any(equation: &Equation) -> Option<Vec<Operation>> {
+    fn solve_recursive_any_helper(exp_result: isize, curr_value: isize, operands_left: &[isize]) -> Option<Vec<Operation>> {
+        if operands_left.len() == 0 {
+            return if exp_result == curr_value {
+                Some(vec![])
+            } else {
+                None
+            }
+        }
+
+        let next_rhs_op: isize = operands_left[0];
+        let next_add_candidate = curr_value + next_rhs_op;
+        if let Some(mut solved_operation_list) = solve_recursive_any_helper(exp_result, next_add_candidate, &operands_left[1..]) {
+            solved_operation_list.push(Operation::Add);
+            Some(solved_operation_list)
+        } else {
+            let next_mul_candidate = curr_value * next_rhs_op;
+            if let Some(mut solved_operation_list) = solve_recursive_any_helper(exp_result, next_mul_candidate, &operands_left[1..]) {
+                solved_operation_list.push(Operation::Mul);
+                Some(solved_operation_list)
+            } else {
+                None
+            }
+        }
+    }
+
+    if equation.operands.len() == 0 {
+        return solve_recursive_any_helper(equation.result, 0, &[]);
+    }
+
+    if let Some(mut solution) = solve_recursive_any_helper(equation.result, equation.operands[0], &equation.operands[1..]) {
+        // the operands from the recursive any helper are returned in reverse order for efficiency (vector pushback is faster than vector pushfront)
+        solution.reverse();
+        Some(solution)
+    } else {
+        None
+    }
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
@@ -62,7 +102,20 @@ fn main() -> ExitCode {
         }
     };
 
-    dbg!(equations);
+    let solved_equations: Vec<(Equation, Vec<Operation>)> = 
+        equations
+        .iter()
+        .map(|eq| (eq.clone(), solve_recursive_any(&eq)))
+        .filter(|(eq, solution)| solution.is_some())
+        .map(|(eq, solution)| (eq, solution.unwrap()))
+        .collect();
+
+    for (eq, _) in &solved_equations {
+        println!("Found sol for {:?}", eq);
+    }
+
+    let sum_solvable_results: isize = solved_equations.iter().map(|(eq, sol)| eq.result).sum();
+    println!("Sum of solution results: {}", sum_solvable_results);
 
     /*
     let player_initial_state = player_state.clone();
