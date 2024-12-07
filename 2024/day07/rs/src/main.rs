@@ -27,7 +27,8 @@ fn read_equations(filename: &str) -> Result<Vec<Equation>, String> {
 }
 
 fn parse_equation_from_line(line: &str) -> Result<Equation, String> {
-    let result_sep_idx = line.find(": ")
+    let result_sep_idx = line
+        .find(": ")
         .ok_or(format!("Failed to find result separator in equation line"))?;
 
     if line.len() <= result_sep_idx + 2 {
@@ -35,35 +36,47 @@ fn parse_equation_from_line(line: &str) -> Result<Equation, String> {
     }
 
     let result_str = &line[..result_sep_idx];
-    let result: usize = result_str.parse().map_err(|err| format!("Failed to parse result value '{}'! {}", result_str, err))?;
-    let operands_str = &line[(result_sep_idx+2)..];
+    let result: usize = result_str
+        .parse()
+        .map_err(|err| format!("Failed to parse result value '{}'! {}", result_str, err))?;
+    let operands_str = &line[(result_sep_idx + 2)..];
     let mut operands: Vec<usize> = vec![];
     for operand_str in operands_str.split_ascii_whitespace() {
-        let operand = operand_str.parse().map_err(|err| format!("Failed to parse operand value '{}'! {}", operand_str, err))?;
+        let operand = operand_str
+            .parse()
+            .map_err(|err| format!("Failed to parse operand value '{}'! {}", operand_str, err))?;
         operands.push(operand);
     }
 
-    Ok(Equation{result, operands})
+    Ok(Equation { result, operands })
 }
 
 fn solve_recursive_any_pt1(equation: &Equation) -> Option<Vec<Operation>> {
-    fn solve_recursive_any_helper(exp_result: usize, curr_value: usize, operands_left: &[usize]) -> Option<Vec<Operation>> {
+    fn solve_recursive_any_helper(
+        exp_result: usize,
+        curr_value: usize,
+        operands_left: &[usize],
+    ) -> Option<Vec<Operation>> {
         if operands_left.len() == 0 {
             return if exp_result == curr_value {
                 Some(vec![])
             } else {
                 None
-            }
+            };
         }
 
         let next_rhs_op: usize = operands_left[0];
         let next_add_candidate = curr_value + next_rhs_op;
-        if let Some(mut solved_operation_list) = solve_recursive_any_helper(exp_result, next_add_candidate, &operands_left[1..]) {
+        if let Some(mut solved_operation_list) =
+            solve_recursive_any_helper(exp_result, next_add_candidate, &operands_left[1..])
+        {
             solved_operation_list.push(Operation::Add);
             Some(solved_operation_list)
         } else {
             let next_mul_candidate = curr_value * next_rhs_op;
-            if let Some(mut solved_operation_list) = solve_recursive_any_helper(exp_result, next_mul_candidate, &operands_left[1..]) {
+            if let Some(mut solved_operation_list) =
+                solve_recursive_any_helper(exp_result, next_mul_candidate, &operands_left[1..])
+            {
                 solved_operation_list.push(Operation::Mul);
                 Some(solved_operation_list)
             } else {
@@ -76,7 +89,11 @@ fn solve_recursive_any_pt1(equation: &Equation) -> Option<Vec<Operation>> {
         return solve_recursive_any_helper(equation.result, 0, &[]);
     }
 
-    if let Some(mut solution) = solve_recursive_any_helper(equation.result, equation.operands[0], &equation.operands[1..]) {
+    if let Some(mut solution) = solve_recursive_any_helper(
+        equation.result,
+        equation.operands[0],
+        &equation.operands[1..],
+    ) {
         // the operands from the recursive any helper are returned in reverse order for efficiency (vector pushback is faster than vector pushfront)
         solution.reverse();
         Some(solution)
@@ -98,28 +115,40 @@ fn concat_values(lhs: usize, rhs: usize) -> usize {
 }
 
 fn solve_recursive_any_pt2(equation: &Equation) -> Option<Vec<Operation>> {
-    fn solve_recursive_any_helper(exp_result: usize, curr_value: usize, operands_left: &[usize]) -> Option<Vec<Operation>> {
+    fn solve_recursive_any_helper(
+        exp_result: usize,
+        curr_value: usize,
+        operands_left: &[usize],
+    ) -> Option<Vec<Operation>> {
         if operands_left.len() == 0 {
             return if exp_result == curr_value {
                 Some(vec![])
             } else {
                 None
-            }
+            };
         }
 
         let next_rhs_op: usize = operands_left[0];
         let next_add_candidate = curr_value + next_rhs_op;
-        if let Some(mut solved_operation_list) = solve_recursive_any_helper(exp_result, next_add_candidate, &operands_left[1..]) {
+        if let Some(mut solved_operation_list) =
+            solve_recursive_any_helper(exp_result, next_add_candidate, &operands_left[1..])
+        {
             solved_operation_list.push(Operation::Add);
             Some(solved_operation_list)
         } else {
             let next_mul_candidate = curr_value * next_rhs_op;
-            if let Some(mut solved_operation_list) = solve_recursive_any_helper(exp_result, next_mul_candidate, &operands_left[1..]) {
+            if let Some(mut solved_operation_list) =
+                solve_recursive_any_helper(exp_result, next_mul_candidate, &operands_left[1..])
+            {
                 solved_operation_list.push(Operation::Mul);
                 Some(solved_operation_list)
             } else {
                 let next_concat_candidate = concat_values(curr_value, next_rhs_op);
-                if let Some(mut solved_operation_list) = solve_recursive_any_helper(exp_result, next_concat_candidate, &operands_left[1..]) {
+                if let Some(mut solved_operation_list) = solve_recursive_any_helper(
+                    exp_result,
+                    next_concat_candidate,
+                    &operands_left[1..],
+                ) {
                     solved_operation_list.push(Operation::Concat);
                     Some(solved_operation_list)
                 } else {
@@ -133,7 +162,11 @@ fn solve_recursive_any_pt2(equation: &Equation) -> Option<Vec<Operation>> {
         return solve_recursive_any_helper(equation.result, 0, &[]);
     }
 
-    if let Some(mut solution) = solve_recursive_any_helper(equation.result, equation.operands[0], &equation.operands[1..]) {
+    if let Some(mut solution) = solve_recursive_any_helper(
+        equation.result,
+        equation.operands[0],
+        &equation.operands[1..],
+    ) {
         // the operands from the recursive any helper are returned in reverse order for efficiency (vector pushback is faster than vector pushfront)
         solution.reverse();
         Some(solution)
@@ -162,8 +195,7 @@ fn main() -> ExitCode {
 
     println!("Pt 1:");
 
-    let solved_equations_pt1: Vec<(Equation, Vec<Operation>)> = 
-        equations
+    let solved_equations_pt1: Vec<(Equation, Vec<Operation>)> = equations
         .iter()
         .map(|eq| (eq.clone(), solve_recursive_any_pt1(&eq)))
         .filter(|(eq, solution)| solution.is_some())
@@ -174,15 +206,15 @@ fn main() -> ExitCode {
         println!("Found sol for {:?}", eq);
     }
 
-    let sum_solvable_results_pt1: usize = solved_equations_pt1.iter().map(|(eq, sol)| eq.result).sum();
+    let sum_solvable_results_pt1: usize =
+        solved_equations_pt1.iter().map(|(eq, sol)| eq.result).sum();
     println!("Sum of solution results: {}", sum_solvable_results_pt1);
 
     println!("");
 
     println!("Pt 2:");
 
-    let solved_equations_pt2: Vec<(Equation, Vec<Operation>)> = 
-        equations
+    let solved_equations_pt2: Vec<(Equation, Vec<Operation>)> = equations
         .iter()
         .map(|eq| (eq.clone(), solve_recursive_any_pt2(&eq)))
         .filter(|(eq, solution)| solution.is_some())
@@ -193,7 +225,8 @@ fn main() -> ExitCode {
         println!("Found sol for {:?}", eq);
     }
 
-    let sum_solvable_results_pt2: usize = solved_equations_pt2.iter().map(|(eq, sol)| eq.result).sum();
+    let sum_solvable_results_pt2: usize =
+        solved_equations_pt2.iter().map(|(eq, sol)| eq.result).sum();
     println!("Sum of solution results: {}", sum_solvable_results_pt2);
 
     /*
@@ -232,7 +265,7 @@ fn main() -> ExitCode {
     let pt2_start_time = std::time::Instant::now();
 
     let mut looping_obstructions: Vec<GridPos> = Vec::new();
-    
+
     let obstruction_candidates = {
         let mut obstruction_candidates = player_space_history.clone();
         obstruction_candidates.remove(&player_initial_state.pos);
