@@ -3,6 +3,12 @@ use std::process::ExitCode;
 use itertools::Itertools;
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+struct GridVector {
+    row: isize,
+    col: isize,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 struct GridPos {
     row: isize,
     col: isize,
@@ -37,6 +43,10 @@ impl<T> Grid<T> where T: Clone + Copy {
         let col = (idx % width) as isize;
         let row = (idx / width) as isize;
         GridPos{row, col}
+    }
+
+    fn is_pos_in_bounds(&self, row: isize, col: isize) -> bool {
+        !self.is_pos_out_of_bounds(row, col)
     }
 
     fn is_pos_out_of_bounds(&self, row: isize, col: isize) -> bool {
@@ -100,7 +110,7 @@ fn dump_tower_grid(tower_grid: &TowerGrid) {
     }
 }
 
-fn calculate_all_antinode_positions(tower_grid: &TowerGrid) -> std::collections::HashSet<GridPos> {
+fn calculate_all_antinode_positions_pt1(tower_grid: &TowerGrid) -> std::collections::HashSet<GridPos> {
     // FIXME: rather than preprocessing the tower grid here, the input should probably just be read in this format
     let tower_positions = {
         let mut tower_positions = std::collections::HashMap::<char, Vec<GridPos>>::new();
@@ -159,6 +169,84 @@ fn calculate_all_antinode_positions(tower_grid: &TowerGrid) -> std::collections:
     antinode_positions
 }
 
+pub fn gcd(mut n: usize, mut m: usize) -> usize {
+    assert!(n != 0 && m != 0);
+    while m != 0 {
+      if m < n {
+        std::mem::swap(&mut m, &mut n);
+      }
+      m %= n;
+    }
+    n
+  }
+
+// FIXME: refactor to share common code with pt 1
+fn calculate_all_antinode_positions_pt2(tower_grid: &TowerGrid) -> std::collections::HashSet<GridPos> {
+    // FIXME: rather than preprocessing the tower grid here, the input should probably just be read in this format
+    let tower_positions = {
+        let mut tower_positions = std::collections::HashMap::<char, Vec<GridPos>>::new();
+        for r in 0..(tower_grid.height as isize) {
+            for c in 0..(tower_grid.width as isize) {
+                if let Some(tower) = tower_grid.get_cell(r, c) {
+                    if let Some(single_freq_tower_positions) = tower_positions.get_mut(&tower.freq) {
+                        single_freq_tower_positions.push(GridPos{row: r, col: c});
+                    } else {
+                        let mut single_freq_tower_positions = vec![];
+                        single_freq_tower_positions.push(GridPos{row: r, col: c});
+                        tower_positions.insert(tower.freq, single_freq_tower_positions);
+                    }
+                }
+            }
+        }
+        tower_positions
+    };
+
+    let mut antinode_positions = std::collections::HashSet::<GridPos>::new();
+
+    for (_freq, tower_positions) in &tower_positions {
+        // FIXME: drop all of the extra printlns in here
+        println!("freq({}): pos={:?}", _freq, tower_positions);
+        for (tower_a, tower_b) in tower_positions.iter().tuple_combinations() {
+            let min_tower_ab_line_step = {
+                let tower_ab_displacement = GridVector {
+                    row: tower_a.row + (tower_a.row - tower_b.row),
+                    col: tower_a.col + (tower_a.col - tower_b.col),
+                };
+
+                let ab_row_displacement = tower_a.row - tower_b.row;
+                let ab_col_displacement = tower_a.col - tower_b.col;
+
+                let displacement_gcd = gcd(
+                    ab_row_displacement.abs() as usize,
+                    ab_col_displacement.abs() as usize) as isize;
+                    
+                GridVector {
+                    row: ab_row_displacement / displacement_gcd,
+                    col: ab_col_displacement / displacement_gcd,
+                }
+            };
+
+            // starting from tower a, add the line step until we go out of bounds to get all cells in one direction.
+            let mut next_antinode_pos = tower_a.clone();
+            while tower_grid.is_pos_in_bounds(next_antinode_pos.row, next_antinode_pos.col) {
+                antinode_positions.insert(next_antinode_pos);
+                next_antinode_pos.row += min_tower_ab_line_step.row;
+                next_antinode_pos.col += min_tower_ab_line_step.col;
+            }
+            
+            // starting from tower a, subtract the line step until we go out of bounds to all cells in the other direction.
+            let mut next_antinode_pos = tower_a.clone();
+            while tower_grid.is_pos_in_bounds(next_antinode_pos.row, next_antinode_pos.col) {
+                antinode_positions.insert(next_antinode_pos);
+                next_antinode_pos.row -= min_tower_ab_line_step.row;
+                next_antinode_pos.col -= min_tower_ab_line_step.col;
+            }
+        }
+    }
+
+    antinode_positions
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
@@ -177,21 +265,29 @@ fn main() -> ExitCode {
         }
     };
 
-    println!("Pt 1:");
     dump_tower_grid(&tower_grid);
-    let antinode_positions = calculate_all_antinode_positions(&tower_grid);
-    println!("antinode position count: {}", antinode_positions.len());
-    if antinode_positions.len() < 10 {
-        for p in antinode_positions {
-            println!("- (r:{},c:{})", p.row, p.col);
+
+    {
+        let antinode_positions_pt1 = calculate_all_antinode_positions_pt1(&tower_grid);
+        println!("Pt 1: antinode position count = {}", antinode_positions_pt1.len());
+        if antinode_positions_pt1.len() < 10 {
+            for p in antinode_positions_pt1 {
+                println!("- (r:{},c:{})", p.row, p.col);
+            }
         }
     }
 
     println!("");
 
-    println!("Pt 2:");
-
-    // FIXME: do pt 2
+    {
+        let antinode_positions_pt2 = calculate_all_antinode_positions_pt2(&tower_grid);
+        println!("Pt 2: antinode position count = {}", antinode_positions_pt2.len());
+        if antinode_positions_pt2.len() < 10 {
+            for p in antinode_positions_pt2 {
+                println!("- (r:{},c:{})", p.row, p.col);
+            }
+        }
+    }
 
     return ExitCode::SUCCESS;
 }
