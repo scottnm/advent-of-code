@@ -123,6 +123,7 @@ fn calculate_all_antinode_positions(tower_grid: &TowerGrid) -> std::collections:
     let mut antinode_positions = std::collections::HashSet::<GridPos>::new();
 
     for (_freq, tower_positions) in &tower_positions {
+        // FIXME: drop all of the extra printlns in here
         println!("freq({}): pos={:?}", _freq, tower_positions);
         for (tower_a, tower_b) in tower_positions.iter().tuple_combinations() {
             let antinode_pos_1 = GridPos {
@@ -186,41 +187,11 @@ fn main() -> ExitCode {
         }
     }
 
-    /*
-    let solved_equations_pt1: Vec<(Equation, Vec<Operation>)> = equations
-        .iter()
-        .map(|eq| (eq.clone(), solve_recursive_any_pt1(&eq)))
-        .filter(|(_eq, solution)| solution.is_some())
-        .map(|(eq, solution)| (eq, solution.unwrap()))
-        .collect();
-
-    // for (eq, _) in &solved_equations_pt1 {
-    //     println!("Found sol for {:?}", eq);
-    // }
-
-    let sum_solvable_results_pt1: usize =
-        solved_equations_pt1.iter().map(|(eq, _sol)| eq.result).sum();
-    println!("Sum of solution results: {}", sum_solvable_results_pt1);
-
     println!("");
 
     println!("Pt 2:");
 
-    let solved_equations_pt2: Vec<(Equation, Vec<Operation>)> = equations
-        .iter()
-        .map(|eq| (eq.clone(), solve_recursive_any_pt2(&eq)))
-        .filter(|(_eq, solution)| solution.is_some())
-        .map(|(eq, solution)| (eq, solution.unwrap()))
-        .collect();
-
-    // for (eq, _) in &solved_equations_pt2 {
-    //     println!("Found sol for {:?}", eq);
-    // }
-
-    let sum_solvable_results_pt2: usize =
-        solved_equations_pt2.iter().map(|(eq, _sol)| eq.result).sum();
-    println!("Sum of solution results: {}", sum_solvable_results_pt2);
-    */
+    // FIXME: do pt 2
 
     return ExitCode::SUCCESS;
 }
