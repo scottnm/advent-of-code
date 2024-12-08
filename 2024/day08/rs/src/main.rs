@@ -47,13 +47,13 @@ impl<T> Grid<T> where T: Clone + Copy {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-struct Frequency {
-    val: char
+struct Tower {
+    freq: char
 }
 
-type FrequencyGrid = Grid<Option<Frequency>>;
+type TowerGrid = Grid<Option<Tower>>;
 
-fn read_tower_grid(filename: &str) -> Result<FrequencyGrid, String> {
+fn read_tower_grid(filename: &str) -> Result<TowerGrid, String> {
     let lines: Vec<String> = input_helpers::read_lines(filename).collect();
 
     if lines.len() == 0 {
@@ -63,7 +63,7 @@ fn read_tower_grid(filename: &str) -> Result<FrequencyGrid, String> {
     let height = lines.len();
     let width = lines[0].len();
 
-    let mut cells: Vec<Option<Frequency>> = vec![];
+    let mut cells: Vec<Option<Tower>> = vec![];
     for line in lines {
         if line.len() != width {
             return Err(format!(
@@ -76,7 +76,7 @@ fn read_tower_grid(filename: &str) -> Result<FrequencyGrid, String> {
         for c in line.chars() {
             let cell = match c {
                 '.' => None,
-                '0'..='9' | 'a'..='z' | 'A'..='Z' => Some(Frequency{val: c}),
+                '0'..='9' | 'a'..='z' | 'A'..='Z' => Some(Tower{freq: c}),
                 _ => return Err(format!("Invalid frequency tower grid char! {}", c)),
             };
             cells.push(cell);
@@ -84,6 +84,19 @@ fn read_tower_grid(filename: &str) -> Result<FrequencyGrid, String> {
     }
 
     Ok(Grid {width, height, cells})
+}
+
+fn dump_tower_grid(tower_grid: &TowerGrid) {
+    for r in 0..(tower_grid.height as isize) {
+        for c in 0..(tower_grid.width as isize) {
+            let print_char = match tower_grid.get_cell(r, c) {
+                Some(tower) => tower.freq,
+                None => '.',
+            };
+            print!("{}", print_char);
+        }
+        println!("");
+    }
 }
 
 fn main() -> ExitCode {
@@ -105,6 +118,7 @@ fn main() -> ExitCode {
     };
 
     println!("Pt 1:");
+    dump_tower_grid(&tower_grid);
 
     /*
     let solved_equations_pt1: Vec<(Equation, Vec<Operation>)> = equations
