@@ -1,6 +1,52 @@
 use input_helpers;
 use std::process::ExitCode;
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+struct GridPos {
+    row: isize,
+    col: isize,
+}
+
+struct Grid<T> 
+    where T: Clone + Copy
+    {
+    width: usize,
+    height: usize,
+    cells: Vec<T>,
+}
+
+impl<T> Grid<T> where T: Clone + Copy {
+    fn get_cell_idx(&self, row: isize, col: isize) -> usize {
+        assert!(!self.is_pos_out_of_bounds(row, col));
+
+        (row as usize * self.width) + (col as usize)
+    }
+
+    fn get_cell(&self, row: isize, col: isize) -> T {
+        self.cells[self.get_cell_idx(row, col)]
+    }
+
+    fn get_cell_mut(&mut self, row: isize, col: isize) -> &mut T {
+        let idx = self.get_cell_idx(row, col);
+        &mut self.cells[idx]
+    }
+
+    fn cell_pos_from_idx(width: usize, height: usize, idx: usize) -> GridPos {
+        assert!(idx < (width * height));
+        let col = (idx % width) as isize;
+        let row = (idx / width) as isize;
+        GridPos{row, col}
+    }
+
+    fn is_pos_out_of_bounds(&self, row: isize, col: isize) -> bool {
+        row < 0 ||
+        col < 0 ||
+        row as usize >= self.height ||
+        col as usize >= self.width
+    }
+}
+
+
 #[derive(Debug, Clone)]
 struct Equation {
     result: usize,
