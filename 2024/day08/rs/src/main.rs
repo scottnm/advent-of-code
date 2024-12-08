@@ -1,7 +1,8 @@
 use input_helpers;
 use std::process::ExitCode;
+use itertools::Itertools;
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 struct GridPos {
     row: isize,
     col: isize,
@@ -46,7 +47,7 @@ impl<T> Grid<T> where T: Clone + Copy {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct Tower {
     freq: char
 }
@@ -99,6 +100,64 @@ fn dump_tower_grid(tower_grid: &TowerGrid) {
     }
 }
 
+fn calculate_all_antinode_positions(tower_grid: &TowerGrid) -> std::collections::HashSet<GridPos> {
+    // FIXME: rather than preprocessing the tower grid here, the input should probably just be read in this format
+    let tower_positions = {
+        let mut tower_positions = std::collections::HashMap::<char, Vec<GridPos>>::new();
+        for r in 0..(tower_grid.height as isize) {
+            for c in 0..(tower_grid.width as isize) {
+                if let Some(tower) = tower_grid.get_cell(r, c) {
+                    if let Some(single_freq_tower_positions) = tower_positions.get_mut(&tower.freq) {
+                        single_freq_tower_positions.push(GridPos{row: r, col: c});
+                    } else {
+                        let mut single_freq_tower_positions = vec![];
+                        single_freq_tower_positions.push(GridPos{row: r, col: c});
+                        tower_positions.insert(tower.freq, single_freq_tower_positions);
+                    }
+                }
+            }
+        }
+        tower_positions
+    };
+
+    let mut antinode_positions = std::collections::HashSet::<GridPos>::new();
+
+    for (_freq, tower_positions) in &tower_positions {
+        println!("freq({}): pos={:?}", _freq, tower_positions);
+        for (tower_a, tower_b) in tower_positions.iter().tuple_combinations() {
+            let antinode_pos_1 = GridPos {
+                row: tower_a.row + (tower_a.row - tower_b.row),
+                col: tower_a.col + (tower_a.col - tower_b.col),
+            };
+
+            print!("    testing pos: ({},{})...", antinode_pos_1.row, antinode_pos_1.col);
+
+            if !tower_grid.is_pos_out_of_bounds(antinode_pos_1.row, antinode_pos_1.col) {
+                antinode_positions.insert(antinode_pos_1);
+                println!("inserted");
+            } else {
+                println!("OOB !!");
+            }
+
+            let antinode_pos_2 = GridPos {
+                row: tower_b.row + (tower_b.row - tower_a.row),
+                col: tower_b.col + (tower_b.col - tower_a.col),
+            };
+
+            print!("    testing pos: ({},{})...", antinode_pos_1.row, antinode_pos_1.col);
+
+            if !tower_grid.is_pos_out_of_bounds(antinode_pos_2.row, antinode_pos_2.col) {
+                antinode_positions.insert(antinode_pos_2);
+                println!("inserted");
+            } else {
+                println!("OOB !!");
+            }
+        }
+    }
+
+    antinode_positions
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
@@ -119,6 +178,13 @@ fn main() -> ExitCode {
 
     println!("Pt 1:");
     dump_tower_grid(&tower_grid);
+    let antinode_positions = calculate_all_antinode_positions(&tower_grid);
+    println!("antinode position count: {}", antinode_positions.len());
+    if antinode_positions.len() < 10 {
+        for p in antinode_positions {
+            println!("- (r:{},c:{})", p.row, p.col);
+        }
+    }
 
     /*
     let solved_equations_pt1: Vec<(Equation, Vec<Operation>)> = equations
