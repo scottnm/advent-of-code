@@ -227,6 +227,10 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
             None
         };
 
+        asdflkjasdflalsdf // NOTE TO SELF: one of my bugs is likely that I'm calling `remove` below on compacted disk space
+                          // when I should be replacing with free blocks
+                          // further, I'll need to handle the case where surrounding freeblocks need to be compacted
+
         if free_chunk.block_count == next_file_chunk_to_compact.block_count {
             //println!("compacting {} from {} to {}", next_file_chunk_to_compact.id, next_file_chunk_idx, next_free_chunk_idx);
             compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(FileChunk{id: next_file_chunk_to_compact.id, block_count: free_chunk.block_count});
