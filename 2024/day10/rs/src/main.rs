@@ -64,7 +64,7 @@ struct HeightIndex {
 }
 
 impl HeightIndex {
-    fn is_climbable(&self, other: &Self) -> bool {
+    fn can_climb_to(&self, other: &Self) -> bool {
         self.val + 1 == other.val
     }
 
@@ -124,8 +124,78 @@ fn read_topographic_trail_map(filename: &str) -> Result<TopographicTrailMap, Str
     Ok(Grid {width, height, cells})
 }
 
-fn find_trails_pt1(trail_map: &TopographicTrailMap) -> std::collections::HashMap<GridPos, Vec<GridPos>> {
-    unimplemented!();
+fn find_trails_pt1(trail_map: &TopographicTrailMap, start_pos: &GridPos) -> Vec<GridPos> {
+    let mut trailends = std::collections::HashSet::<GridPos>::new();
+
+    fn get_neighbor_at_offset(
+        trail_map: &TopographicTrailMap, 
+        pos: &GridPos,
+        row_offset: isize, 
+        col_offset: isize) -> Option<(GridPos, HeightIndex)> {
+
+        let neighbor_pos = GridPos { row: pos.row + row_offset, col: pos.col + col_offset };
+        if trail_map.is_pos_out_of_bounds(neighbor_pos.row, neighbor_pos.col) {
+            None
+        } else {
+            // FIXME: this could probably be baked directly into the grid helper as some get_cell variant
+            Some((neighbor_pos, trail_map.get_cell(neighbor_pos.row, neighbor_pos.col)))
+        }
+    }
+
+    fn find_trails_rec_helper(
+        trail_map: &TopographicTrailMap, 
+        curr_pos: &GridPos, 
+        trailends: &mut std::collections::HashSet<GridPos>) {
+        
+        let curr_trail_cell = trail_map.get_cell(curr_pos.row, curr_pos.col);
+        if curr_trail_cell.is_trailend() {
+            trailends.insert(curr_pos.clone());
+            return;
+        }
+
+        // try up
+        if let Some((up_neighbor_pos, up_neighbor)) = get_neighbor_at_offset(trail_map, curr_pos, -1, 0) {
+            if curr_trail_cell.can_climb_to(&up_neighbor) {
+                find_trails_rec_helper(trail_map, &up_neighbor_pos, trailends);
+            }
+        }
+
+        if let Some((down_neighbor_pos, down_neighbor)) = get_neighbor_at_offset(trail_map, curr_pos, 1, 0) {
+            if curr_trail_cell.can_climb_to(&down_neighbor) {
+                find_trails_rec_helper(trail_map, &down_neighbor_pos, trailends);
+            }
+        }
+        
+        if let Some((left_neighbor_pos, left_neighbor)) = get_neighbor_at_offset(trail_map, curr_pos, 0, -1) {
+            if curr_trail_cell.can_climb_to(&left_neighbor) {
+                find_trails_rec_helper(trail_map, &left_neighbor_pos, trailends);
+            }
+        }
+
+        if let Some((right_neighbor_pos, right_neighbor)) = get_neighbor_at_offset(trail_map, curr_pos, 0, 1) {
+            if curr_trail_cell.can_climb_to(&right_neighbor) {
+                find_trails_rec_helper(trail_map, &right_neighbor_pos, trailends);
+            }
+        }
+    }
+
+    find_trails_rec_helper(trail_map, start_pos, &mut trailends);
+
+    Vec::from_iter(trailends)
+}
+
+fn find_all_trails_pt1(trail_map: &TopographicTrailMap) -> std::collections::HashMap<GridPos, Vec<GridPos>> {
+    let mut trails = std::collections::HashMap::<GridPos, Vec<GridPos>>::new();
+    for r in 0..(trail_map.height as isize) {
+        for c in 0..(trail_map.width as isize) {
+            if trail_map.get_cell(r, c).is_trailhead() {
+                let trailhead_pos = GridPos { row: r, col: c };
+                trails.insert(trailhead_pos, find_trails_pt1(trail_map, &trailhead_pos));
+            }
+        }
+    }
+
+    trails
 }
 
 fn main() -> ExitCode {
@@ -149,11 +219,11 @@ fn main() -> ExitCode {
     dump_trail_map(&trail_map);
 
     {
-        let trails = find_trails_pt1(&trail_map);
+        let trails = find_all_trails_pt1(&trail_map);
         let trailhead_scores: Vec<usize> = trails.iter().map(|(_trail_start, trail_ends)| trail_ends.len()).collect();
         let trailhead_score_sum: usize = trailhead_scores.iter().sum();
         println!("Pt 1: trailhead_score_sum = {}", trailhead_score_sum);
-        if trails.len() < 10 {
+        if trails.len() < 20 {
             for trail in &trails {
                 println!("- start={}; trail={:?}", trail.0, trail.1);
             }
