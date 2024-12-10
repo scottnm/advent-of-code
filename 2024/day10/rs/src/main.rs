@@ -160,18 +160,21 @@ fn find_trails_pt1(trail_map: &TopographicTrailMap, start_pos: &GridPos) -> Vec<
             }
         }
 
+        // try down
         if let Some((down_neighbor_pos, down_neighbor)) = get_neighbor_at_offset(trail_map, curr_pos, 1, 0) {
             if curr_trail_cell.can_climb_to(&down_neighbor) {
                 find_trails_rec_helper(trail_map, &down_neighbor_pos, trailends);
             }
         }
         
+        // try left
         if let Some((left_neighbor_pos, left_neighbor)) = get_neighbor_at_offset(trail_map, curr_pos, 0, -1) {
             if curr_trail_cell.can_climb_to(&left_neighbor) {
                 find_trails_rec_helper(trail_map, &left_neighbor_pos, trailends);
             }
         }
 
+        // try right
         if let Some((right_neighbor_pos, right_neighbor)) = get_neighbor_at_offset(trail_map, curr_pos, 0, 1) {
             if curr_trail_cell.can_climb_to(&right_neighbor) {
                 find_trails_rec_helper(trail_map, &right_neighbor_pos, trailends);
@@ -199,7 +202,8 @@ fn find_all_trails_pt1(trail_map: &TopographicTrailMap) -> std::collections::Has
 }
 
 fn find_trails_pt2(trail_map: &TopographicTrailMap, start_pos: &GridPos) -> Vec<GridPos> {
-    let mut trailends = std::collections::HashSet::<GridPos>::new();
+    // FIXME: refactor shared helpers from find_trails_pt1
+    let mut trailends = Vec::<GridPos>::new();
 
     fn get_neighbor_at_offset(
         trail_map: &TopographicTrailMap, 
@@ -219,11 +223,11 @@ fn find_trails_pt2(trail_map: &TopographicTrailMap, start_pos: &GridPos) -> Vec<
     fn find_trails_rec_helper(
         trail_map: &TopographicTrailMap, 
         curr_pos: &GridPos, 
-        trailends: &mut std::collections::HashSet<GridPos>) {
+        trailends: &mut Vec<GridPos>) {
         
         let curr_trail_cell = trail_map.get_cell(curr_pos.row, curr_pos.col);
         if curr_trail_cell.is_trailend() {
-            trailends.insert(curr_pos.clone());
+            trailends.push(curr_pos.clone());
             return;
         }
 
@@ -234,18 +238,21 @@ fn find_trails_pt2(trail_map: &TopographicTrailMap, start_pos: &GridPos) -> Vec<
             }
         }
 
+        // try down
         if let Some((down_neighbor_pos, down_neighbor)) = get_neighbor_at_offset(trail_map, curr_pos, 1, 0) {
             if curr_trail_cell.can_climb_to(&down_neighbor) {
                 find_trails_rec_helper(trail_map, &down_neighbor_pos, trailends);
             }
         }
         
+        // try left
         if let Some((left_neighbor_pos, left_neighbor)) = get_neighbor_at_offset(trail_map, curr_pos, 0, -1) {
             if curr_trail_cell.can_climb_to(&left_neighbor) {
                 find_trails_rec_helper(trail_map, &left_neighbor_pos, trailends);
             }
         }
 
+        // try right
         if let Some((right_neighbor_pos, right_neighbor)) = get_neighbor_at_offset(trail_map, curr_pos, 0, 1) {
             if curr_trail_cell.can_climb_to(&right_neighbor) {
                 find_trails_rec_helper(trail_map, &right_neighbor_pos, trailends);
@@ -255,7 +262,7 @@ fn find_trails_pt2(trail_map: &TopographicTrailMap, start_pos: &GridPos) -> Vec<
 
     find_trails_rec_helper(trail_map, start_pos, &mut trailends);
 
-    Vec::from_iter(trailends)
+    trailends
 }
 
 fn find_all_trails_pt2(trail_map: &TopographicTrailMap) -> std::collections::HashMap<GridPos, Vec<GridPos>> {
