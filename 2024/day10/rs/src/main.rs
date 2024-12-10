@@ -8,6 +8,12 @@ struct GridPos {
     col: isize,
 }
 
+impl std::fmt::Display for GridPos {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(r:{}, c:{})", self.row, self.col)
+    }
+}
+
 struct Grid<T>
 where
     T: Clone + Copy,
@@ -118,6 +124,10 @@ fn read_topographic_trail_map(filename: &str) -> Result<TopographicTrailMap, Str
     Ok(Grid {width, height, cells})
 }
 
+fn find_trails_pt1(trail_map: &TopographicTrailMap) -> std::collections::HashMap<GridPos, Vec<GridPos>> {
+    unimplemented!();
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
@@ -138,16 +148,17 @@ fn main() -> ExitCode {
 
     dump_trail_map(&trail_map);
 
-    /*
     {
-        let antinode_positions_pt1 = calculate_all_antinode_positions_pt1(&tower_grid);
-        println!("Pt 1: antinode position count = {}", antinode_positions_pt1.len());
-        if antinode_positions_pt1.len() < 10 {
-            for p in antinode_positions_pt1 {
-                println!("- (r:{},c:{})", p.row, p.col);
+        let trails = find_trails_pt1(&trail_map);
+        let trailhead_scores: Vec<usize> = trails.iter().map(|(_trail_start, trail_ends)| trail_ends.len()).collect();
+        let trailhead_score_sum: usize = trailhead_scores.iter().sum();
+        println!("Pt 1: trailhead_score_sum = {}", trailhead_score_sum);
+        if trails.len() < 10 {
+            for trail in &trails {
+                println!("- start={}; trail={:?}", trail.0, trail.1);
             }
         }
-    } */
+    }
 
     /*
     println!("");
