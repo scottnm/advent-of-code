@@ -101,15 +101,16 @@ fn compact_disk_pt1(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
         };
 
         if free_chunk.block_count < tail_file_chunk.block_count {
+            let remaining_file_block_count = tail_file_chunk.block_count - free_chunk.block_count;
             compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(FileChunk{id: tail_file_chunk.id, block_count: free_chunk.block_count});
-            *compacted_disk_chunks.last_mut().unwrap() = DiskChunk::File(FileChunk{id: tail_file_chunk.id, block_count: tail_file_chunk.block_count - free_chunk.block_count});
+            *compacted_disk_chunks.last_mut().unwrap() = DiskChunk::File(FileChunk{id: tail_file_chunk.id, block_count: remaining_file_block_count});
         } else if free_chunk.block_count == tail_file_chunk.block_count {
-            compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(FileChunk{id: tail_file_chunk.id, block_count: free_chunk.block_count});
-            compacted_disk_chunks.pop();
+            compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(tail_file_chunk);
+            *compacted_disk_chunks.last_mut().unwrap() = DiskChunk::FreeSpace(FreeSpaceChunk { block_count: tail_file_chunk.block_count });
         } else {
             let remaining_free_space = free_chunk.block_count - tail_file_chunk.block_count;
             compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(tail_file_chunk);
-            compacted_disk_chunks.pop();
+            *compacted_disk_chunks.last_mut().unwrap() = DiskChunk::FreeSpace(FreeSpaceChunk { block_count: tail_file_chunk.block_count });
             compacted_disk_chunks.insert(next_free_chunk_idx + 1, DiskChunk::FreeSpace(FreeSpaceChunk{block_count: remaining_free_space}));
         }
 
@@ -186,6 +187,8 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
             break;
         };
 
+        // FIXME: technically this is a bug and I shouldn't be doing this since this makes the total disk space shrink
+        // not doing it will require better tracking for where to look for the 'last' check to try and move
         while !compacted_disk_chunks.is_empty() && is_free_space(compacted_disk_chunks.last().unwrap()) {
             compacted_disk_chunks.pop();
         }
@@ -227,12 +230,6 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
             None
         };
 
-
-        /*
-        FIXME: Do I need to handle the case where I don't remove the old chunk from the end of the list if its compacted to the front?
-        I don't think it makes a huge difference (other than losing some space...)
-        OH FUCK.... wait that actually might be a problem.... because if we lose free space, then unmoved blocks aren't added correctly
-         */
 
         if free_chunk.block_count == next_file_chunk_to_compact.block_count {
             //println!("compacting {} from {} to {}", next_file_chunk_to_compact.id, next_file_chunk_idx, next_free_chunk_idx);
@@ -279,6 +276,28 @@ fn calculate_checksum(disk_chunks: &[DiskChunk]) -> usize {
     checksum
 }
 
+fn stringify_disk_layout(disk_chunks: &[DiskChunk]) -> String {
+    let mut disk_layout_string = String::new();
+    for chunk in disk_chunks {
+        let (print_char, block_count) = match chunk {
+            DiskChunk::File(FileChunk { id, block_count }) => {
+                const ID_CHARS: [char; 16] = [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' ];
+                let id_char = ID_CHARS[*id as usize % ID_CHARS.len()];
+                (id_char, *block_count)
+            },
+            DiskChunk::FreeSpace(FreeSpaceChunk { block_count }) => {
+                ('.', *block_count)
+            },
+        };
+
+        for _ in 0..block_count {
+            disk_layout_string.push(print_char);
+        }
+    }
+    
+    disk_layout_string
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
@@ -301,8 +320,10 @@ fn main() -> ExitCode {
         let compacted_disk_chunks = compact_disk_pt1(&disk_chunks);
         let checksum = calculate_checksum(&compacted_disk_chunks);
         println!("Pt 1: checksum = {}", checksum);
-        if compacted_disk_chunks.len() < 10 {
-            dbg!(compacted_disk_chunks);
+        if compacted_disk_chunks.len() < 20 {
+            println!("Original layout:  {}", stringify_disk_layout(&disk_chunks));
+            println!("Compacted layout: {}", stringify_disk_layout(&compacted_disk_chunks));
+            //dbg!(compacted_disk_chunks);
         }
     }
 
@@ -312,8 +333,10 @@ fn main() -> ExitCode {
         let compacted_disk_chunks = compact_disk_pt2(&disk_chunks);
         let checksum = calculate_checksum(&compacted_disk_chunks);
         println!("Pt 2: checksum = {}", checksum);
-        if compacted_disk_chunks.len() < 10 {
-            dbg!(compacted_disk_chunks);
+        if compacted_disk_chunks.len() < 20 {
+            println!("Original layout:  {}", stringify_disk_layout(&disk_chunks));
+            println!("Compacted layout: {}", stringify_disk_layout(&compacted_disk_chunks));
+            //dbg!(compacted_disk_chunks);
         }
     }
 
