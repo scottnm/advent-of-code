@@ -227,9 +227,12 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
             None
         };
 
-        asdflkjasdflalsdf // NOTE TO SELF: one of my bugs is likely that I'm calling `remove` below on compacted disk space
-                          // when I should be replacing with free blocks
-                          // further, I'll need to handle the case where surrounding freeblocks need to be compacted
+
+        /*
+        FIXME: Do I need to handle the case where I don't remove the old chunk from the end of the list if its compacted to the front?
+        I don't think it makes a huge difference (other than losing some space...)
+        OH FUCK.... wait that actually might be a problem.... because if we lose free space, then unmoved blocks aren't added correctly
+         */
 
         if free_chunk.block_count == next_file_chunk_to_compact.block_count {
             //println!("compacting {} from {} to {}", next_file_chunk_to_compact.id, next_file_chunk_idx, next_free_chunk_idx);
