@@ -120,6 +120,22 @@ fn compact_disk_pt1(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
     compacted_disk_chunks
 }
 
+/* FIXME: bug in pt 2 
+
+Bugs in pt2:
+1. incorrect shift from front...
+    > Pt 2: checksum = 132
+    > Original layout:  0..111....22222
+    > Compacted layout: .0.111....22222
+
+2. compacting sample_input.txt just generally looks wrong
+    > Pt 2: checksum = 3427
+    > Original layout:  00...111...2...333.44.5555.6666.777.888899
+    > Compacted layout: 00992...111....333.44.5555.6666.777.8888
+*/
+
+asdfl;kjasfljadsl;f
+
 fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
     let mut compacted_disk_chunks = disk_chunks.to_vec();
 
