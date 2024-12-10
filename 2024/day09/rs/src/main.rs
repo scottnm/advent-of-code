@@ -236,14 +236,14 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
 
         if free_chunk.block_count == next_file_chunk_to_compact.block_count {
             //println!("compacting {} from {} to {}", next_file_chunk_to_compact.id, next_file_chunk_idx, next_free_chunk_idx);
-            compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(FileChunk{id: next_file_chunk_to_compact.id, block_count: free_chunk.block_count});
-            compacted_disk_chunks.remove(next_file_chunk_idx);
+            compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(next_file_chunk_to_compact);
+            compacted_disk_chunks[next_file_chunk_idx] = DiskChunk::FreeSpace(FreeSpaceChunk{block_count: next_file_chunk_to_compact.block_count});
         } else if free_chunk.block_count > next_file_chunk_to_compact.block_count {
             //println!("compacting {} from {} to {}", next_file_chunk_to_compact.id, next_file_chunk_idx, next_free_chunk_idx);
             //println!("inserting remaning free space at {}", next_free_chunk_idx + 1);
             let remaining_free_space = free_chunk.block_count - next_file_chunk_to_compact.block_count;
             compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(next_file_chunk_to_compact);
-            compacted_disk_chunks.remove(next_file_chunk_idx);
+            compacted_disk_chunks[next_file_chunk_idx] = DiskChunk::FreeSpace(FreeSpaceChunk{block_count: next_file_chunk_to_compact.block_count});
             compacted_disk_chunks.insert(next_free_chunk_idx + 1, DiskChunk::FreeSpace(FreeSpaceChunk{block_count: remaining_free_space}));
         } else {
             //println!("not compacting {} from {}", next_file_chunk_to_compact.id, next_file_chunk_idx);
