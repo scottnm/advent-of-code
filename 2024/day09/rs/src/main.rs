@@ -1,6 +1,15 @@
+/**
+ * WARNING: The solution in this file is UGGGGGLYYYYYYYY
+ *
+ * There are still bugs and fixmes all over the place BUT it passes both tests from Advent of Code and the next day
+ * is set to release in 30 minutes so I'm going to call it for now
+ * 
+ * notably I haven't bothered adding any support for compacting free space together in pt2.
+ * i.e. FreeSpaceChunk{2} and FreeSpaceChunk{3} might be colocated and could/should be collapsed to FreeSpaceChunk{5}
+ */
 use input_helpers;
-use std::{fmt::format, fs::File, ops::Index, process::ExitCode};
 use itertools::Itertools;
+use std::{fmt::format, fs::File, ops::Index, process::ExitCode};
 
 #[derive(Debug, Clone, Copy)]
 struct FileChunk {
@@ -40,11 +49,16 @@ fn read_disk_layout(filename: &str) -> Result<Vec<DiskChunk>, String> {
         };
 
         let disk_chunk = if disk_chunk_toggle {
-            let disk_chunk = DiskChunk::File(FileChunk{id: next_file_id, block_count: disk_chunk_len});
+            let disk_chunk = DiskChunk::File(FileChunk {
+                id: next_file_id,
+                block_count: disk_chunk_len,
+            });
             next_file_id += 1;
             disk_chunk
         } else {
-            DiskChunk::FreeSpace(FreeSpaceChunk { block_count: disk_chunk_len })
+            DiskChunk::FreeSpace(FreeSpaceChunk {
+                block_count: disk_chunk_len,
+            })
         };
 
         disk_chunk_toggle = !disk_chunk_toggle;
@@ -66,16 +80,23 @@ fn compact_disk_pt1(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
     }
 
     fn find_free_space(disk_chunks: &[DiskChunk], offset: usize) -> Option<usize> {
-        disk_chunks.iter().skip(offset).position(is_free_space).map(|idx_with_skip| idx_with_skip + offset)
+        disk_chunks
+            .iter()
+            .skip(offset)
+            .position(is_free_space)
+            .map(|idx_with_skip| idx_with_skip + offset)
     }
 
     let mut next_free_chunk_search_offset = 0;
     loop {
-        while !compacted_disk_chunks.is_empty() && is_free_space(compacted_disk_chunks.last().unwrap()) {
+        while !compacted_disk_chunks.is_empty()
+            && is_free_space(compacted_disk_chunks.last().unwrap())
+        {
             compacted_disk_chunks.pop();
         }
 
-        let next_free_chunk_idx_search = find_free_space(&compacted_disk_chunks, next_free_chunk_search_offset);
+        let next_free_chunk_idx_search =
+            find_free_space(&compacted_disk_chunks, next_free_chunk_search_offset);
 
         let next_free_chunk_idx = if let Some(next_free_chunk_idx) = next_free_chunk_idx_search {
             next_free_chunk_idx
@@ -102,16 +123,31 @@ fn compact_disk_pt1(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
 
         if free_chunk.block_count < tail_file_chunk.block_count {
             let remaining_file_block_count = tail_file_chunk.block_count - free_chunk.block_count;
-            compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(FileChunk{id: tail_file_chunk.id, block_count: free_chunk.block_count});
-            *compacted_disk_chunks.last_mut().unwrap() = DiskChunk::File(FileChunk{id: tail_file_chunk.id, block_count: remaining_file_block_count});
+            compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(FileChunk {
+                id: tail_file_chunk.id,
+                block_count: free_chunk.block_count,
+            });
+            *compacted_disk_chunks.last_mut().unwrap() = DiskChunk::File(FileChunk {
+                id: tail_file_chunk.id,
+                block_count: remaining_file_block_count,
+            });
         } else if free_chunk.block_count == tail_file_chunk.block_count {
             compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(tail_file_chunk);
-            *compacted_disk_chunks.last_mut().unwrap() = DiskChunk::FreeSpace(FreeSpaceChunk { block_count: tail_file_chunk.block_count });
+            *compacted_disk_chunks.last_mut().unwrap() = DiskChunk::FreeSpace(FreeSpaceChunk {
+                block_count: tail_file_chunk.block_count,
+            });
         } else {
             let remaining_free_space = free_chunk.block_count - tail_file_chunk.block_count;
             compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(tail_file_chunk);
-            *compacted_disk_chunks.last_mut().unwrap() = DiskChunk::FreeSpace(FreeSpaceChunk { block_count: tail_file_chunk.block_count });
-            compacted_disk_chunks.insert(next_free_chunk_idx + 1, DiskChunk::FreeSpace(FreeSpaceChunk{block_count: remaining_free_space}));
+            *compacted_disk_chunks.last_mut().unwrap() = DiskChunk::FreeSpace(FreeSpaceChunk {
+                block_count: tail_file_chunk.block_count,
+            });
+            compacted_disk_chunks.insert(
+                next_free_chunk_idx + 1,
+                DiskChunk::FreeSpace(FreeSpaceChunk {
+                    block_count: remaining_free_space,
+                }),
+            );
         }
 
         next_free_chunk_search_offset = next_free_chunk_idx;
@@ -120,7 +156,7 @@ fn compact_disk_pt1(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
     compacted_disk_chunks
 }
 
-/* FIXME: bug in pt 2 
+/* FIXME: bug in pt 2
 
 Bugs in pt2:
 1. incorrect shift from front...
@@ -143,14 +179,17 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
     fn is_sufficient_free_space(chunk: &DiskChunk, required_block_count: u8) -> bool {
         match chunk {
             DiskChunk::File(_) => false,
-            DiskChunk::FreeSpace(FreeSpaceChunk { block_count }) => *block_count >= required_block_count,
+            DiskChunk::FreeSpace(FreeSpaceChunk { block_count }) => {
+                *block_count >= required_block_count
+            }
         }
     }
 
     fn find_free_space(
-        disk_chunks: &[DiskChunk], 
+        disk_chunks: &[DiskChunk],
         required_block_count: u8,
-        max_free_space_idx: usize) -> Option<usize> {
+        max_free_space_idx: usize,
+    ) -> Option<usize> {
         disk_chunks[..max_free_space_idx]
             .iter()
             .position(|chunk| is_sufficient_free_space(chunk, required_block_count))
@@ -159,7 +198,11 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
     // FIXME: maybe add a rev-offset to prevent re-checking files which weren't moved
     fn find_next_file_chunk(disk_chunks: &[DiskChunk], max_file_id: u32) -> Option<usize> {
         fn is_earlier_file_chunk(chunk: &DiskChunk, max_file_id: u32) -> bool {
-            if let DiskChunk::File(FileChunk { id, block_count: _block_count }) = chunk {
+            if let DiskChunk::File(FileChunk {
+                id,
+                block_count: _block_count,
+            }) = chunk
+            {
                 max_file_id >= *id
             } else {
                 false
@@ -177,7 +220,7 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
     let mut next_file_chunk_id = {
         let mut highest_file_chunk_id = None;
         for chunk in &compacted_disk_chunks {
-            if let DiskChunk::File(FileChunk { id, block_count: _}) = chunk {
+            if let DiskChunk::File(FileChunk { id, block_count: _ }) = chunk {
                 if let Some(curr_highest_file_chunk_id) = highest_file_chunk_id {
                     if curr_highest_file_chunk_id < *id {
                         highest_file_chunk_id = Some(*id);
@@ -199,10 +242,10 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
             break;
         };
 
-
         //println!("attempting compact of ids <= {}", max_file_chunk_id_to_compact);
 
-        let next_file_chunk_idx_search = find_next_file_chunk(&compacted_disk_chunks, max_file_chunk_id_to_compact);
+        let next_file_chunk_idx_search =
+            find_next_file_chunk(&compacted_disk_chunks, max_file_chunk_id_to_compact);
         let next_file_chunk_idx = if let Some(next_file_chunk_idx) = next_file_chunk_idx_search {
             next_file_chunk_idx
         } else {
@@ -214,7 +257,10 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
             DiskChunk::File(file_chunk) => file_chunk.clone(),
             // FIXME: there's got to be a more elegant way to do this. Maybe it means that
             // what I'm doing getting indexes isn't the right way to do this or using enums isn't the best tool here
-            _ => panic!("Unexpected chunk type at idx {}! Expected 'file'", next_file_chunk_idx),
+            _ => panic!(
+                "Unexpected chunk type at idx {}! Expected 'file'",
+                next_file_chunk_idx
+            ),
         };
 
         // set the file chunk id we'll search for on the next loop iteration.
@@ -227,9 +273,10 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
         };
 
         let next_free_chunk_idx_search = find_free_space(
-            &compacted_disk_chunks, 
+            &compacted_disk_chunks,
             next_file_chunk_to_compact.block_count,
-            next_file_chunk_idx);
+            next_file_chunk_idx,
+        );
 
         let next_free_chunk_idx = if let Some(next_free_chunk_idx) = next_free_chunk_idx_search {
             next_free_chunk_idx
@@ -245,18 +292,29 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
             _ => panic!("Unexpected chunk type! Expected 'free'"),
         };
 
-
         if free_chunk.block_count == next_file_chunk_to_compact.block_count {
             //println!("compacting {} from {} to {}", next_file_chunk_to_compact.id, next_file_chunk_idx, next_free_chunk_idx);
-            compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(next_file_chunk_to_compact);
-            compacted_disk_chunks[next_file_chunk_idx] = DiskChunk::FreeSpace(FreeSpaceChunk{block_count: next_file_chunk_to_compact.block_count});
+            compacted_disk_chunks[next_free_chunk_idx] =
+                DiskChunk::File(next_file_chunk_to_compact);
+            compacted_disk_chunks[next_file_chunk_idx] = DiskChunk::FreeSpace(FreeSpaceChunk {
+                block_count: next_file_chunk_to_compact.block_count,
+            });
         } else if free_chunk.block_count > next_file_chunk_to_compact.block_count {
             //println!("compacting {} from {} to {}", next_file_chunk_to_compact.id, next_file_chunk_idx, next_free_chunk_idx);
             //println!("inserting remaning free space at {}", next_free_chunk_idx + 1);
-            let remaining_free_space = free_chunk.block_count - next_file_chunk_to_compact.block_count;
-            compacted_disk_chunks[next_free_chunk_idx] = DiskChunk::File(next_file_chunk_to_compact);
-            compacted_disk_chunks[next_file_chunk_idx] = DiskChunk::FreeSpace(FreeSpaceChunk{block_count: next_file_chunk_to_compact.block_count});
-            compacted_disk_chunks.insert(next_free_chunk_idx + 1, DiskChunk::FreeSpace(FreeSpaceChunk{block_count: remaining_free_space}));
+            let remaining_free_space =
+                free_chunk.block_count - next_file_chunk_to_compact.block_count;
+            compacted_disk_chunks[next_free_chunk_idx] =
+                DiskChunk::File(next_file_chunk_to_compact);
+            compacted_disk_chunks[next_file_chunk_idx] = DiskChunk::FreeSpace(FreeSpaceChunk {
+                block_count: next_file_chunk_to_compact.block_count,
+            });
+            compacted_disk_chunks.insert(
+                next_free_chunk_idx + 1,
+                DiskChunk::FreeSpace(FreeSpaceChunk {
+                    block_count: remaining_free_space,
+                }),
+            );
         } else {
             //println!("not compacting {} from {}", next_file_chunk_to_compact.id, next_file_chunk_idx);
         }
@@ -277,17 +335,17 @@ fn calculate_checksum(disk_chunks: &[DiskChunk]) -> usize {
         match chunk {
             DiskChunk::File(FileChunk { id, block_count }) => {
                 let block_count = *block_count as usize;
-                let block_idx_sum: usize = (block_idx..(block_idx+block_count)).sum();
+                let block_idx_sum: usize = (block_idx..(block_idx + block_count)).sum();
                 let id = *id as usize;
                 checksum += block_idx_sum * id;
                 block_idx += block_count;
-            },
+            }
             DiskChunk::FreeSpace(FreeSpaceChunk { block_count }) => {
                 block_idx += *block_count as usize;
-            },
+            }
         }
     }
-    
+
     checksum
 }
 
@@ -296,20 +354,20 @@ fn stringify_disk_layout(disk_chunks: &[DiskChunk]) -> String {
     for chunk in disk_chunks {
         let (print_char, block_count) = match chunk {
             DiskChunk::File(FileChunk { id, block_count }) => {
-                const ID_CHARS: [char; 16] = [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' ];
+                const ID_CHARS: [char; 16] = [
+                    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+                ];
                 let id_char = ID_CHARS[*id as usize % ID_CHARS.len()];
                 (id_char, *block_count)
-            },
-            DiskChunk::FreeSpace(FreeSpaceChunk { block_count }) => {
-                ('.', *block_count)
-            },
+            }
+            DiskChunk::FreeSpace(FreeSpaceChunk { block_count }) => ('.', *block_count),
         };
 
         for _ in 0..block_count {
             disk_layout_string.push(print_char);
         }
     }
-    
+
     disk_layout_string
 }
 
@@ -337,7 +395,10 @@ fn main() -> ExitCode {
         println!("Pt 1: checksum = {}", checksum);
         if compacted_disk_chunks.len() < 20 {
             println!("Original layout:  {}", stringify_disk_layout(&disk_chunks));
-            println!("Compacted layout: {}", stringify_disk_layout(&compacted_disk_chunks));
+            println!(
+                "Compacted layout: {}",
+                stringify_disk_layout(&compacted_disk_chunks)
+            );
             //dbg!(compacted_disk_chunks);
         }
     }
@@ -350,7 +411,10 @@ fn main() -> ExitCode {
         println!("Pt 2: checksum = {}", checksum);
         if compacted_disk_chunks.len() < 20 {
             println!("Original layout:  {}", stringify_disk_layout(&disk_chunks));
-            println!("Compacted layout: {}", stringify_disk_layout(&compacted_disk_chunks));
+            println!(
+                "Compacted layout: {}",
+                stringify_disk_layout(&compacted_disk_chunks)
+            );
             //dbg!(compacted_disk_chunks);
         }
     }
@@ -391,7 +455,11 @@ mod tests {
 
     fn find_next_file_chunk(disk_chunks: &[DiskChunk], max_file_id: u32) -> Option<usize> {
         fn is_earlier_file_chunk(chunk: &DiskChunk, max_file_id: u32) -> bool {
-            if let DiskChunk::File(FileChunk { id, block_count: _block_count }) = chunk {
+            if let DiskChunk::File(FileChunk {
+                id,
+                block_count: _block_count,
+            }) = chunk
+            {
                 max_file_id >= *id
             } else {
                 false
@@ -409,15 +477,35 @@ mod tests {
     #[test]
     fn test_find_next_file_chunk() {
         let chunks = [
-            /* 0 */ DiskChunk::File(FileChunk { id: 0, block_count: 1 }),
+            /* 0 */
+            DiskChunk::File(FileChunk {
+                id: 0,
+                block_count: 1,
+            }),
             /* 1 */ DiskChunk::FreeSpace(FreeSpaceChunk { block_count: 1 }),
-            /* 2 */ DiskChunk::File(FileChunk { id: 1, block_count: 1 }),
+            /* 2 */
+            DiskChunk::File(FileChunk {
+                id: 1,
+                block_count: 1,
+            }),
             /* 3 */ DiskChunk::FreeSpace(FreeSpaceChunk { block_count: 1 }),
-            /* 4 */ DiskChunk::File(FileChunk { id: 2, block_count: 1 }),
+            /* 4 */
+            DiskChunk::File(FileChunk {
+                id: 2,
+                block_count: 1,
+            }),
             /* 5 */ DiskChunk::FreeSpace(FreeSpaceChunk { block_count: 1 }),
-            /* 6 */ DiskChunk::File(FileChunk { id: 3, block_count: 1 }),
+            /* 6 */
+            DiskChunk::File(FileChunk {
+                id: 3,
+                block_count: 1,
+            }),
             /* 7 */ DiskChunk::FreeSpace(FreeSpaceChunk { block_count: 1 }),
-            /* 8 */ DiskChunk::File(FileChunk { id: 4, block_count: 1 }),
+            /* 8 */
+            DiskChunk::File(FileChunk {
+                id: 4,
+                block_count: 1,
+            }),
         ];
 
         assert_eq!(find_next_file_chunk(&chunks, 4), Some(8));
