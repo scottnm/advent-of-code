@@ -104,95 +104,58 @@ struct StoneBlinkProgress {
     blinks_left: usize,
 }
 
-type BlinkResultCompressorMapKey = usize;
+/** Map from a given stone value + number of blinks left to the number of stones that results from doing all of those blinks  */
+type BlinkResultsMap = std::collections::HashMap<StoneBlinkProgress, usize>;
 
-struct BlinkResultCompressorMap
-{
-    result_to_key_map: std::collections::HashMap<Vec<StoneVal>, BlinkResultCompressorMapKey>,
-    key_to_result_map: Vec<Vec<StoneVal>>,
-}
-
-type BlinkResultsMap = std::collections::HashMap<StoneBlinkProgress, BlinkResultCompressorMapKey>;
-
-impl BlinkResultCompressorMap {
-    fn new() -> Self {
-        Self {
-            result_to_key_map: std::collections::HashMap::<Vec<StoneVal>, usize>::new(),
-            key_to_result_map: vec![],
-        }
-    }
-
-    fn insert(&mut self, result: &Vec<StoneVal>) -> BlinkResultCompressorMapKey {
-        if let Some(key) = self.result_to_key_map.get(result) {
-            return *key;
-        }
-
-        let key = self.key_to_result_map.len();
-        self.key_to_result_map.push(result.clone());
-        self.result_to_key_map.insert(result.clone(), key);
-        key
-    }
-}
-
-fn memoize_stone_blinks(
+fn memoize_stone_counts_after_blinks(
     stone_state: StoneBlinkProgress,
-    memo: &mut BlinkResultsMap,
-    compression_map: &mut BlinkResultCompressorMap) -> BlinkResultCompressorMapKey {
+    memo: &mut BlinkResultsMap) -> usize {
 
     if let Some(memod_result) = memo.get(&stone_state) {
-        return *memod_result;
+        return memod_result.clone();
     }
 
     if stone_state.blinks_left == 0 {
-        let result = vec![stone_state.val];
-        let result_key = compression_map.insert(&result);
-        memo.insert(stone_state, result_key);
-        return result_key;
+        memo.insert(stone_state, 1);
+        return 1;
     }
 
     if stone_state.val == 0 {
-        let result_key = memoize_stone_blinks(StoneBlinkProgress{val: 1, blinks_left: stone_state.blinks_left - 1}, memo, compression_map);
-        memo.insert(stone_state, result_key);
-        return result_key;
+        let result_count = memoize_stone_counts_after_blinks(StoneBlinkProgress{val: 1, blinks_left: stone_state.blinks_left - 1}, memo);
+        memo.insert(stone_state, result_count);
+        return result_count;
     } 
 
     let digit_count = count_digits(stone_state.val);
     if digit_count % 2 == 0 {
         let (high_digits, low_digits) = split_num(stone_state.val, digit_count / 2);
-        let result_stones = {
-            let high_digits_stone_results_key = 
-                memoize_stone_blinks(StoneBlinkProgress{val: high_digits, blinks_left: stone_state.blinks_left - 1}, memo, compression_map);
-            let low_digits_stone_results_key = 
-                memoize_stone_blinks(StoneBlinkProgress{val: low_digits, blinks_left: stone_state.blinks_left - 1}, memo, compression_map);
+        let result_count = {
+            let high_digits_stone_result_count =
+                memoize_stone_counts_after_blinks(StoneBlinkProgress{val: high_digits, blinks_left: stone_state.blinks_left - 1}, memo);
+            let low_digits_stone_result_count = 
+                memoize_stone_counts_after_blinks(StoneBlinkProgress{val: low_digits, blinks_left: stone_state.blinks_left - 1}, memo);
             
-            let mut results = compression_map.key_to_result_map[high_digits_stone_results_key].clone();
-            results.append(&mut compression_map.key_to_result_map[low_digits_stone_results_key].clone());
-            results
+            high_digits_stone_result_count + low_digits_stone_result_count
         };
-        let result_key = compression_map.insert(&result_stones);
-        memo.insert(stone_state, result_key);
-        return result_key;
+        memo.insert(stone_state, result_count);
+        return result_count;
     } 
 
-    let result_key = memoize_stone_blinks(StoneBlinkProgress{val: stone_state.val * 2024, blinks_left: stone_state.blinks_left - 1}, memo, compression_map);
-    memo.insert(stone_state, result_key);
-    return result_key;
+
+    let result_count = memoize_stone_counts_after_blinks(StoneBlinkProgress{val: stone_state.val * 2024, blinks_left: stone_state.blinks_left - 1}, memo);
+    memo.insert(stone_state, result_count);
+    return result_count;
 }
 
-fn do_blinks_memod(stones: &mut Vec<StoneVal>, blink_count: usize) {
-    let mut result_compression_map = BlinkResultCompressorMap::new();
+fn count_stones_after_blinks_memod(stones: &[StoneVal], blink_count: usize) -> usize {
     let mut memoized_blink_results = BlinkResultsMap::new();
-    let mut full_blink_results: Vec<StoneVal> = vec![];
 
+    let mut sum = 0;
     for stone in stones.iter().cloned() {
-        let result_key = memoize_stone_blinks(
-            StoneBlinkProgress{val: stone, blinks_left: blink_count}, 
-            &mut memoized_blink_results,
-            &mut result_compression_map);
-        full_blink_results.append(&mut result_compression_map.key_to_result_map[result_key].clone());
+        sum += memoize_stone_counts_after_blinks(StoneBlinkProgress{val: stone, blinks_left: blink_count}, &mut memoized_blink_results);
     }
 
-    *stones = full_blink_results;
+    sum
 }
 
 fn get_nth_string_arg<'a>(args: &'a [String], n: usize) -> Result<&'a str, String> {
@@ -226,18 +189,19 @@ fn run(args: &[String]) -> Result<(), String> {
     dump_stones("original", &original_stones);
 
     if use_memoization {
-        do_blinks_memod(&mut stones, blink_count);
+        let count = count_stones_after_blinks_memod(&stones, blink_count);
+        println!("result = {} stones", count);
     } else {
         for i in 0..blink_count {
             println!("{:03}/{:03} blinks", i, blink_count);
             do_blink(&mut stones);
         }
+        if stones.len() < 50 {
+            dump_stones("after blinks", &stones);
+        }
+        println!("result = {} stones", stones.len());
     }
 
-    if stones.len() < 50 {
-        dump_stones("after blinks", &stones);
-    }
-    println!("result = {} stones", stones.len());
 
     /*
     println!("");
