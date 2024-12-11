@@ -140,16 +140,20 @@ asdfl;kjasfljadsl;f
 fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
     let mut compacted_disk_chunks = disk_chunks.to_vec();
 
-    fn is_free_space(chunk: &DiskChunk) -> bool {
+    fn is_sufficient_free_space(chunk: &DiskChunk, required_block_count: u8) -> bool {
         match chunk {
             DiskChunk::File(_) => false,
-            DiskChunk::FreeSpace(_) => true,
+            DiskChunk::FreeSpace(FreeSpaceChunk { block_count }) => *block_count >= required_block_count,
         }
     }
 
-    // FIXME: I could use enumerate instead of position(..) + an add op
-    fn find_free_space(disk_chunks: &[DiskChunk], offset: usize) -> Option<usize> {
-        disk_chunks.iter().skip(offset).position(is_free_space).map(|idx_with_skip| idx_with_skip + offset)
+    fn find_free_space(
+        disk_chunks: &[DiskChunk], 
+        required_block_count: u8,
+        max_free_space_idx: usize) -> Option<usize> {
+        disk_chunks[..max_free_space_idx]
+            .iter()
+            .position(|chunk| is_sufficient_free_space(chunk, required_block_count))
     }
 
     // FIXME: maybe add a rev-offset to prevent re-checking files which weren't moved
@@ -170,7 +174,6 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
             .map(|(idx, _chunk)| idx)
     }
 
-    let mut next_free_chunk_search_offset = 0;
     let mut next_file_chunk_id = {
         let mut highest_file_chunk_id = None;
         for chunk in &compacted_disk_chunks {
@@ -187,11 +190,12 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
         highest_file_chunk_id
     };
 
-    println!("compacted_disk_chunk start:  {}", stringify_disk_layout(&compacted_disk_chunks));
+    //println!("compacted_disk_chunk start:  {}", stringify_disk_layout(&compacted_disk_chunks));
     loop {
         let max_file_chunk_id_to_compact = if let Some(next_file_chunk_id) = next_file_chunk_id {
             next_file_chunk_id
         } else {
+            //println!("done searching for files...");
             break;
         };
 
@@ -202,35 +206,15 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
         let next_file_chunk_idx = if let Some(next_file_chunk_idx) = next_file_chunk_idx_search {
             next_file_chunk_idx
         } else {
+            //println!("could not find file with maximum file id...");
             break;
-        };
-
-        let next_free_chunk_idx_search = find_free_space(&compacted_disk_chunks, next_free_chunk_search_offset);
-
-        let next_free_chunk_idx = if let Some(next_free_chunk_idx) = next_free_chunk_idx_search {
-            next_free_chunk_idx
-        } else {
-            break;
-        };
-
-        // There has to be at least one free chunk from the beginning of the search offset and one non-free chunk at the end.
-        assert!((compacted_disk_chunks.len() - next_free_chunk_search_offset) >= 2);
-
-        let free_chunk = match &compacted_disk_chunks[next_free_chunk_idx] {
-            DiskChunk::FreeSpace(free_chunk) => free_chunk.clone(),
-            // FIXME: there's got to be a more elegant way to do this. Maybe it means that
-            // what I'm doing getting indexes isn't the right way to do this or using enums isn't the best tool here
-            _ => panic!("Unexpected chunk type! Expected 'free'"),
         };
 
         let next_file_chunk_to_compact = match &compacted_disk_chunks[next_file_chunk_idx] {
             DiskChunk::File(file_chunk) => file_chunk.clone(),
             // FIXME: there's got to be a more elegant way to do this. Maybe it means that
             // what I'm doing getting indexes isn't the right way to do this or using enums isn't the best tool here
-            _ => {
-                dbg!(compacted_disk_chunks);
-                panic!("Unexpected chunk type at idx {}! Expected 'file'", next_file_chunk_idx);
-            },
+            _ => panic!("Unexpected chunk type at idx {}! Expected 'file'", next_file_chunk_idx),
         };
 
         // set the file chunk id we'll search for on the next loop iteration.
@@ -240,6 +224,25 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
             Some(next_file_chunk_to_compact.id - 1)
         } else {
             None
+        };
+
+        let next_free_chunk_idx_search = find_free_space(
+            &compacted_disk_chunks, 
+            next_file_chunk_to_compact.block_count,
+            next_file_chunk_idx);
+
+        let next_free_chunk_idx = if let Some(next_free_chunk_idx) = next_free_chunk_idx_search {
+            next_free_chunk_idx
+        } else {
+            //println!("could not find file free space...");
+            continue;
+        };
+
+        let free_chunk = match &compacted_disk_chunks[next_free_chunk_idx] {
+            DiskChunk::FreeSpace(free_chunk) => free_chunk.clone(),
+            // FIXME: there's got to be a more elegant way to do this. Maybe it means that
+            // what I'm doing getting indexes isn't the right way to do this or using enums isn't the best tool here
+            _ => panic!("Unexpected chunk type! Expected 'free'"),
         };
 
 
@@ -258,9 +261,7 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
             //println!("not compacting {} from {}", next_file_chunk_to_compact.id, next_file_chunk_idx);
         }
 
-        next_free_chunk_search_offset = next_free_chunk_idx;
-
-        println!("compacted_disk_chunk update: {}", stringify_disk_layout(&compacted_disk_chunks));
+        //println!("compacted_disk_chunk update: {}", stringify_disk_layout(&compacted_disk_chunks));
     }
 
     compacted_disk_chunks
