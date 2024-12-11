@@ -1,5 +1,5 @@
 use input_helpers;
-use std::process::ExitCode;
+use std::{any::Any, process::ExitCode};
 
 type StoneVal = usize;
 
@@ -98,30 +98,38 @@ fn do_blink(stones: &mut Vec<StoneVal>) {
     }
 }
 
-fn main() -> ExitCode {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    if args.is_empty() {
-        println!("Not enough args");
-        return ExitCode::FAILURE;
+fn get_nth_string_arg<'a>(args: &'a [String], n: usize) -> Result<&'a str, String> {
+    if args.len() <= n {
+        return Err(format!("Too few args! needed {}; had {}", n+1, args.len()));
     }
 
-    let filename: &str = &args[0];
+    Ok(&args[n])
+}
 
-    let parse_result = read_stone_arrangement(filename);
-    let mut stones = match parse_result {
-        Ok(stones) => stones,
-        Err(e) => {
-            println!("Invalid input! {}", e);
-            return ExitCode::FAILURE;
-        }
-    };
+fn get_nth_parsed_arg<T>(args: &[String], n: usize) -> Result<T, String> 
+    where T: std::str::FromStr {
+    if args.len() <= n {
+        return Err(format!("Too few args! needed {}; had {}", n+1, args.len()));
+    }
+
+    match args[n].parse() {
+        Ok(v) => Ok(v),
+        Err(_) => Err(format!("Failed to parse arg! '{}'", &args[n])),
+    }
+}
+
+fn run(args: &[String]) -> Result<(), String> {
+    let filename: &str = get_nth_string_arg(args, 0)?;
+    let blink_count: usize = get_nth_parsed_arg(args, 1)?;
+
+    let mut stones = read_stone_arrangement(filename)?;
 
     let original_stones = stones.clone();
     dump_stones("original", &original_stones);
 
     {
-        // FIXME: take the number of blinks as user input
-        for _ in 0..25 {
+        for i in 0..blink_count {
+            println!("{:03}/{:03} blinks", i, blink_count);
             do_blink(&mut stones);
         }
         if stones.len() < 50 {
@@ -148,7 +156,18 @@ fn main() -> ExitCode {
         }
     } */
 
-    return ExitCode::SUCCESS;
+    Ok(())
+}
+
+fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    match run(&args) {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(e) => {
+            println!("Err: {}", e);
+            ExitCode::FAILURE
+        }
+    }
 }
 
 #[cfg(test)]
