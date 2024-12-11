@@ -69,19 +69,19 @@ fn do_blink(stones: &mut Vec<StoneVal>) {
     while i < stones.len() {
         /*
         RULES:
-        
+
         01. If the stone is engraved with the number 0, it is replaced by a stone engraved with the number 1.
 
-        02. If the stone is engraved with a number that has an even number of digits, it is replaced by two stones. The 
+        02. If the stone is engraved with a number that has an even number of digits, it is replaced by two stones. The
             left half of the digits are engraved on the new left stone, and the right half of the digits are engraved on
             the new right stone. (The new numbers don't keep extra leading zeroes: 1000 would become stones 10 and 0.)
 
-        03. If none of the other rules apply, the stone is replaced by a new stone; the old stone's number multiplied by 
+        03. If none of the other rules apply, the stone is replaced by a new stone; the old stone's number multiplied by
             2024 is engraved on the new stone.
          */
         let prev_stone = stones[i];
         if prev_stone == 0 {
-            stones[i] = 1;            
+            stones[i] = 1;
             i += 1;
         } else {
             let digit_count = count_digits(prev_stone);
@@ -91,7 +91,7 @@ fn do_blink(stones: &mut Vec<StoneVal>) {
                 stones.insert(i + 1, low_digits);
                 i += 2;
             } else {
-                stones[i] = prev_stone * 2024; 
+                stones[i] = prev_stone * 2024;
                 i += 1;
             }
         }
@@ -109,8 +109,8 @@ type BlinkResultsMap = std::collections::HashMap<StoneBlinkProgress, usize>;
 
 fn memoize_stone_counts_after_blinks(
     stone_state: StoneBlinkProgress,
-    memo: &mut BlinkResultsMap) -> usize {
-
+    memo: &mut BlinkResultsMap,
+) -> usize {
     if let Some(memod_result) = memo.get(&stone_state) {
         return memod_result.clone();
     }
@@ -121,28 +121,49 @@ fn memoize_stone_counts_after_blinks(
     }
 
     if stone_state.val == 0 {
-        let result_count = memoize_stone_counts_after_blinks(StoneBlinkProgress{val: 1, blinks_left: stone_state.blinks_left - 1}, memo);
+        let result_count = memoize_stone_counts_after_blinks(
+            StoneBlinkProgress {
+                val: 1,
+                blinks_left: stone_state.blinks_left - 1,
+            },
+            memo,
+        );
         memo.insert(stone_state, result_count);
         return result_count;
-    } 
+    }
 
     let digit_count = count_digits(stone_state.val);
     if digit_count % 2 == 0 {
         let (high_digits, low_digits) = split_num(stone_state.val, digit_count / 2);
         let result_count = {
-            let high_digits_stone_result_count =
-                memoize_stone_counts_after_blinks(StoneBlinkProgress{val: high_digits, blinks_left: stone_state.blinks_left - 1}, memo);
-            let low_digits_stone_result_count = 
-                memoize_stone_counts_after_blinks(StoneBlinkProgress{val: low_digits, blinks_left: stone_state.blinks_left - 1}, memo);
-            
+            let high_digits_stone_result_count = memoize_stone_counts_after_blinks(
+                StoneBlinkProgress {
+                    val: high_digits,
+                    blinks_left: stone_state.blinks_left - 1,
+                },
+                memo,
+            );
+            let low_digits_stone_result_count = memoize_stone_counts_after_blinks(
+                StoneBlinkProgress {
+                    val: low_digits,
+                    blinks_left: stone_state.blinks_left - 1,
+                },
+                memo,
+            );
+
             high_digits_stone_result_count + low_digits_stone_result_count
         };
         memo.insert(stone_state, result_count);
         return result_count;
-    } 
+    }
 
-
-    let result_count = memoize_stone_counts_after_blinks(StoneBlinkProgress{val: stone_state.val * 2024, blinks_left: stone_state.blinks_left - 1}, memo);
+    let result_count = memoize_stone_counts_after_blinks(
+        StoneBlinkProgress {
+            val: stone_state.val * 2024,
+            blinks_left: stone_state.blinks_left - 1,
+        },
+        memo,
+    );
     memo.insert(stone_state, result_count);
     return result_count;
 }
@@ -152,7 +173,13 @@ fn count_stones_after_blinks_memod(stones: &[StoneVal], blink_count: usize) -> u
 
     let mut sum = 0;
     for stone in stones.iter().cloned() {
-        sum += memoize_stone_counts_after_blinks(StoneBlinkProgress{val: stone, blinks_left: blink_count}, &mut memoized_blink_results);
+        sum += memoize_stone_counts_after_blinks(
+            StoneBlinkProgress {
+                val: stone,
+                blinks_left: blink_count,
+            },
+            &mut memoized_blink_results,
+        );
     }
 
     sum
@@ -160,16 +187,26 @@ fn count_stones_after_blinks_memod(stones: &[StoneVal], blink_count: usize) -> u
 
 fn get_nth_string_arg<'a>(args: &'a [String], n: usize) -> Result<&'a str, String> {
     if args.len() <= n {
-        return Err(format!("Too few args! needed {}; had {}", n+1, args.len()));
+        return Err(format!(
+            "Too few args! needed {}; had {}",
+            n + 1,
+            args.len()
+        ));
     }
 
     Ok(&args[n])
 }
 
-fn get_nth_parsed_arg<T>(args: &[String], n: usize) -> Result<T, String> 
-    where T: std::str::FromStr {
+fn get_nth_parsed_arg<T>(args: &[String], n: usize) -> Result<T, String>
+where
+    T: std::str::FromStr,
+{
     if args.len() <= n {
-        return Err(format!("Too few args! needed {}; had {}", n+1, args.len()));
+        return Err(format!(
+            "Too few args! needed {}; had {}",
+            n + 1,
+            args.len()
+        ));
     }
 
     match args[n].parse() {
@@ -201,25 +238,6 @@ fn run(args: &[String]) -> Result<(), String> {
         }
         println!("result = {} stones", stones.len());
     }
-
-
-    /*
-    println!("");
-
-    {
-        let trails = find_all_trails_pt2(&trail_map);
-        let trailhead_ratings: Vec<usize> = trails
-            .iter()
-            .map(|(_trail_start, trail_ends)| trail_ends.len())
-            .collect();
-        let trailhead_rating_sum: usize = trailhead_ratings.iter().sum();
-        println!("Pt 2: trailhead_rating_sum = {}", trailhead_rating_sum);
-        if trails.len() < 20 {
-            for trail in &trails {
-                println!("- start={}; trail={:?}", trail.0, trail.1);
-            }
-        }
-    } */
 
     Ok(())
 }
