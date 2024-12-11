@@ -1,5 +1,5 @@
 use input_helpers;
-use std::{any::Any, process::ExitCode};
+use std::process::ExitCode;
 
 type StoneVal = usize;
 
@@ -98,6 +98,67 @@ fn do_blink(stones: &mut Vec<StoneVal>) {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct StoneBlinkProgress {
+    val: StoneVal,
+    blinks_left: usize,
+}
+
+type BlinkResultsMap = std::collections::HashMap<StoneBlinkProgress, Vec<StoneVal>>;
+
+fn memoize_stone_blinks(
+    stone_state: StoneBlinkProgress,
+    memo: &mut BlinkResultsMap) -> Vec<StoneVal> {
+
+    if let Some(memod_result) = memo.get(&stone_state) {
+        return memod_result.clone();
+    }
+
+    if stone_state.blinks_left == 0 {
+        let result = vec![stone_state.val];
+        memo.insert(stone_state, result.clone());
+        return result;
+    }
+
+    if stone_state.val == 0 {
+        let result_stones = memoize_stone_blinks(StoneBlinkProgress{val: 1, blinks_left: stone_state.blinks_left - 1}, memo);
+        memo.insert(stone_state, result_stones.clone());
+        return result_stones;
+    } 
+
+    let digit_count = count_digits(stone_state.val);
+    if digit_count % 2 == 0 {
+        let (high_digits, low_digits) = split_num(stone_state.val, digit_count / 2);
+        let result_stones = {
+            let mut high_digits_stone_results = 
+                memoize_stone_blinks(StoneBlinkProgress{val: high_digits, blinks_left: stone_state.blinks_left - 1}, memo);
+            let mut low_digits_stone_results = 
+                memoize_stone_blinks(StoneBlinkProgress{val: low_digits, blinks_left: stone_state.blinks_left - 1}, memo);
+            high_digits_stone_results.append(&mut low_digits_stone_results);
+            high_digits_stone_results
+        };
+        memo.insert(stone_state, result_stones.clone());
+        return result_stones;
+    } 
+
+
+    let result_stones = memoize_stone_blinks(StoneBlinkProgress{val: stone_state.val * 2024, blinks_left: stone_state.blinks_left - 1}, memo);
+    memo.insert(stone_state, result_stones.clone());
+    return result_stones;
+}
+
+fn do_blinks_memod(stones: &mut Vec<StoneVal>, blink_count: usize) {
+    let mut memoized_blink_results = BlinkResultsMap::new();
+    let mut full_blink_results: Vec<StoneVal> = vec![];
+
+    for stone in stones.iter().cloned() {
+        let mut results = memoize_stone_blinks(StoneBlinkProgress{val: stone, blinks_left: blink_count}, &mut memoized_blink_results);
+        full_blink_results.append(&mut results);
+    }
+
+    *stones = full_blink_results;
+}
+
 fn get_nth_string_arg<'a>(args: &'a [String], n: usize) -> Result<&'a str, String> {
     if args.len() <= n {
         return Err(format!("Too few args! needed {}; had {}", n+1, args.len()));
@@ -121,22 +182,26 @@ fn get_nth_parsed_arg<T>(args: &[String], n: usize) -> Result<T, String>
 fn run(args: &[String]) -> Result<(), String> {
     let filename: &str = get_nth_string_arg(args, 0)?;
     let blink_count: usize = get_nth_parsed_arg(args, 1)?;
+    let use_memoization: bool = get_nth_parsed_arg(args, 2)?;
 
     let mut stones = read_stone_arrangement(filename)?;
 
     let original_stones = stones.clone();
     dump_stones("original", &original_stones);
 
-    {
+    if use_memoization {
+        do_blinks_memod(&mut stones, blink_count);
+    } else {
         for i in 0..blink_count {
             println!("{:03}/{:03} blinks", i, blink_count);
             do_blink(&mut stones);
         }
-        if stones.len() < 50 {
-            dump_stones("after blinks", &stones);
-        }
-        println!("Pt1 result = {} stones", stones.len());
     }
+
+    if stones.len() < 50 {
+        dump_stones("after blinks", &stones);
+    }
+    println!("result = {} stones", stones.len());
 
     /*
     println!("");
