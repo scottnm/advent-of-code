@@ -129,12 +129,13 @@ Bugs in pt2:
     > Compacted layout: .0.111....22222
 
 2. compacting sample_input.txt just generally looks wrong
+    - inserting extra free space?
     > Pt 2: checksum = 3427
     > Original layout:  00...111...2...333.44.5555.6666.777.888899
     > Compacted layout: 00992...111....333.44.5555.6666.777.8888
-*/
 
 asdfl;kjasfljadsl;f
+*/
 
 fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
     let mut compacted_disk_chunks = disk_chunks.to_vec();
@@ -186,6 +187,7 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
         highest_file_chunk_id
     };
 
+    println!("compacted_disk_chunk start:  {}", stringify_disk_layout(&compacted_disk_chunks));
     loop {
         let max_file_chunk_id_to_compact = if let Some(next_file_chunk_id) = next_file_chunk_id {
             next_file_chunk_id
@@ -202,12 +204,6 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
         } else {
             break;
         };
-
-        // FIXME: technically this is a bug and I shouldn't be doing this since this makes the total disk space shrink
-        // not doing it will require better tracking for where to look for the 'last' check to try and move
-        while !compacted_disk_chunks.is_empty() && is_free_space(compacted_disk_chunks.last().unwrap()) {
-            compacted_disk_chunks.pop();
-        }
 
         let next_free_chunk_idx_search = find_free_space(&compacted_disk_chunks, next_free_chunk_search_offset);
 
@@ -263,6 +259,8 @@ fn compact_disk_pt2(disk_chunks: &[DiskChunk]) -> Vec<DiskChunk> {
         }
 
         next_free_chunk_search_offset = next_free_chunk_idx;
+
+        println!("compacted_disk_chunk update: {}", stringify_disk_layout(&compacted_disk_chunks));
     }
 
     compacted_disk_chunks
