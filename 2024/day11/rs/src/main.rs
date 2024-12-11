@@ -104,56 +104,92 @@ struct StoneBlinkProgress {
     blinks_left: usize,
 }
 
-type BlinkResultsMap = std::collections::HashMap<StoneBlinkProgress, Vec<StoneVal>>;
+type BlinkResultCompressorMapKey = usize;
+
+struct BlinkResultCompressorMap
+{
+    result_to_key_map: std::collections::HashMap<Vec<StoneVal>, BlinkResultCompressorMapKey>,
+    key_to_result_map: Vec<Vec<StoneVal>>,
+}
+
+type BlinkResultsMap = std::collections::HashMap<StoneBlinkProgress, BlinkResultCompressorMapKey>;
+
+impl BlinkResultCompressorMap {
+    fn new() -> Self {
+        Self {
+            result_to_key_map: std::collections::HashMap::<Vec<StoneVal>, usize>::new(),
+            key_to_result_map: vec![],
+        }
+    }
+
+    fn insert(&mut self, result: &Vec<StoneVal>) -> BlinkResultCompressorMapKey {
+        if let Some(key) = self.result_to_key_map.get(result) {
+            return *key;
+        }
+
+        let key = self.key_to_result_map.len();
+        self.key_to_result_map.push(result.clone());
+        self.result_to_key_map.insert(result.clone(), key);
+        key
+    }
+}
 
 fn memoize_stone_blinks(
     stone_state: StoneBlinkProgress,
-    memo: &mut BlinkResultsMap) -> Vec<StoneVal> {
+    memo: &mut BlinkResultsMap,
+    compression_map: &mut BlinkResultCompressorMap) -> BlinkResultCompressorMapKey {
 
     if let Some(memod_result) = memo.get(&stone_state) {
-        return memod_result.clone();
+        return *memod_result;
     }
 
     if stone_state.blinks_left == 0 {
         let result = vec![stone_state.val];
-        memo.insert(stone_state, result.clone());
-        return result;
+        let result_key = compression_map.insert(&result);
+        memo.insert(stone_state, result_key);
+        return result_key;
     }
 
     if stone_state.val == 0 {
-        let result_stones = memoize_stone_blinks(StoneBlinkProgress{val: 1, blinks_left: stone_state.blinks_left - 1}, memo);
-        memo.insert(stone_state, result_stones.clone());
-        return result_stones;
+        let result_key = memoize_stone_blinks(StoneBlinkProgress{val: 1, blinks_left: stone_state.blinks_left - 1}, memo, compression_map);
+        memo.insert(stone_state, result_key);
+        return result_key;
     } 
 
     let digit_count = count_digits(stone_state.val);
     if digit_count % 2 == 0 {
         let (high_digits, low_digits) = split_num(stone_state.val, digit_count / 2);
         let result_stones = {
-            let mut high_digits_stone_results = 
-                memoize_stone_blinks(StoneBlinkProgress{val: high_digits, blinks_left: stone_state.blinks_left - 1}, memo);
-            let mut low_digits_stone_results = 
-                memoize_stone_blinks(StoneBlinkProgress{val: low_digits, blinks_left: stone_state.blinks_left - 1}, memo);
-            high_digits_stone_results.append(&mut low_digits_stone_results);
-            high_digits_stone_results
+            let high_digits_stone_results_key = 
+                memoize_stone_blinks(StoneBlinkProgress{val: high_digits, blinks_left: stone_state.blinks_left - 1}, memo, compression_map);
+            let low_digits_stone_results_key = 
+                memoize_stone_blinks(StoneBlinkProgress{val: low_digits, blinks_left: stone_state.blinks_left - 1}, memo, compression_map);
+            
+            let mut results = compression_map.key_to_result_map[high_digits_stone_results_key].clone();
+            results.append(&mut compression_map.key_to_result_map[low_digits_stone_results_key].clone());
+            results
         };
-        memo.insert(stone_state, result_stones.clone());
-        return result_stones;
+        let result_key = compression_map.insert(&result_stones);
+        memo.insert(stone_state, result_key);
+        return result_key;
     } 
 
-
-    let result_stones = memoize_stone_blinks(StoneBlinkProgress{val: stone_state.val * 2024, blinks_left: stone_state.blinks_left - 1}, memo);
-    memo.insert(stone_state, result_stones.clone());
-    return result_stones;
+    let result_key = memoize_stone_blinks(StoneBlinkProgress{val: stone_state.val * 2024, blinks_left: stone_state.blinks_left - 1}, memo, compression_map);
+    memo.insert(stone_state, result_key);
+    return result_key;
 }
 
 fn do_blinks_memod(stones: &mut Vec<StoneVal>, blink_count: usize) {
+    let mut result_compression_map = BlinkResultCompressorMap::new();
     let mut memoized_blink_results = BlinkResultsMap::new();
     let mut full_blink_results: Vec<StoneVal> = vec![];
 
     for stone in stones.iter().cloned() {
-        let mut results = memoize_stone_blinks(StoneBlinkProgress{val: stone, blinks_left: blink_count}, &mut memoized_blink_results);
-        full_blink_results.append(&mut results);
+        let result_key = memoize_stone_blinks(
+            StoneBlinkProgress{val: stone, blinks_left: blink_count}, 
+            &mut memoized_blink_results,
+            &mut result_compression_map);
+        full_blink_results.append(&mut result_compression_map.key_to_result_map[result_key].clone());
     }
 
     *stones = full_blink_results;
