@@ -63,6 +63,11 @@ struct GardenPlot {
     plant_type: char,
 }
 
+struct GardenRegion {
+    plant_type: char,
+    plot_positions: Vec<GridPos>,
+}
+
 fn dump_garden(garden: &Grid<GardenPlot>) {
     for r in 0..(garden.height as isize) {
         for c in 0..(garden.width as isize) {
@@ -70,6 +75,18 @@ fn dump_garden(garden: &Grid<GardenPlot>) {
         }
         println!("");
     }
+}
+
+fn split_regions(garden: &Grid<GardenPlot>) -> Vec<GardenRegion> {
+    unimplemented!();
+}
+
+fn calculate_region_area(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize {
+    unimplemented!();
+}
+
+fn calculate_region_perimeter(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize {
+    unimplemented!();
 }
 
 fn read_garden_map(filename: &str) -> Result<Grid<GardenPlot>, String> {
@@ -132,21 +149,20 @@ fn main() -> ExitCode {
 
     dump_garden(&garden);
 
-    /*
     {
-        let trails = find_all_trails_pt1(&trail_map);
-        let trailhead_scores: Vec<usize> = trails
+        let regions = split_regions(&garden);
+        let fence_prices: Vec<usize> = regions
             .iter()
-            .map(|(_trail_start, trail_ends)| trail_ends.len())
-            .collect();
-        let trailhead_score_sum: usize = trailhead_scores.iter().sum();
-        println!("Pt 1: trailhead_score_sum = {}", trailhead_score_sum);
-        if trails.len() < 20 {
-            for trail in &trails {
-                println!("- start={}; trail={:?}", trail.0, trail.1);
+            .map(|region| calculate_region_area(&garden, region) * calculate_region_perimeter(&garden, region))
+            .collect(); 
+        let total_fence_price: usize = fence_prices.iter().sum();
+        println!("Pt 1: total fence price = {}", total_fence_price);
+        if regions.len() < 20 {
+            for (i, (region, price)) in regions.iter().zip(fence_prices.iter()).enumerate() {
+                println!(" {:02}. {} ${}: {:?}", i, region.plant_type, price, region.plot_positions);
             }
         }
-    } */
+    }
 
     println!("");
 
