@@ -212,7 +212,258 @@ fn calculate_region_perimeter(garden: &Grid<GardenPlot>, region: &GardenRegion) 
 }
 
 fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize {
-    unimplemented!();
+    let region_position_set: std::collections::HashSet<GridPos> = region.plot_positions.iter().cloned().collect();
+    let mut region_bottom_wall_candidates = region_position_set.clone();
+    let mut region_top_wall_candidates = region_position_set.clone();
+    let mut region_left_wall_candidates = region_position_set.clone();
+    let mut region_right_wall_candidates = region_position_set.clone();
+
+    fn is_neighbor_in_region(
+        region_position_set: &std::collections::HashSet<GridPos>,
+        pos: &GridPos,
+        row_offset: isize,
+        col_offset: isize,
+    ) -> bool {
+        let neighbor_pos = GridPos {
+            row: pos.row + row_offset,
+            col: pos.col + col_offset,
+        };
+        region_position_set.contains(&neighbor_pos)
+    }
+
+    let mut bottom_wall_count = 0;
+    loop {
+        let next_candidate = {
+            if let Some(candidate) = region_bottom_wall_candidates.iter().next() {
+                *candidate
+            } else {
+                // the region_bottom_wall_candidates list is empty.
+                break;
+            }
+        };
+
+        region_bottom_wall_candidates.remove(&next_candidate);
+        if is_neighbor_in_region(&region_position_set, &next_candidate, 1, 0) {
+            // this is not a bottom wall. we have another region cell below us.
+            continue;
+        }
+
+        bottom_wall_count += 1;
+
+        // check for other cells which share this wall to the left
+        {
+            let mut shared_wall_candidate = next_candidate.clone();
+            loop {
+                shared_wall_candidate.col -= 1;
+
+                if !region_position_set.contains(&shared_wall_candidate) {
+                    // the next wall candidate to check isn't in our region
+                    break;
+                }  
+
+                region_bottom_wall_candidates.remove(&shared_wall_candidate);
+                if !is_neighbor_in_region(&region_bottom_wall_candidates, &shared_wall_candidate, 1, 0) {
+                    // the next wall candidate is not a bottom wall.
+                    break;
+                }
+            }
+        }
+
+        // Check for other cells which share this wall to the right
+        {
+            let mut shared_wall_candidate = next_candidate.clone();
+            loop {
+                shared_wall_candidate.col += 1;
+
+                if !region_position_set.contains(&shared_wall_candidate) {
+                    // the next wall candidate to check isn't in our region
+                    break;
+                }  
+
+                region_bottom_wall_candidates.remove(&shared_wall_candidate);
+                if !is_neighbor_in_region(&region_bottom_wall_candidates, &shared_wall_candidate, 1, 0) {
+                    // the next wall candidate is not a bottom wall.
+                    break;
+                }
+            }
+        }
+    }
+
+    let mut top_wall_count = 0;
+    loop {
+        let next_candidate = {
+            if let Some(candidate) = region_top_wall_candidates.iter().next() {
+                *candidate
+            } else {
+                // the region_top_wall_candidates list is empty.
+                break;
+            }
+        };
+
+        region_top_wall_candidates.remove(&next_candidate);
+        if is_neighbor_in_region(&region_position_set, &next_candidate, -1, 0) {
+            // this is not a top wall. we have another region cell below us.
+            continue;
+        }
+
+        top_wall_count += 1;
+
+        // check for other cells which share this wall to the left
+        {
+            let mut shared_wall_candidate = next_candidate.clone();
+            loop {
+                shared_wall_candidate.col -= 1;
+
+                if !region_position_set.contains(&shared_wall_candidate) {
+                    // the next wall candidate to check isn't in our region
+                    break;
+                }  
+
+                region_top_wall_candidates.remove(&shared_wall_candidate);
+                if !is_neighbor_in_region(&region_top_wall_candidates, &shared_wall_candidate, -1, 0) {
+                    // the next wall candidate is not a top wall.
+                    break;
+                }
+            }
+        }
+
+        // Check for other cells which share this wall to the right
+        {
+            let mut shared_wall_candidate = next_candidate.clone();
+            loop {
+                shared_wall_candidate.col += 1;
+
+                if !region_position_set.contains(&shared_wall_candidate) {
+                    // the next wall candidate to check isn't in our region
+                    break;
+                }  
+
+                region_top_wall_candidates.remove(&shared_wall_candidate);
+                if !is_neighbor_in_region(&region_top_wall_candidates, &shared_wall_candidate, -1, 0) {
+                    // the next wall candidate is not a top wall.
+                    break;
+                }
+            }
+        }
+    }
+
+    let mut left_wall_count = 0;
+    loop {
+        let next_candidate = {
+            if let Some(candidate) = region_left_wall_candidates.iter().next() {
+                *candidate
+            } else {
+                // the region_left_wall_candidates list is empty.
+                break;
+            }
+        };
+
+        region_left_wall_candidates.remove(&next_candidate);
+        if is_neighbor_in_region(&region_position_set, &next_candidate, 0, -1) {
+            // this is not a left wall. we have another region cell below us.
+            continue;
+        }
+
+        left_wall_count += 1;
+
+        // check for other cells which share this wall moving upward
+        {
+            let mut shared_wall_candidate = next_candidate.clone();
+            loop {
+                shared_wall_candidate.row -= 1;
+
+                if !region_position_set.contains(&shared_wall_candidate) {
+                    // the next wall candidate to check isn't in our region
+                    break;
+                }  
+
+                region_left_wall_candidates.remove(&shared_wall_candidate);
+                if !is_neighbor_in_region(&region_left_wall_candidates, &shared_wall_candidate, 0, -1) {
+                    // the next wall candidate is not a left wall.
+                    break;
+                }
+            }
+        }
+
+        // check for other cells which share this wall moving downward
+        {
+            let mut shared_wall_candidate = next_candidate.clone();
+            loop {
+                shared_wall_candidate.row += 1;
+
+                if !region_position_set.contains(&shared_wall_candidate) {
+                    // the next wall candidate to check isn't in our region
+                    break;
+                }  
+
+                region_left_wall_candidates.remove(&shared_wall_candidate);
+                if !is_neighbor_in_region(&region_left_wall_candidates, &shared_wall_candidate, 0, -1) {
+                    // the next wall candidate is not a left wall.
+                    break;
+                }
+            }
+        }
+    }
+
+    let mut right_wall_count = 0;
+    loop {
+        let next_candidate = {
+            if let Some(candidate) = region_right_wall_candidates.iter().next() {
+                *candidate
+            } else {
+                // the region_right_wall_candidates list is empty.
+                break;
+            }
+        };
+
+        region_right_wall_candidates.remove(&next_candidate);
+        if is_neighbor_in_region(&region_position_set, &next_candidate, 0, 1) {
+            // this is not a right wall. we have another region cell below us.
+            continue;
+        }
+
+        right_wall_count += 1;
+
+        // check for other cells which share this wall moving upward
+        {
+            let mut shared_wall_candidate = next_candidate.clone();
+            loop {
+                shared_wall_candidate.row -= 1;
+
+                if !region_position_set.contains(&shared_wall_candidate) {
+                    // the next wall candidate to check isn't in our region
+                    break;
+                }  
+
+                region_right_wall_candidates.remove(&shared_wall_candidate);
+                if !is_neighbor_in_region(&region_right_wall_candidates, &shared_wall_candidate, 0, 1) {
+                    // the next wall candidate is not a right wall.
+                    break;
+                }
+            }
+        }
+
+        // check for other cells which share this wall moving downward
+        {
+            let mut shared_wall_candidate = next_candidate.clone();
+            loop {
+                shared_wall_candidate.row += 1;
+
+                if !region_position_set.contains(&shared_wall_candidate) {
+                    // the next wall candidate to check isn't in our region
+                    break;
+                }  
+
+                region_right_wall_candidates.remove(&shared_wall_candidate);
+                if !is_neighbor_in_region(&region_right_wall_candidates, &shared_wall_candidate, 0, 1) {
+                    // the next wall candidate is not a right wall.
+                    break;
+                }
+            }
+        }
+    }
+
+    bottom_wall_count + top_wall_count + left_wall_count + right_wall_count
 }
 
 fn read_garden_map(filename: &str) -> Result<Grid<GardenPlot>, String> {
@@ -273,40 +524,44 @@ fn main() -> ExitCode {
         }
     };
 
-    dump_garden(&garden);
+    //dump_garden(&garden);
 
     {
         let regions = split_regions(&garden);
-        let fence_prices: Vec<usize> = regions
-            .iter()
-            .map(|region| calculate_region_area(&garden, region) * calculate_region_perimeter(&garden, region))
-            .collect(); 
-        let total_fence_price: usize = fence_prices.iter().sum();
-        println!("Pt 1: total fence price = {}", total_fence_price);
-        if regions.len() < 20 {
-            for (i, (region, price)) in regions.iter().zip(fence_prices.iter()).enumerate() {
-                println!(" {:02}. {} ${}: {:?}", i, region.plant_type, price, region.plot_positions);
+        let mut total_fence_price = 0;
+        let print_region_info = regions.len() < 20;
+        for (i, region) in regions.iter().enumerate() {
+            let area = calculate_region_area(&garden, region);
+            let perimeter = calculate_region_perimeter(&garden, region);
+            let price = area * perimeter;
+            total_fence_price += price;
+            if print_region_info {
+                println!(" {:02}. {} ${} = {}(area) x {}(peri)  ::  {:?}", i, region.plant_type, price, area, perimeter, region.plot_positions);
             }
         }
+
+        println!("Pt 1: total fence price = {}", total_fence_price);
     }
 
     println!("");
 
     /*
     {
-        let trails = find_all_trails_pt2(&trail_map);
-        let trailhead_ratings: Vec<usize> = trails
-            .iter()
-            .map(|(_trail_start, trail_ends)| trail_ends.len())
-            .collect();
-        let trailhead_rating_sum: usize = trailhead_ratings.iter().sum();
-        println!("Pt 2: trailhead_rating_sum = {}", trailhead_rating_sum);
-        if trails.len() < 20 {
-            for trail in &trails {
-                println!("- start={}; trail={:?}", trail.0, trail.1);
+        let regions = split_regions(&garden);
+        let mut total_fence_price = 0;
+        let print_region_info = regions.len() < 20;
+        for (i, region) in regions.iter().enumerate() {
+            let area = calculate_region_area(&garden, region);
+            let perimeter = calculate_region_perimeter(&garden, region);
+            let price = area * perimeter;
+            total_fence_price += price;
+            if print_region_info {
+                println!(" {:02}. {} ${} = {}(area) x {}(peri)  ::  {:?}", i, region.plant_type, price, area, perimeter, region.plot_positions);
             }
         }
-    } */
+
+        println!("Pt 2: total fence price = {}", total_fence_price);
+    }*/
 
     return ExitCode::SUCCESS;
 }
