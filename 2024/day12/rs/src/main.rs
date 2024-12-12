@@ -170,9 +170,10 @@ fn calculate_region_area(_garden: &Grid<GardenPlot>, region: &GardenRegion) -> u
 }
 
 fn calculate_region_perimeter(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize {
+    let region_position_set: std::collections::HashSet<GridPos> = region.plot_positions.iter().cloned().collect();
+
     fn is_neighbor_in_region(
-        garden: &Grid<GardenPlot>,
-        region_plot_type: char,
+        region_position_set: &std::collections::HashSet<GridPos>,
         pos: &GridPos,
         row_offset: isize,
         col_offset: isize,
@@ -181,38 +182,37 @@ fn calculate_region_perimeter(garden: &Grid<GardenPlot>, region: &GardenRegion) 
             row: pos.row + row_offset,
             col: pos.col + col_offset,
         };
-        if garden.is_pos_out_of_bounds(neighbor_pos.row, neighbor_pos.col) {
-            false
-        } else {
-            let plot = garden.get_cell(neighbor_pos.row, neighbor_pos.col);
-            plot.plant_type == region_plot_type 
-        } 
+        region_position_set.contains(&neighbor_pos)
     }
 
     let mut perimeter = 0;
     for region_plot_position in &region.plot_positions {
         // up direction
-        if !is_neighbor_in_region(garden, region.plant_type, region_plot_position, -1, 0) {
+        if !is_neighbor_in_region(&region_position_set, region_plot_position, -1, 0) {
             perimeter += 1;
         }
 
         // down direction
-        if !is_neighbor_in_region(garden, region.plant_type, region_plot_position, 1, 0) {
+        if !is_neighbor_in_region(&region_position_set, region_plot_position, 1, 0) {
             perimeter += 1;
         }
 
         // left direction
-        if !is_neighbor_in_region(garden, region.plant_type, region_plot_position, 0, -1) {
+        if !is_neighbor_in_region(&region_position_set, region_plot_position, 0, -1) {
             perimeter += 1;
         }
 
         // right direction
-        if !is_neighbor_in_region(garden, region.plant_type, region_plot_position, 0, 1) {
+        if !is_neighbor_in_region(&region_position_set, region_plot_position, 0, 1) {
             perimeter += 1;
         }
     }
 
     perimeter
+}
+
+fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize {
+    unimplemented!();
 }
 
 fn read_garden_map(filename: &str) -> Result<Grid<GardenPlot>, String> {
