@@ -78,15 +78,141 @@ fn dump_garden(garden: &Grid<GardenPlot>) {
 }
 
 fn split_regions(garden: &Grid<GardenPlot>) -> Vec<GardenRegion> {
-    unimplemented!();
+
+    let mut tmp_garden = {
+        let tmp_garden_cells: Vec<Option<GardenPlot>> = garden.cells.iter().map(|plot| Some(*plot)).collect();
+        Grid { width: garden.width, height: garden.height, cells: tmp_garden_cells }
+    };
+
+    fn get_neighbor_at_offset(
+        garden: &Grid<Option<GardenPlot>>,
+        pos: &GridPos,
+        row_offset: isize,
+        col_offset: isize,
+    ) -> Option<(GridPos, GardenPlot)> {
+        let neighbor_pos = GridPos {
+            row: pos.row + row_offset,
+            col: pos.col + col_offset,
+        };
+        if garden.is_pos_out_of_bounds(neighbor_pos.row, neighbor_pos.col) {
+            None
+        } else if let Some(plot) = garden.get_cell(neighbor_pos.row, neighbor_pos.col) {
+            // FIXME: this could probably be baked directly into the grid helper as some get_cell variant
+            Some((neighbor_pos, plot))
+        } else {
+            None
+        }
+    }
+
+    fn gather_region_from_point(remaining_plots: &mut Grid<Option<GardenPlot>>, start_pos: GridPos) -> GardenRegion {
+        let plant_type = remaining_plots.get_cell(start_pos.row, start_pos.col).unwrap().plant_type;
+
+        let mut cells_to_check = vec![start_pos];
+        *remaining_plots.get_cell_mut(start_pos.row, start_pos.col) = None;
+
+        let mut region_cells: Vec<GridPos> = vec![];
+
+        while let Some(next_cell_to_check) = cells_to_check.pop() {
+            region_cells.push(next_cell_to_check);
+
+            // up direction
+            if let Some((neighbor_pos, neighbor_plot)) = get_neighbor_at_offset(&remaining_plots, &next_cell_to_check, -1, 0) {
+                if neighbor_plot.plant_type == plant_type {
+                    cells_to_check.push(neighbor_pos);
+                    *remaining_plots.get_cell_mut(neighbor_pos.row, neighbor_pos.col) = None;
+                }
+            }
+
+            // down direction
+            if let Some((neighbor_pos, neighbor_plot)) = get_neighbor_at_offset(&remaining_plots, &next_cell_to_check, 1, 0) {
+                if neighbor_plot.plant_type == plant_type {
+                    cells_to_check.push(neighbor_pos);
+                    *remaining_plots.get_cell_mut(neighbor_pos.row, neighbor_pos.col) = None;
+                }
+            }
+
+            // left direction
+            if let Some((neighbor_pos, neighbor_plot)) = get_neighbor_at_offset(&remaining_plots, &next_cell_to_check, 0, -1) {
+                if neighbor_plot.plant_type == plant_type {
+                    cells_to_check.push(neighbor_pos);
+                    *remaining_plots.get_cell_mut(neighbor_pos.row, neighbor_pos.col) = None;
+                }
+            }
+
+            // right direction
+            if let Some((neighbor_pos, neighbor_plot)) = get_neighbor_at_offset(&remaining_plots, &next_cell_to_check, 0, 1) {
+                if neighbor_plot.plant_type == plant_type {
+                    cells_to_check.push(neighbor_pos);
+                    *remaining_plots.get_cell_mut(neighbor_pos.row, neighbor_pos.col) = None;
+                }
+            }
+        }
+
+        GardenRegion{ plant_type, plot_positions: region_cells }
+    }
+
+    let mut regions: Vec<GardenRegion> = vec![];
+    for r in 0..(tmp_garden.height as isize) {
+        for c in 0..(tmp_garden.width as isize) {
+            let cell = tmp_garden.get_cell(r, c);
+            if cell.is_some() {
+                let region = gather_region_from_point(&mut tmp_garden, GridPos{row: r, col: c});
+                regions.push(region);
+            }
+        }
+    }
+
+    regions
 }
 
-fn calculate_region_area(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize {
-    unimplemented!();
+fn calculate_region_area(_garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize {
+    region.plot_positions.len() 
 }
 
 fn calculate_region_perimeter(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize {
-    unimplemented!();
+    fn is_neighbor_in_region(
+        garden: &Grid<GardenPlot>,
+        region_plot_type: char,
+        pos: &GridPos,
+        row_offset: isize,
+        col_offset: isize,
+    ) -> bool {
+        let neighbor_pos = GridPos {
+            row: pos.row + row_offset,
+            col: pos.col + col_offset,
+        };
+        if garden.is_pos_out_of_bounds(neighbor_pos.row, neighbor_pos.col) {
+            false
+        } else {
+            let plot = garden.get_cell(neighbor_pos.row, neighbor_pos.col);
+            plot.plant_type == region_plot_type 
+        } 
+    }
+
+    let mut perimeter = 0;
+    for region_plot_position in &region.plot_positions {
+        // up direction
+        if !is_neighbor_in_region(garden, region.plant_type, region_plot_position, -1, 0) {
+            perimeter += 1;
+        }
+
+        // down direction
+        if !is_neighbor_in_region(garden, region.plant_type, region_plot_position, 1, 0) {
+            perimeter += 1;
+        }
+
+        // left direction
+        if !is_neighbor_in_region(garden, region.plant_type, region_plot_position, 0, -1) {
+            perimeter += 1;
+        }
+
+        // right direction
+        if !is_neighbor_in_region(garden, region.plant_type, region_plot_position, 0, 1) {
+            perimeter += 1;
+        }
+    }
+
+    perimeter
 }
 
 fn read_garden_map(filename: &str) -> Result<Grid<GardenPlot>, String> {
