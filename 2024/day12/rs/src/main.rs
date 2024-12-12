@@ -248,6 +248,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
             continue;
         }
 
+        println!("starting bottom wall checks @ {}", next_candidate);
         bottom_wall_count += 1;
 
         // check for other cells which share this wall to the left
@@ -258,12 +259,14 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
 
                 if !region_position_set.contains(&shared_wall_candidate) {
                     // the next wall candidate to check isn't in our region
+                    println!("stopping left checks @ {} (not in region)", shared_wall_candidate);
                     break;
                 }  
 
                 region_bottom_wall_candidates.remove(&shared_wall_candidate);
-                if !is_neighbor_in_region(&region_bottom_wall_candidates, &shared_wall_candidate, 1, 0) {
+                if is_neighbor_in_region(&region_bottom_wall_candidates, &shared_wall_candidate, 1, 0) {
                     // the next wall candidate is not a bottom wall.
+                    println!("stopping left checks @ {} (not a bottom wall)", shared_wall_candidate);
                     break;
                 }
             }
@@ -277,12 +280,14 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
 
                 if !region_position_set.contains(&shared_wall_candidate) {
                     // the next wall candidate to check isn't in our region
+                    println!("stopping right checks @ {} (not in region)", shared_wall_candidate);
                     break;
                 }  
 
                 region_bottom_wall_candidates.remove(&shared_wall_candidate);
-                if !is_neighbor_in_region(&region_bottom_wall_candidates, &shared_wall_candidate, 1, 0) {
+                if is_neighbor_in_region(&region_bottom_wall_candidates, &shared_wall_candidate, 1, 0) {
                     // the next wall candidate is not a bottom wall.
+                    println!("stopping right checks @ {} (not a bottom wall)", shared_wall_candidate);
                     break;
                 }
             }
@@ -320,7 +325,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_top_wall_candidates.remove(&shared_wall_candidate);
-                if !is_neighbor_in_region(&region_top_wall_candidates, &shared_wall_candidate, -1, 0) {
+                if is_neighbor_in_region(&region_top_wall_candidates, &shared_wall_candidate, -1, 0) {
                     // the next wall candidate is not a top wall.
                     break;
                 }
@@ -339,7 +344,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_top_wall_candidates.remove(&shared_wall_candidate);
-                if !is_neighbor_in_region(&region_top_wall_candidates, &shared_wall_candidate, -1, 0) {
+                if is_neighbor_in_region(&region_top_wall_candidates, &shared_wall_candidate, -1, 0) {
                     // the next wall candidate is not a top wall.
                     break;
                 }
@@ -378,7 +383,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_left_wall_candidates.remove(&shared_wall_candidate);
-                if !is_neighbor_in_region(&region_left_wall_candidates, &shared_wall_candidate, 0, -1) {
+                if is_neighbor_in_region(&region_left_wall_candidates, &shared_wall_candidate, 0, -1) {
                     // the next wall candidate is not a left wall.
                     break;
                 }
@@ -397,7 +402,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_left_wall_candidates.remove(&shared_wall_candidate);
-                if !is_neighbor_in_region(&region_left_wall_candidates, &shared_wall_candidate, 0, -1) {
+                if is_neighbor_in_region(&region_left_wall_candidates, &shared_wall_candidate, 0, -1) {
                     // the next wall candidate is not a left wall.
                     break;
                 }
@@ -436,7 +441,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_right_wall_candidates.remove(&shared_wall_candidate);
-                if !is_neighbor_in_region(&region_right_wall_candidates, &shared_wall_candidate, 0, 1) {
+                if is_neighbor_in_region(&region_right_wall_candidates, &shared_wall_candidate, 0, 1) {
                     // the next wall candidate is not a right wall.
                     break;
                 }
@@ -455,7 +460,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_right_wall_candidates.remove(&shared_wall_candidate);
-                if !is_neighbor_in_region(&region_right_wall_candidates, &shared_wall_candidate, 0, 1) {
+                if is_neighbor_in_region(&region_right_wall_candidates, &shared_wall_candidate, 0, 1) {
                     // the next wall candidate is not a right wall.
                     break;
                 }
@@ -463,6 +468,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
         }
     }
 
+    println!("region({}): bottom={} top={} left={}, right={}", region.plant_type, bottom_wall_count, top_wall_count, left_wall_count, right_wall_count);
     bottom_wall_count + top_wall_count + left_wall_count + right_wall_count
 }
 
@@ -524,7 +530,7 @@ fn main() -> ExitCode {
         }
     };
 
-    //dump_garden(&garden);
+    dump_garden(&garden);
 
     {
         let regions = split_regions(&garden);
@@ -545,23 +551,22 @@ fn main() -> ExitCode {
 
     println!("");
 
-    /*
     {
         let regions = split_regions(&garden);
         let mut total_fence_price = 0;
         let print_region_info = regions.len() < 20;
         for (i, region) in regions.iter().enumerate() {
             let area = calculate_region_area(&garden, region);
-            let perimeter = calculate_region_perimeter(&garden, region);
-            let price = area * perimeter;
+            let side_count = count_region_sides(&garden, region);
+            let price = area * side_count;
             total_fence_price += price;
             if print_region_info {
-                println!(" {:02}. {} ${} = {}(area) x {}(peri)  ::  {:?}", i, region.plant_type, price, area, perimeter, region.plot_positions);
+                println!(" {:02}. {} ${} = {}(area) x {}(sides)  ::  {:?}", i, region.plant_type, price, area, side_count, region.plot_positions);
             }
         }
 
         println!("Pt 2: total fence price = {}", total_fence_price);
-    }*/
+    }
 
     return ExitCode::SUCCESS;
 }
