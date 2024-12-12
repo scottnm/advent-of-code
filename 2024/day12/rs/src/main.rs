@@ -242,9 +242,11 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
             }
         };
 
+        println!("removing {} from remaining bottom wall candidates", next_candidate);
         region_bottom_wall_candidates.remove(&next_candidate);
         if is_neighbor_in_region(&region_position_set, &next_candidate, 1, 0) {
             // this is not a bottom wall. we have another region cell below us.
+            println!("next candidate {} does not start bottom wall", next_candidate);
             continue;
         }
 
@@ -263,8 +265,9 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                     break;
                 }  
 
+                println!("removing {} from remaining bottom wall candidates", shared_wall_candidate);
                 region_bottom_wall_candidates.remove(&shared_wall_candidate);
-                if is_neighbor_in_region(&region_bottom_wall_candidates, &shared_wall_candidate, 1, 0) {
+                if is_neighbor_in_region(&region_position_set, &shared_wall_candidate, 1, 0) {
                     // the next wall candidate is not a bottom wall.
                     println!("stopping left checks @ {} (not a bottom wall)", shared_wall_candidate);
                     break;
@@ -284,8 +287,9 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                     break;
                 }  
 
+                println!("removing {} from remaining bottom wall candidates", shared_wall_candidate);
                 region_bottom_wall_candidates.remove(&shared_wall_candidate);
-                if is_neighbor_in_region(&region_bottom_wall_candidates, &shared_wall_candidate, 1, 0) {
+                if is_neighbor_in_region(&region_position_set, &shared_wall_candidate, 1, 0) {
                     // the next wall candidate is not a bottom wall.
                     println!("stopping right checks @ {} (not a bottom wall)", shared_wall_candidate);
                     break;
@@ -325,7 +329,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_top_wall_candidates.remove(&shared_wall_candidate);
-                if is_neighbor_in_region(&region_top_wall_candidates, &shared_wall_candidate, -1, 0) {
+                if is_neighbor_in_region(&region_position_set, &shared_wall_candidate, -1, 0) {
                     // the next wall candidate is not a top wall.
                     break;
                 }
@@ -344,7 +348,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_top_wall_candidates.remove(&shared_wall_candidate);
-                if is_neighbor_in_region(&region_top_wall_candidates, &shared_wall_candidate, -1, 0) {
+                if is_neighbor_in_region(&region_position_set, &shared_wall_candidate, -1, 0) {
                     // the next wall candidate is not a top wall.
                     break;
                 }
@@ -383,7 +387,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_left_wall_candidates.remove(&shared_wall_candidate);
-                if is_neighbor_in_region(&region_left_wall_candidates, &shared_wall_candidate, 0, -1) {
+                if is_neighbor_in_region(&region_position_set, &shared_wall_candidate, 0, -1) {
                     // the next wall candidate is not a left wall.
                     break;
                 }
@@ -402,7 +406,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_left_wall_candidates.remove(&shared_wall_candidate);
-                if is_neighbor_in_region(&region_left_wall_candidates, &shared_wall_candidate, 0, -1) {
+                if is_neighbor_in_region(&region_position_set, &shared_wall_candidate, 0, -1) {
                     // the next wall candidate is not a left wall.
                     break;
                 }
@@ -441,7 +445,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_right_wall_candidates.remove(&shared_wall_candidate);
-                if is_neighbor_in_region(&region_right_wall_candidates, &shared_wall_candidate, 0, 1) {
+                if is_neighbor_in_region(&region_position_set, &shared_wall_candidate, 0, 1) {
                     // the next wall candidate is not a right wall.
                     break;
                 }
@@ -460,7 +464,7 @@ fn count_region_sides(garden: &Grid<GardenPlot>, region: &GardenRegion) -> usize
                 }  
 
                 region_right_wall_candidates.remove(&shared_wall_candidate);
-                if is_neighbor_in_region(&region_right_wall_candidates, &shared_wall_candidate, 0, 1) {
+                if is_neighbor_in_region(&region_position_set, &shared_wall_candidate, 0, 1) {
                     // the next wall candidate is not a right wall.
                     break;
                 }
