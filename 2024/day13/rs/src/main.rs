@@ -3,8 +3,8 @@ use std::process::ExitCode;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Vec2 {
-    x: isize,
-    y: isize,
+    x: usize,
+    y: usize,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -59,14 +59,14 @@ fn read_claw_machine_summaries(filename: &str) -> Result<Vec<ClawMachine>, Strin
     fn parse_and_extract_vec2_from_int_captures(captures: Option<regex::Captures>, line_desc: &str) -> Result<Vec2, String> {
         let line_match = captures.ok_or(format!("Missing '{}'", line_desc))?;
 
-        let x: isize = line_match
+        let x: usize = line_match
             .get(1)
             .ok_or(format!("Missing 'x' on {} line", line_desc))?
             .as_str()
             .parse()
             .map_err(|_| format!("Failed to parse {}'s x value as int", line_desc))?;
 
-        let y: isize = line_match
+        let y: usize = line_match
             .get(2)
             .ok_or(format!("Missing 'y' on {} line", line_desc))?
             .as_str()
@@ -109,9 +109,42 @@ fn read_claw_machine_summaries(filename: &str) -> Result<Vec<ClawMachine>, Strin
     Ok(claw_machines)
 }
 
+fn calculate_claw_position(claw_machine: &ClawMachine, a_press_cnt: usize, b_press_cnt: usize) -> Vec2 {
+    Vec2 {
+        x: (claw_machine.button_a_move.x * a_press_cnt) + (claw_machine.button_b_move.x * b_press_cnt),
+        y: (claw_machine.button_a_move.y * a_press_cnt) + (claw_machine.button_b_move.y * b_press_cnt),
+    }
+}
+
 fn find_all_solutions(claw_machine: &ClawMachine) -> Vec<ClawMachineSolution> {
-    // TODO: real solution
-    vec![ClawMachineSolution{a_press_count: 0, b_press_count: 0}]
+    let mut solutions = vec![];
+
+    let max_a_presses_to_x = claw_machine.prize_pos.x / claw_machine.button_a_move.x;
+    let max_a_presses_to_y = claw_machine.prize_pos.y / claw_machine.button_a_move.y;
+    let max_a_presses = std::cmp::min(max_a_presses_to_x, max_a_presses_to_y);
+
+    let max_b_presses_to_x = claw_machine.prize_pos.x / claw_machine.button_b_move.x;
+    let max_b_presses_to_y = claw_machine.prize_pos.y / claw_machine.button_b_move.y;
+    let max_b_presses = std::cmp::min(max_b_presses_to_x, max_b_presses_to_y);
+
+    for a_press_cnt in 0..max_a_presses {
+        for b_press_cnt in 0..max_b_presses {
+            let claw_position = calculate_claw_position(claw_machine, a_press_cnt, b_press_cnt);
+
+            // Found solution
+            if claw_position == claw_machine.prize_pos {
+                solutions.push(ClawMachineSolution{a_press_count: a_press_cnt, b_press_count: b_press_cnt});
+                break;
+            }
+
+            // No solution
+            if claw_position.x > claw_machine.prize_pos.x || claw_position.y > claw_machine.prize_pos.y {
+                break;
+            }
+        }
+    }
+
+    solutions
 }
 
 fn count_tokens_for_solution(solution: &ClawMachineSolution) -> usize {
