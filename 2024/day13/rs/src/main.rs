@@ -82,8 +82,6 @@ fn read_claw_machine_summaries(filename: &str) -> Result<Vec<ClawMachine>, Strin
         let next_machine = read_claw_machine_summary(button_a_line, button_b_line, prize_line)?;
         claw_machines.push(next_machine);
     }
-    dbg!(&line_idx);
-    dbg!(&lines.len());
 
     Ok(claw_machines)
 }
@@ -106,7 +104,6 @@ fn main() -> ExitCode {
         }
     };
 
-    dbg!(&claw_machines);
     /*
     {
         let compacted_disk_chunks = compact_disk_pt1(&disk_chunks);
