@@ -127,8 +127,8 @@ fn find_all_solutions(claw_machine: &ClawMachine) -> Vec<ClawMachineSolution> {
     let max_b_presses_to_y = claw_machine.prize_pos.y / claw_machine.button_b_move.y;
     let max_b_presses = std::cmp::min(max_b_presses_to_x, max_b_presses_to_y);
 
-    for a_press_cnt in 0..max_a_presses {
-        for b_press_cnt in 0..max_b_presses {
+    for a_press_cnt in 0..max_a_presses+1 {
+        for b_press_cnt in 0..max_b_presses+1 {
             let claw_position = calculate_claw_position(claw_machine, a_press_cnt, b_press_cnt);
 
             // Found solution
