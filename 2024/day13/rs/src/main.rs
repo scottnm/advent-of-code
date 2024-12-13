@@ -14,6 +14,32 @@ struct ClawMachine {
     prize_pos: Vec2,    
 }
 
+impl std::fmt::Display for ClawMachine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ClawMachine{{A(+{},+{}); B(+{},{}); Prize({},{})}}",
+            self.button_a_move.x, 
+            self.button_a_move.y, 
+            self.button_b_move.x, 
+            self.button_b_move.y, 
+            self.prize_pos.x, 
+            self.prize_pos.y)
+    }
+}
+
+impl std::fmt::Display for ClawMachineSolution {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ClawMachineSolution{{A: {}, B: {}}}",
+            self.a_press_count,
+            self.b_press_count)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct ClawMachineSolution {
+    a_press_count: usize,
+    b_press_count: usize,
+}
+
 fn read_claw_machine_summaries(filename: &str) -> Result<Vec<ClawMachine>, String> {
     let lines: Vec<String> = input_helpers::read_lines(filename).collect();
 
@@ -26,9 +52,6 @@ fn read_claw_machine_summaries(filename: &str) -> Result<Vec<ClawMachine>, Strin
             lines.len()));
     }
 
-// Button A: X+94, Y+34
-// Button B: X+22, Y+67
-// Prize: X=8400, Y=5400
     let button_a_line_re = regex::Regex::new(r"Button\s+A:\s+X\+(\d+),\s+Y\+(\d+)").unwrap();
     let button_b_line_re = regex::Regex::new(r"Button\s+B:\s+X\+(\d+),\s+Y\+(\d+)").unwrap();
     let prize_line_re = regex::Regex::new(r"Prize:\s+X=(\d+),\s+Y=(\d+)").unwrap();
@@ -86,6 +109,15 @@ fn read_claw_machine_summaries(filename: &str) -> Result<Vec<ClawMachine>, Strin
     Ok(claw_machines)
 }
 
+fn find_all_solutions(claw_machine: &ClawMachine) -> Vec<ClawMachineSolution> {
+    // TODO: real solution
+    vec![ClawMachineSolution{a_press_count: 0, b_press_count: 0}]
+}
+
+fn count_tokens_for_solution(solution: &ClawMachineSolution) -> usize {
+    (solution.a_press_count * 3) + solution.b_press_count
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
@@ -104,20 +136,43 @@ fn main() -> ExitCode {
         }
     };
 
-    /*
     {
-        let compacted_disk_chunks = compact_disk_pt1(&disk_chunks);
-        let checksum = calculate_checksum(&compacted_disk_chunks);
-        println!("Pt 1: checksum = {}", checksum);
-        if compacted_disk_chunks.len() < 20 {
-            println!("Original layout:  {}", stringify_disk_layout(&disk_chunks));
-            println!(
-                "Compacted layout: {}",
-                stringify_disk_layout(&compacted_disk_chunks)
-            );
-            //dbg!(compacted_disk_chunks);
+        let print_machines = claw_machines.len() < 10;
+        let mut total_min_tokens: Option<usize> = None;
+        for claw_machine in &claw_machines {
+            let solutions = find_all_solutions(claw_machine);
+            let min_cost_solution = solutions
+                .iter()
+                .enumerate()
+                .map(|(i, solution)| (i, count_tokens_for_solution(solution)))
+                .min_by_key(|(_i, solution_token_count)| solution_token_count.clone());
+            if let Some((solution_idx, min_cost_solution_token_count)) = min_cost_solution {
+                if let Some(token_count) = total_min_tokens {
+                    total_min_tokens = Some(token_count + min_cost_solution_token_count);
+                } else {
+                    total_min_tokens = Some(min_cost_solution_token_count);
+                }
+
+                if print_machines {
+                    println!("{}", claw_machine);
+                    println!("{}", solutions[solution_idx]);
+                    println!("");
+                }
+            } else {
+                if print_machines {
+                    println!("{}", claw_machine);
+                    println!("NO SOLUTION");
+                    println!("");
+                }
+            }
         }
-    } */
+
+        if let Some(total_min_tokens) = total_min_tokens {
+            println!("Pt 1: min token count = {}", total_min_tokens);
+        } else {
+            println!("Pt 1: min token count = NO SOLUTIONS");
+        }
+    }
 
     // println!("");
 
