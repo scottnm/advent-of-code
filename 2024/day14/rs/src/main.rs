@@ -1,5 +1,18 @@
 use input_helpers;
-use std::process::ExitCode;
+use std::{process::ExitCode, string};
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct Vec2 {
+    x: isize,
+    y: isize,
+}
+
+impl std::fmt::Display for Vec2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(x:{},y:{})", self.x, self.y)
+    }
+}
+
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 struct GridPos {
@@ -57,54 +70,103 @@ where
     }
 }
 
-fn dump_grid(garden: &Grid<()>) {
-    for r in 0..(garden.height as isize) {
-        for c in 0..(garden.width as isize) {
-            //print!("{}", garden.get_cell(r, c).plant_type);
+struct Robot {
+    pos: Vec2,    
+    vel: Vec2,
+}
+
+struct RobotArea {
+    width: usize,
+    height: usize,
+}
+
+fn dump_grid(robot_area: &RobotArea, robots: &[Robot]) {
+    let mut string_buf = String::with_capacity(robot_area.width);
+    for r in 0..robot_area.height as isize {
+        string_buf.clear();
+        for c in 0..robot_area.width as isize {
+            let pos = Vec2 {x: c, y: r};
+            let robots_in_pos = robots.iter().filter(|r| r.pos == pos).count();
+            let cell_char = match robots_in_pos {
+                0 => '.',
+                1..=9 => (('0' as usize) + robots_in_pos) as u8 as char, 
+                10..=35=> (('A' as usize) + (robots_in_pos - 10)) as u8 as char,
+                36..=61=> (('a' as usize) + (robots_in_pos - 36)) as u8 as char,
+                _ => panic!("not enough chars to represent {}", robots_in_pos),
+            };
+            string_buf.push(cell_char);
         }
-        //println!("");
+        println!("{}", string_buf);
     }
 }
 
-fn read_(filename: &str) -> Result<Grid<()>, String> {
+fn read_robots(filename: &str) -> Result<(RobotArea, Vec<Robot>), String> {
     let lines: Vec<String> = input_helpers::read_lines(filename).collect();
 
-    if lines.len() == 0 {
-        return Ok(Grid {
-            width: 0,
-            height: 0,
-            cells: vec![],
-        });
+    if lines.is_empty() {
+        return Err(format!("Need at least one line for width/height of robot area"));
     }
 
-    let height = lines.len();
-    let width = lines[0].len();
+    let area_line = &lines[0];
+    let mut area_line_split = area_line.split_ascii_whitespace();
 
-    let mut cells: Vec<()> = vec![];
-    for line in lines {
-        if line.len() != width {
-            return Err(format!(
-                "Grid must have consistent line widths! Expected {} found {}",
-                width,
-                line.len()
-            ));
-        }
+    let width: usize = area_line_split
+        .next()
+        .unwrap()
+        .parse()
+        .map_err(|_| String::from("Failed to parse width"))?;
 
-        for c in line.chars() {
-            let cell = match c {
-                'A'..='Z' => (),
-                _ => return Err(format!("Invalid garden plot char! {}", c)),
-            };
-            cells.push(cell);
-        }
+    let height: usize = area_line_split
+        .next()
+        .ok_or(String::from("Missing height value on first list"))?
+        .parse()
+        .map_err(|_| String::from("Failed to parse width"))?;
+
+    let robot_area = RobotArea {width, height};
+
+    let robot_line_re = regex::Regex::new(r"p=(-?\d+),(-?\d+)\s+v=(-?\d+),(-?\d+)").unwrap();
+    
+    let mut robots = vec![];
+
+    for line in &lines[1..] {
+        let captures = robot_line_re.captures(line);
+        let robot_match = captures.ok_or(format!("line '{}' did not match expected robot format", line))?;
+
+        let px: isize = robot_match
+            .get(1)
+            .unwrap()
+            .as_str()
+            .parse()
+            .map_err(|_| format!("X position could not be parsed as int! '{}'", line))?;
+
+        let py: isize = robot_match
+            .get(2)
+            .unwrap()
+            .as_str()
+            .parse()
+            .map_err(|_| format!("Y position could not be parsed as int! '{}'", line))?;
+
+        let vx: isize = robot_match
+            .get(3)
+            .unwrap()
+            .as_str()
+            .parse()
+            .map_err(|_| format!("X velocity could not be parsed as int! '{}'", line))?;
+
+        let vy: isize = robot_match
+            .get(4)
+            .unwrap()
+            .as_str()
+            .parse()
+            .map_err(|_| format!("Y velocity could not be parsed as int! '{}'", line))?;
+        
+        let robot = Robot{pos: Vec2{x: px, y: py}, vel: Vec2{x: vx, y: vy}};
+        robots.push(robot);
     }
 
-    Ok(Grid {
-        width,
-        height,
-        cells,
-    })
+    Ok((robot_area, robots))
 }
+
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -115,16 +177,16 @@ fn main() -> ExitCode {
 
     let filename: &str = &args[0];
 
-    let parse_result = read_(filename);
-    let garden = match parse_result {
-        Ok(garden) => garden,
+    let parse_result = read_robots(filename);
+    let (robot_area, robots)= match parse_result {
+        Ok(result) => result,
         Err(e) => {
             println!("Invalid input! {}", e);
             return ExitCode::FAILURE;
         }
     };
 
-    dump_grid(&garden);
+    dump_grid(&robot_area, &robots);
 
     /*
     {
