@@ -1,5 +1,5 @@
 use input_helpers;
-use std::{fmt::DebugMap, process::ExitCode, string};
+use std::process::ExitCode;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Vec2 {
@@ -13,62 +13,6 @@ impl std::fmt::Display for Vec2 {
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
-struct GridPos {
-    row: isize,
-    col: isize,
-}
-
-impl std::fmt::Display for GridPos {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "(r:{}, c:{})", self.row, self.col)
-    }
-}
-
-struct Grid<T>
-where
-    T: Clone + Copy,
-{
-    width: usize,
-    height: usize,
-    cells: Vec<T>,
-}
-
-impl<T> Grid<T>
-where
-    T: Clone + Copy,
-{
-    fn get_cell_idx(&self, row: isize, col: isize) -> usize {
-        assert!(!self.is_pos_out_of_bounds(row, col));
-
-        (row as usize * self.width) + (col as usize)
-    }
-
-    fn get_cell(&self, row: isize, col: isize) -> T {
-        self.cells[self.get_cell_idx(row, col)]
-    }
-
-    fn get_cell_mut(&mut self, row: isize, col: isize) -> &mut T {
-        let idx = self.get_cell_idx(row, col);
-        &mut self.cells[idx]
-    }
-
-    fn cell_pos_from_idx(width: usize, height: usize, idx: usize) -> GridPos {
-        assert!(idx < (width * height));
-        let col = (idx % width) as isize;
-        let row = (idx / width) as isize;
-        GridPos { row, col }
-    }
-
-    fn is_pos_in_bounds(&self, row: isize, col: isize) -> bool {
-        !self.is_pos_out_of_bounds(row, col)
-    }
-
-    fn is_pos_out_of_bounds(&self, row: isize, col: isize) -> bool {
-        row < 0 || col < 0 || row as usize >= self.height || col as usize >= self.width
-    }
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Robot {
     pos: Vec2,
@@ -78,27 +22,6 @@ struct Robot {
 struct RobotArea {
     width: usize,
     height: usize,
-}
-
-fn wipe_grid_print(title: &str, robot_area: &RobotArea, robots: &[Robot]) {
-    println!("{}: ", title);
-    let mut string_buf = String::with_capacity(robot_area.width);
-    for r in 0..robot_area.height as isize {
-        string_buf.clear();
-        for c in 0..robot_area.width as isize {
-            let pos = Vec2 { x: c, y: r };
-            let robots_in_pos = robots.iter().filter(|r| r.pos == pos).count();
-            let cell_char = match robots_in_pos {
-                0 => '.',
-                1..=9 => (('0' as usize) + robots_in_pos) as u8 as char,
-                10..=35 => (('A' as usize) + (robots_in_pos - 10)) as u8 as char,
-                36..=61 => (('a' as usize) + (robots_in_pos - 36)) as u8 as char,
-                _ => panic!("not enough chars to represent {}", robots_in_pos),
-            };
-            string_buf.push(cell_char);
-        }
-        println!("  {}", string_buf);
-    }
 }
 
 fn dump_grid_to_str(title: &str, robot_area: &RobotArea, robots: &[Robot]) -> String {
@@ -210,23 +133,6 @@ fn step_by_step_simulation(
     print_grid: bool,
     in_place_print: bool,
 ) {
-    let clear_buf = {
-        let mut buf = String::new();
-        let line_buf = {
-            let mut line_buf = String::new();
-            for _ in 0..(robot_area.width * 2) {
-                line_buf.push(' ');
-            }
-            line_buf
-        };
-
-        for _ in 0..(robot_area.height + 1) {
-            buf.push_str(&line_buf);
-            buf.push('\n');
-        }
-        buf
-    };
-
     let cursor_move = format!("\x1b[{}A", robot_area.height + 1);
 
     // FIXME:
@@ -257,9 +163,8 @@ fn step_by_step_simulation(
             print!("{}", grid_str);
         }
 
-        if in_place_print {
+        if in_place_print && (i < simulation_step_count - 1) {
             std::thread::sleep(std::time::Duration::from_millis(250));
-            //print!("{}{}{}", cursor_move, clear_buf, cursor_move);
             print!("{}", cursor_move);
         }
     }
@@ -386,8 +291,6 @@ fn main() -> ExitCode {
             quadrant_counts.3
         );
     }
-
-    println!("");
 
     return ExitCode::SUCCESS;
 }
