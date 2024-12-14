@@ -151,23 +151,41 @@ fn count_tokens_for_solution(solution: &ClawMachineSolution) -> usize {
     (solution.a_press_count * 3) + solution.b_press_count
 }
 
-fn main() -> ExitCode {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    if args.is_empty() {
-        println!("Not enough args");
-        return ExitCode::FAILURE;
+fn get_nth_string_arg<'a>(args: &'a [String], n: usize) -> Result<&'a str, String> {
+    if args.len() <= n {
+        return Err(format!(
+            "Too few args! needed {}; had {}",
+            n + 1,
+            args.len()
+        ));
     }
 
-    let filename: &str = &args[0];
+    Ok(&args[n])
+}
 
-    let parse_result = read_claw_machine_summaries(filename);
-    let claw_machines = match parse_result {
-        Ok(claw_machines) => claw_machines,
-        Err(e) => {
-            println!("Invalid input! {}", e);
-            return ExitCode::FAILURE;
-        }
-    };
+fn get_nth_parsed_arg<T>(args: &[String], n: usize) -> Result<T, String>
+where
+    T: std::str::FromStr,
+{
+    if args.len() <= n {
+        return Err(format!(
+            "Too few args! needed {}; had {}",
+            n + 1,
+            args.len()
+        ));
+    }
+
+    match args[n].parse() {
+        Ok(v) => Ok(v),
+        Err(_) => Err(format!("Failed to parse arg! '{}'", &args[n])),
+    }
+}
+
+fn run(args: &[String]) -> Result<(), String> {
+    let filename: &str = get_nth_string_arg(args, 0)?;
+    let claw_machine_offset: usize = get_nth_parsed_arg(args, 1)?;
+
+    let claw_machines = read_claw_machine_summaries(filename)?;
 
     {
         let print_machines = claw_machines.len() < 10;
@@ -207,22 +225,57 @@ fn main() -> ExitCode {
         }
     }
 
-    // println!("");
+    println!("");
 
     /*
     {
-        let compacted_disk_chunks = compact_disk_pt2(&disk_chunks);
-        let checksum = calculate_checksum(&compacted_disk_chunks);
-        println!("Pt 2: checksum = {}", checksum);
-        if compacted_disk_chunks.len() < 20 {
-            println!("Original layout:  {}", stringify_disk_layout(&disk_chunks));
-            println!(
-                "Compacted layout: {}",
-                stringify_disk_layout(&compacted_disk_chunks)
-            );
-            //dbg!(compacted_disk_chunks);
+        let print_machines = claw_machines.len() < 10;
+        let mut total_min_tokens: Option<usize> = None;
+        for claw_machine in &claw_machines {
+            let solutions = find_all_solutions_with_offset(claw_machine, claw_machine_offset);
+            let min_cost_solution = solutions
+                .iter()
+                .enumerate()
+                .map(|(i, solution)| (i, count_tokens_for_solution(solution)))
+                .min_by_key(|(_i, solution_token_count)| solution_token_count.clone());
+            if let Some((solution_idx, min_cost_solution_token_count)) = min_cost_solution {
+                if let Some(token_count) = total_min_tokens {
+                    total_min_tokens = Some(token_count + min_cost_solution_token_count);
+                } else {
+                    total_min_tokens = Some(min_cost_solution_token_count);
+                }
+
+                if print_machines {
+                    println!("{}", claw_machine);
+                    println!("{}", solutions[solution_idx]);
+                    println!("");
+                }
+            } else {
+                if print_machines {
+                    println!("{}", claw_machine);
+                    println!("NO SOLUTION");
+                    println!("");
+                }
+            }
+        }
+
+        if let Some(total_min_tokens) = total_min_tokens {
+            println!("Pt 2: min token count = {}", total_min_tokens);
+        } else {
+            println!("Pt 2: min token count = NO SOLUTIONS");
         }
     } */
 
-    return ExitCode::SUCCESS;
+    Ok(())
+}
+
+fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    match run(&args) {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(e) => {
+            println!("Err: {}", e);
+            ExitCode::FAILURE
+        }
+    }
 }
