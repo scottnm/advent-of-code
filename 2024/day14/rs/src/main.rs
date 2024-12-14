@@ -13,7 +13,6 @@ impl std::fmt::Display for Vec2 {
     }
 }
 
-
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 struct GridPos {
     row: isize,
@@ -72,7 +71,7 @@ where
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Robot {
-    pos: Vec2,    
+    pos: Vec2,
     vel: Vec2,
 }
 
@@ -87,13 +86,13 @@ fn wipe_grid_print(title: &str, robot_area: &RobotArea, robots: &[Robot]) {
     for r in 0..robot_area.height as isize {
         string_buf.clear();
         for c in 0..robot_area.width as isize {
-            let pos = Vec2 {x: c, y: r};
+            let pos = Vec2 { x: c, y: r };
             let robots_in_pos = robots.iter().filter(|r| r.pos == pos).count();
             let cell_char = match robots_in_pos {
                 0 => '.',
-                1..=9 => (('0' as usize) + robots_in_pos) as u8 as char, 
-                10..=35=> (('A' as usize) + (robots_in_pos - 10)) as u8 as char,
-                36..=61=> (('a' as usize) + (robots_in_pos - 36)) as u8 as char,
+                1..=9 => (('0' as usize) + robots_in_pos) as u8 as char,
+                10..=35 => (('A' as usize) + (robots_in_pos - 10)) as u8 as char,
+                36..=61 => (('a' as usize) + (robots_in_pos - 36)) as u8 as char,
                 _ => panic!("not enough chars to represent {}", robots_in_pos),
             };
             string_buf.push(cell_char);
@@ -108,13 +107,13 @@ fn dump_grid_to_str(title: &str, robot_area: &RobotArea, robots: &[Robot]) -> St
     string_buf.push_str(&format!("{}:\n", title));
     for r in 0..robot_area.height as isize {
         for c in 0..robot_area.width as isize {
-            let pos = Vec2 {x: c, y: r};
+            let pos = Vec2 { x: c, y: r };
             let robots_in_pos = robots.iter().filter(|r| r.pos == pos).count();
             let cell_char = match robots_in_pos {
                 0 => '.',
-                1..=9 => (('0' as usize) + robots_in_pos) as u8 as char, 
-                10..=35=> (('A' as usize) + (robots_in_pos - 10)) as u8 as char,
-                36..=61=> (('a' as usize) + (robots_in_pos - 36)) as u8 as char,
+                1..=9 => (('0' as usize) + robots_in_pos) as u8 as char,
+                10..=35 => (('A' as usize) + (robots_in_pos - 10)) as u8 as char,
+                36..=61 => (('a' as usize) + (robots_in_pos - 36)) as u8 as char,
                 _ => panic!("not enough chars to represent {}", robots_in_pos),
             };
             string_buf.push(cell_char);
@@ -133,7 +132,9 @@ fn read_robots(filename: &str) -> Result<(RobotArea, Vec<Robot>), String> {
     let lines: Vec<String> = input_helpers::read_lines(filename).collect();
 
     if lines.is_empty() {
-        return Err(format!("Need at least one line for width/height of robot area"));
+        return Err(format!(
+            "Need at least one line for width/height of robot area"
+        ));
     }
 
     let area_line = &lines[0];
@@ -151,15 +152,18 @@ fn read_robots(filename: &str) -> Result<(RobotArea, Vec<Robot>), String> {
         .parse()
         .map_err(|_| String::from("Failed to parse width"))?;
 
-    let robot_area = RobotArea {width, height};
+    let robot_area = RobotArea { width, height };
 
     let robot_line_re = regex::Regex::new(r"p=(-?\d+),(-?\d+)\s+v=(-?\d+),(-?\d+)").unwrap();
-    
+
     let mut robots = vec![];
 
     for line in &lines[1..] {
         let captures = robot_line_re.captures(line);
-        let robot_match = captures.ok_or(format!("line '{}' did not match expected robot format", line))?;
+        let robot_match = captures.ok_or(format!(
+            "line '{}' did not match expected robot format",
+            line
+        ))?;
 
         let px: isize = robot_match
             .get(1)
@@ -188,8 +192,11 @@ fn read_robots(filename: &str) -> Result<(RobotArea, Vec<Robot>), String> {
             .as_str()
             .parse()
             .map_err(|_| format!("Y velocity could not be parsed as int! '{}'", line))?;
-        
-        let robot = Robot{pos: Vec2{x: px, y: py}, vel: Vec2{x: vx, y: vy}};
+
+        let robot = Robot {
+            pos: Vec2 { x: px, y: py },
+            vel: Vec2 { x: vx, y: vy },
+        };
         robots.push(robot);
     }
 
@@ -197,12 +204,12 @@ fn read_robots(filename: &str) -> Result<(RobotArea, Vec<Robot>), String> {
 }
 
 fn step_by_step_simulation(
-    robots: &mut [Robot], 
-    robot_area: &RobotArea, 
-    simulation_step_count: usize, 
-    print_grid: bool, 
-    in_place_print: bool) {
-
+    robots: &mut [Robot],
+    robot_area: &RobotArea,
+    simulation_step_count: usize,
+    print_grid: bool,
+    in_place_print: bool,
+) {
     let clear_buf = {
         let mut buf = String::new();
         let line_buf = {
@@ -213,14 +220,14 @@ fn step_by_step_simulation(
             line_buf
         };
 
-        for _ in 0..(robot_area.height+1) {
+        for _ in 0..(robot_area.height + 1) {
             buf.push_str(&line_buf);
             buf.push('\n');
         }
         buf
     };
 
-    let cursor_move = format!("\x1b[{}A", robot_area.height+1);
+    let cursor_move = format!("\x1b[{}A", robot_area.height + 1);
 
     // FIXME:
     // This is horribly naive. There are much faster ways to do this. Namely, I don't actually have to loop.
@@ -233,23 +240,20 @@ fn step_by_step_simulation(
 
             if robot.pos.x < 0 {
                 robot.pos.x += (robot_area.width) as isize;
-            }
-
-            else if robot.pos.x >= robot_area.width as isize {
+            } else if robot.pos.x >= robot_area.width as isize {
                 robot.pos.x -= (robot_area.width) as isize;
             }
 
             if robot.pos.y < 0 {
                 robot.pos.y += (robot_area.height) as isize;
-            }
-
-            else if robot.pos.y >= robot_area.height as isize {
+            } else if robot.pos.y >= robot_area.height as isize {
                 robot.pos.y -= (robot_area.height) as isize;
             }
         }
 
         if print_grid {
-            let grid_str = dump_grid_to_str(&format!("after step {:03}", i+1), robot_area, &robots);
+            let grid_str =
+                dump_grid_to_str(&format!("after step {:03}", i + 1), robot_area, &robots);
             print!("{}", grid_str);
         }
 
@@ -261,7 +265,10 @@ fn step_by_step_simulation(
     }
 }
 
-fn count_robots_in_quadrants(robots: &[Robot], robot_area: &RobotArea) -> (usize, usize, usize, usize) {
+fn count_robots_in_quadrants(
+    robots: &[Robot],
+    robot_area: &RobotArea,
+) -> (usize, usize, usize, usize) {
     /*
     |----|-----
     | Q1 | Q2 |
@@ -276,13 +283,13 @@ fn count_robots_in_quadrants(robots: &[Robot], robot_area: &RobotArea) -> (usize
     }
 
     fn in_quadrant_bounds(bounds: &QuadrantBounds, pos: &Vec2) -> bool {
-        pos.x >= bounds.topleft.x &&
-            pos.x <= bounds.bottomright.x &&
-            pos.y >= bounds.topleft.y &&
-            pos.y <= bounds.bottomright.y
+        pos.x >= bounds.topleft.x
+            && pos.x <= bounds.bottomright.x
+            && pos.y >= bounds.topleft.y
+            && pos.y <= bounds.bottomright.y
     }
 
-    // FIXME:  assume width and height are odd values for now. Its the sizes provided in both the sample problem 
+    // FIXME:  assume width and height are odd values for now. Its the sizes provided in both the sample problem
     // and the real pt1 input. Assuming odd makes it easier to calculate area bounds or now
     assert!(robot_area.height % 2 == 1);
     assert!(robot_area.width % 2 == 1);
@@ -291,10 +298,34 @@ fn count_robots_in_quadrants(robots: &[Robot], robot_area: &RobotArea) -> (usize
     let top_x = (robot_area.width - 1) as isize;
     let top_y = (robot_area.height - 1) as isize;
 
-    let q1_bounds = QuadrantBounds { topleft: Vec2{x: 0, y: 0 }, bottomright: Vec2 {x: mid_x-1, y: mid_y-1}};
-    let q2_bounds = QuadrantBounds { topleft: Vec2{x: mid_x+1, y: 0 }, bottomright: Vec2 {x: top_x, y: mid_y-1}};
-    let q3_bounds = QuadrantBounds { topleft: Vec2{x: 0, y: mid_y+1 }, bottomright: Vec2 {x: mid_x-1, y: top_y}};
-    let q4_bounds = QuadrantBounds { topleft: Vec2{x: mid_x+1, y: mid_y+1 }, bottomright: Vec2 {x: top_x, y: top_y}};
+    let q1_bounds = QuadrantBounds {
+        topleft: Vec2 { x: 0, y: 0 },
+        bottomright: Vec2 {
+            x: mid_x - 1,
+            y: mid_y - 1,
+        },
+    };
+    let q2_bounds = QuadrantBounds {
+        topleft: Vec2 { x: mid_x + 1, y: 0 },
+        bottomright: Vec2 {
+            x: top_x,
+            y: mid_y - 1,
+        },
+    };
+    let q3_bounds = QuadrantBounds {
+        topleft: Vec2 { x: 0, y: mid_y + 1 },
+        bottomright: Vec2 {
+            x: mid_x - 1,
+            y: top_y,
+        },
+    };
+    let q4_bounds = QuadrantBounds {
+        topleft: Vec2 {
+            x: mid_x + 1,
+            y: mid_y + 1,
+        },
+        bottomright: Vec2 { x: top_x, y: top_y },
+    };
 
     let mut quadrant_counts = (0, 0, 0, 0);
 
@@ -313,7 +344,6 @@ fn count_robots_in_quadrants(robots: &[Robot], robot_area: &RobotArea) -> (usize
     quadrant_counts
 }
 
-
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
@@ -324,7 +354,7 @@ fn main() -> ExitCode {
     let filename: &str = &args[0];
 
     let parse_result = read_robots(filename);
-    let (robot_area, robots)= match parse_result {
+    let (robot_area, robots) = match parse_result {
         Ok(result) => result,
         Err(e) => {
             println!("Invalid input! {}", e);
@@ -345,9 +375,16 @@ fn main() -> ExitCode {
             dump_grid("pt 1. end state", &robot_area, &simulated_robots);
         }
 
-        let total_safety_factor = quadrant_counts.0 * quadrant_counts.1 * quadrant_counts.2 * quadrant_counts.3;
-        println!("Pt 1. Total safety factor: {} = {} * {} * {} * {}",
-            total_safety_factor, quadrant_counts.0 , quadrant_counts.1 , quadrant_counts.2 , quadrant_counts.3);
+        let total_safety_factor =
+            quadrant_counts.0 * quadrant_counts.1 * quadrant_counts.2 * quadrant_counts.3;
+        println!(
+            "Pt 1. Total safety factor: {} = {} * {} * {} * {}",
+            total_safety_factor,
+            quadrant_counts.0,
+            quadrant_counts.1,
+            quadrant_counts.2,
+            quadrant_counts.3
+        );
     }
 
     println!("");
