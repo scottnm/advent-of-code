@@ -169,13 +169,13 @@ fn read_robots(filename: &str) -> Result<(RobotArea, Vec<Robot>), String> {
     Ok((robot_area, robots))
 }
 
-fn step_by_step_simulation(robots: &mut [Robot], robot_area: &RobotArea, simulation_step_count: usize) {
+fn step_by_step_simulation(robots: &mut [Robot], robot_area: &RobotArea, simulation_step_count: usize, print_grid: bool) {
     // FIXME:
     // This is horribly naive. There are much faster ways to do this. Namely, I don't actually have to loop.
     // I can just multiple all of the moves together and do one calculated adjustment back onto the grid that
     // does all wrapping at once. But I'm keeping it naive for now since I don't know what part 2 will be like.
-    for robot in robots {
-        for _ in 0..simulation_step_count {
+    for i in 0..simulation_step_count {
+        for robot in robots.iter_mut() {
             robot.pos.x += robot.vel.x;
             robot.pos.y += robot.vel.y;
 
@@ -191,9 +191,13 @@ fn step_by_step_simulation(robots: &mut [Robot], robot_area: &RobotArea, simulat
                 robot.pos.y += (robot_area.height) as isize;
             }
 
-            else if robot.pos.x >= robot_area.width as isize {
-                robot.pos.x -= (robot_area.height) as isize;
+            else if robot.pos.y >= robot_area.height as isize {
+                robot.pos.y -= (robot_area.height) as isize;
             }
+        }
+
+        if print_grid {
+            dump_grid(&format!("after step {:03}", i+1), robot_area, &robots);
         }
     }
 }
@@ -269,17 +273,32 @@ fn main() -> ExitCode {
         }
     };
 
-    if robot_area.width * robot_area.height < 250 {
-        dump_grid("start state", &robot_area, &robots);
+    if robots.len() < 20 {
+        for (i, robot) in robots.iter().enumerate() {
+            println!("Short simulating robot {:02}: p={}, v={}", i, robot.pos, robot.vel);
+            let mut simulated_robots = vec![robot.clone()];
+            if robot_area.width * robot_area.height < 250 {
+                dump_grid("start state", &robot_area, &simulated_robots);
+            }
+            step_by_step_simulation(&mut simulated_robots, &robot_area, 5, true);
+            // if robot_area.width * robot_area.height < 250 {
+            //     dump_grid("end state", &robot_area, &simulated_robots);
+            // }
+        }
     }
 
+
     {
+        if robot_area.width * robot_area.height < 250 {
+            dump_grid("pt 1. start state", &robot_area, &robots);
+        }
+
         let mut simulated_robots = robots.clone();
-        step_by_step_simulation(&mut simulated_robots, &robot_area, 100);
+        step_by_step_simulation(&mut simulated_robots, &robot_area, 100, false);
         let quadrant_counts = count_robots_in_quadrants(&simulated_robots, &robot_area);
 
         if robot_area.width * robot_area.height < 250 {
-            dump_grid("end state", &robot_area, &simulated_robots);
+            dump_grid("pt 1. end state", &robot_area, &simulated_robots);
         }
 
         let total_safety_factor = quadrant_counts.0 * quadrant_counts.1 * quadrant_counts.2 * quadrant_counts.3;
