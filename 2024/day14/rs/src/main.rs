@@ -170,13 +170,84 @@ fn read_robots(filename: &str) -> Result<(RobotArea, Vec<Robot>), String> {
 }
 
 fn step_by_step_simulation(robots: &mut [Robot], robot_area: &RobotArea, simulation_step_count: usize) {
-    // TODO:
-    // unimplemented!();
+    // FIXME:
+    // This is horribly naive. There are much faster ways to do this. Namely, I don't actually have to loop.
+    // I can just multiple all of the moves together and do one calculated adjustment back onto the grid that
+    // does all wrapping at once. But I'm keeping it naive for now since I don't know what part 2 will be like.
+    for robot in robots {
+        for _ in 0..simulation_step_count {
+            robot.pos.x += robot.vel.x;
+            robot.pos.y += robot.vel.y;
+
+            if robot.pos.x < 0 {
+                robot.pos.x += (robot_area.width) as isize;
+            }
+
+            else if robot.pos.x >= robot_area.width as isize {
+                robot.pos.x -= (robot_area.width) as isize;
+            }
+
+            if robot.pos.y < 0 {
+                robot.pos.y += (robot_area.height) as isize;
+            }
+
+            else if robot.pos.x >= robot_area.width as isize {
+                robot.pos.x -= (robot_area.height) as isize;
+            }
+        }
+    }
 }
 
 fn count_robots_in_quadrants(robots: &[Robot], robot_area: &RobotArea) -> (usize, usize, usize, usize) {
-    // TODO:
-    (0, 0, 0, 0)// unimplemented!();
+    /*
+    |----|-----
+    | Q1 | Q2 |
+    |----|-----
+    | Q3 | Q4 |
+    |----|-----
+    */
+
+    struct QuadrantBounds {
+        topleft: Vec2,
+        bottomright: Vec2,
+    }
+
+    fn in_quadrant_bounds(bounds: &QuadrantBounds, pos: &Vec2) -> bool {
+        pos.x >= bounds.topleft.x &&
+            pos.x <= bounds.bottomright.x &&
+            pos.y >= bounds.topleft.y &&
+            pos.y <= bounds.bottomright.y
+    }
+
+    // FIXME:  assume width and height are odd values for now. Its the sizes provided in both the sample problem 
+    // and the real pt1 input. Assuming odd makes it easier to calculate area bounds or now
+    assert!(robot_area.height % 2 == 1);
+    assert!(robot_area.width % 2 == 1);
+    let mid_x = (robot_area.width / 2) as isize;
+    let mid_y = (robot_area.height / 2) as isize;
+    let top_x = (robot_area.width - 1) as isize;
+    let top_y = (robot_area.height - 1) as isize;
+
+    let q1_bounds = QuadrantBounds { topleft: Vec2{x: 0, y: 0 }, bottomright: Vec2 {x: mid_x-1, y: mid_y-1}};
+    let q2_bounds = QuadrantBounds { topleft: Vec2{x: mid_x+1, y: 0 }, bottomright: Vec2 {x: top_x, y: mid_y-1}};
+    let q3_bounds = QuadrantBounds { topleft: Vec2{x: 0, y: mid_y+1 }, bottomright: Vec2 {x: mid_x-1, y: top_y}};
+    let q4_bounds = QuadrantBounds { topleft: Vec2{x: mid_x+1, y: mid_y+1 }, bottomright: Vec2 {x: top_x, y: top_y}};
+
+    let mut quadrant_counts = (0, 0, 0, 0);
+
+    for robot in robots {
+        if in_quadrant_bounds(&q1_bounds, &robot.pos) {
+            quadrant_counts.0 += 1;
+        } else if in_quadrant_bounds(&q2_bounds, &robot.pos) {
+            quadrant_counts.1 += 1;
+        } else if in_quadrant_bounds(&q3_bounds, &robot.pos) {
+            quadrant_counts.2 += 1;
+        } else if in_quadrant_bounds(&q4_bounds, &robot.pos) {
+            quadrant_counts.3 += 1;
+        }
+    }
+
+    quadrant_counts
 }
 
 
