@@ -1,5 +1,5 @@
 use input_helpers;
-use std::{process::ExitCode, string};
+use std::{fmt::DebugMap, process::ExitCode, string};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Vec2 {
@@ -81,7 +81,7 @@ struct RobotArea {
     height: usize,
 }
 
-fn dump_grid(title: &str, robot_area: &RobotArea, robots: &[Robot]) {
+fn wipe_grid_print(title: &str, robot_area: &RobotArea, robots: &[Robot]) {
     println!("{}: ", title);
     let mut string_buf = String::with_capacity(robot_area.width);
     for r in 0..robot_area.height as isize {
@@ -100,6 +100,33 @@ fn dump_grid(title: &str, robot_area: &RobotArea, robots: &[Robot]) {
         }
         println!("  {}", string_buf);
     }
+}
+
+fn dump_grid_to_str(title: &str, robot_area: &RobotArea, robots: &[Robot]) -> String {
+    let mut string_buf = String::with_capacity(robot_area.width);
+
+    string_buf.push_str(&format!("{}:\n", title));
+    for r in 0..robot_area.height as isize {
+        for c in 0..robot_area.width as isize {
+            let pos = Vec2 {x: c, y: r};
+            let robots_in_pos = robots.iter().filter(|r| r.pos == pos).count();
+            let cell_char = match robots_in_pos {
+                0 => '.',
+                1..=9 => (('0' as usize) + robots_in_pos) as u8 as char, 
+                10..=35=> (('A' as usize) + (robots_in_pos - 10)) as u8 as char,
+                36..=61=> (('a' as usize) + (robots_in_pos - 36)) as u8 as char,
+                _ => panic!("not enough chars to represent {}", robots_in_pos),
+            };
+            string_buf.push(cell_char);
+            string_buf.push(' ');
+        }
+        string_buf.push('\n');
+    }
+    string_buf
+}
+
+fn dump_grid(title: &str, robot_area: &RobotArea, robots: &[Robot]) {
+    print!("{}", dump_grid_to_str(title, robot_area, robots));
 }
 
 fn read_robots(filename: &str) -> Result<(RobotArea, Vec<Robot>), String> {
@@ -169,7 +196,32 @@ fn read_robots(filename: &str) -> Result<(RobotArea, Vec<Robot>), String> {
     Ok((robot_area, robots))
 }
 
-fn step_by_step_simulation(robots: &mut [Robot], robot_area: &RobotArea, simulation_step_count: usize, print_grid: bool) {
+fn step_by_step_simulation(
+    robots: &mut [Robot], 
+    robot_area: &RobotArea, 
+    simulation_step_count: usize, 
+    print_grid: bool, 
+    in_place_print: bool) {
+
+    let clear_buf = {
+        let mut buf = String::new();
+        let line_buf = {
+            let mut line_buf = String::new();
+            for _ in 0..(robot_area.width * 2) {
+                line_buf.push(' ');
+            }
+            line_buf
+        };
+
+        for _ in 0..(robot_area.height+1) {
+            buf.push_str(&line_buf);
+            buf.push('\n');
+        }
+        buf
+    };
+
+    let cursor_move = format!("\x1b[{}A", robot_area.height+1);
+
     // FIXME:
     // This is horribly naive. There are much faster ways to do this. Namely, I don't actually have to loop.
     // I can just multiple all of the moves together and do one calculated adjustment back onto the grid that
@@ -197,7 +249,14 @@ fn step_by_step_simulation(robots: &mut [Robot], robot_area: &RobotArea, simulat
         }
 
         if print_grid {
-            dump_grid(&format!("after step {:03}", i+1), robot_area, &robots);
+            let grid_str = dump_grid_to_str(&format!("after step {:03}", i+1), robot_area, &robots);
+            print!("{}", grid_str);
+        }
+
+        if in_place_print {
+            std::thread::sleep(std::time::Duration::from_millis(250));
+            //print!("{}{}{}", cursor_move, clear_buf, cursor_move);
+            print!("{}", cursor_move);
         }
     }
 }
@@ -273,28 +332,13 @@ fn main() -> ExitCode {
         }
     };
 
-    if robots.len() < 20 {
-        for (i, robot) in robots.iter().enumerate() {
-            println!("Short simulating robot {:02}: p={}, v={}", i, robot.pos, robot.vel);
-            let mut simulated_robots = vec![robot.clone()];
-            if robot_area.width * robot_area.height < 250 {
-                dump_grid("start state", &robot_area, &simulated_robots);
-            }
-            step_by_step_simulation(&mut simulated_robots, &robot_area, 5, true);
-            // if robot_area.width * robot_area.height < 250 {
-            //     dump_grid("end state", &robot_area, &simulated_robots);
-            // }
-        }
-    }
-
-
     {
         if robot_area.width * robot_area.height < 250 {
             dump_grid("pt 1. start state", &robot_area, &robots);
         }
 
         let mut simulated_robots = robots.clone();
-        step_by_step_simulation(&mut simulated_robots, &robot_area, 100, false);
+        step_by_step_simulation(&mut simulated_robots, &robot_area, 10000, true, true);
         let quadrant_counts = count_robots_in_quadrants(&simulated_robots, &robot_area);
 
         if robot_area.width * robot_area.height < 250 {
@@ -307,26 +351,6 @@ fn main() -> ExitCode {
     }
 
     println!("");
-
-    /*{
-        let regions = split_regions(&garden);
-        let mut total_fence_price = 0;
-        let print_region_info = regions.len() < 20;
-        for (i, region) in regions.iter().enumerate() {
-            let area = calculate_region_area(&garden, region);
-            let side_count = count_region_sides(&garden, region);
-            let price = area * side_count;
-            total_fence_price += price;
-            if print_region_info {
-                println!(
-                    " {:02}. {} ${} = {}(area) x {}(sides)  ::  {:?}",
-                    i, region.plant_type, price, area, side_count, region.plot_positions
-                );
-            }
-        }
-
-        println!("Pt 2: total fence price = {}", total_fence_price);
-    }*/
 
     return ExitCode::SUCCESS;
 }
