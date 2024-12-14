@@ -4,9 +4,9 @@ script_root=$(dirname $(realpath "${BASH_SOURCE:-$0}"))
 clear
 rm "$script_root/day06.out"
 clang \
-    -I "$script_root/../../../helpers/" \
+    -I "$script_root/../../../helpers/c/" \
     -Wno-format-extra-args -Wall -Werror \
-    "$script_root/day06.c" "$script_root/../../../helpers/helpers.c" \
+    "$script_root/day06.c" "$script_root/../../../helpers/c/helpers.c" \
     -o "$script_root/day06.out"
 
 CYAN=$'\033[1;36m'

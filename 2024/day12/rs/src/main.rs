@@ -1,62 +1,6 @@
 use input_helpers;
-use itertools::Itertools;
 use std::process::ExitCode;
-
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
-struct GridPos {
-    row: isize,
-    col: isize,
-}
-
-impl std::fmt::Display for GridPos {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "(r:{}, c:{})", self.row, self.col)
-    }
-}
-
-struct Grid<T>
-where
-    T: Clone + Copy,
-{
-    width: usize,
-    height: usize,
-    cells: Vec<T>,
-}
-
-impl<T> Grid<T>
-where
-    T: Clone + Copy,
-{
-    fn get_cell_idx(&self, row: isize, col: isize) -> usize {
-        assert!(!self.is_pos_out_of_bounds(row, col));
-
-        (row as usize * self.width) + (col as usize)
-    }
-
-    fn get_cell(&self, row: isize, col: isize) -> T {
-        self.cells[self.get_cell_idx(row, col)]
-    }
-
-    fn get_cell_mut(&mut self, row: isize, col: isize) -> &mut T {
-        let idx = self.get_cell_idx(row, col);
-        &mut self.cells[idx]
-    }
-
-    fn cell_pos_from_idx(width: usize, height: usize, idx: usize) -> GridPos {
-        assert!(idx < (width * height));
-        let col = (idx % width) as isize;
-        let row = (idx / width) as isize;
-        GridPos { row, col }
-    }
-
-    fn is_pos_in_bounds(&self, row: isize, col: isize) -> bool {
-        !self.is_pos_out_of_bounds(row, col)
-    }
-
-    fn is_pos_out_of_bounds(&self, row: isize, col: isize) -> bool {
-        row < 0 || col < 0 || row as usize >= self.height || col as usize >= self.width
-    }
-}
+use simple_grid::{Grid, GridPos};
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 struct GardenPlot {

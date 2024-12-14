@@ -4,6 +4,8 @@
 #define Log(fmt, ...) printf(fmt, __VA_ARGS__)
 #elif defined(__linux__)
 #define Log(fmt, ...) printf(fmt "\n", ##__VA_ARGS__)
+#elif defined(__APPLE__)
+#define Log(fmt, ...) printf(fmt "\n", ##__VA_ARGS__)
 #else
 #error  Log definition needed
 #endif // _WIN32 || __linux__
