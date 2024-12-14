@@ -70,6 +70,7 @@ where
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Robot {
     pos: Vec2,    
     vel: Vec2,
@@ -80,7 +81,8 @@ struct RobotArea {
     height: usize,
 }
 
-fn dump_grid(robot_area: &RobotArea, robots: &[Robot]) {
+fn dump_grid(title: &str, robot_area: &RobotArea, robots: &[Robot]) {
+    println!("{}: ", title);
     let mut string_buf = String::with_capacity(robot_area.width);
     for r in 0..robot_area.height as isize {
         string_buf.clear();
@@ -96,7 +98,7 @@ fn dump_grid(robot_area: &RobotArea, robots: &[Robot]) {
             };
             string_buf.push(cell_char);
         }
-        println!("{}", string_buf);
+        println!("  {}", string_buf);
     }
 }
 
@@ -167,6 +169,16 @@ fn read_robots(filename: &str) -> Result<(RobotArea, Vec<Robot>), String> {
     Ok((robot_area, robots))
 }
 
+fn step_by_step_simulation(robots: &mut [Robot], robot_area: &RobotArea, simulation_step_count: usize) {
+    // TODO:
+    // unimplemented!();
+}
+
+fn count_robots_in_quadrants(robots: &[Robot], robot_area: &RobotArea) -> (usize, usize, usize, usize) {
+    // TODO:
+    (0, 0, 0, 0)// unimplemented!();
+}
+
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -186,28 +198,23 @@ fn main() -> ExitCode {
         }
     };
 
-    dump_grid(&robot_area, &robots);
+    if robot_area.width * robot_area.height < 250 {
+        dump_grid("start state", &robot_area, &robots);
+    }
 
-    /*
     {
-        let regions = split_regions(&garden);
-        let mut total_fence_price = 0;
-        let print_region_info = regions.len() < 20;
-        for (i, region) in regions.iter().enumerate() {
-            let area = calculate_region_area(&garden, region);
-            let perimeter = calculate_region_perimeter(&garden, region);
-            let price = area * perimeter;
-            total_fence_price += price;
-            if print_region_info {
-                println!(
-                    " {:02}. {} ${} = {}(area) x {}(peri)  ::  {:?}",
-                    i, region.plant_type, price, area, perimeter, region.plot_positions
-                );
-            }
+        let mut simulated_robots = robots.clone();
+        step_by_step_simulation(&mut simulated_robots, &robot_area, 100);
+        let quadrant_counts = count_robots_in_quadrants(&simulated_robots, &robot_area);
+
+        if robot_area.width * robot_area.height < 250 {
+            dump_grid("end state", &robot_area, &simulated_robots);
         }
 
-        println!("Pt 1: total fence price = {}", total_fence_price);
-    } */
+        let total_safety_factor = quadrant_counts.0 * quadrant_counts.1 * quadrant_counts.2 * quadrant_counts.3;
+        println!("Pt 1. Total safety factor: {} = {} * {} * {} * {}",
+            total_safety_factor, quadrant_counts.0 , quadrant_counts.1 , quadrant_counts.2 , quadrant_counts.3);
+    }
 
     println!("");
 
