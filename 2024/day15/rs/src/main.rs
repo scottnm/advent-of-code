@@ -149,7 +149,58 @@ fn print_warehouse(title: Option<&str>, warehouse: &Warehouse, robot_pos: &GridP
 }
 
 fn do_move(warehouse: &mut Warehouse, robot_pos: &mut GridPos, move_instr: Move) {
-    //unimplemented!();
+    let (row_offset, col_offset) = match move_instr {
+        Move::Up => (-1, 0),
+        Move::Left => (0, -1),
+        Move::Down => (1, 0),
+        Move::Right => (0, 1),
+    };
+
+    let next_cell_pos = GridPos { row: robot_pos.row + row_offset, col: robot_pos.col + col_offset };
+    if warehouse.is_pos_out_of_bounds(next_cell_pos.row, next_cell_pos.col) {
+        return;
+    }
+    
+    fn recursive_move_boxes(
+        row_offset: isize, 
+        col_offset: isize, 
+        warehouse: &mut Warehouse,
+        box_pos: &GridPos
+        ) -> bool {
+
+        let next_cell_pos = GridPos { row: box_pos.row + row_offset, col: box_pos.col + col_offset };
+        if warehouse.is_pos_out_of_bounds(next_cell_pos.row, next_cell_pos.col) {
+            return false;
+        }
+
+        match warehouse.get_cell(next_cell_pos.row, next_cell_pos.col) {
+            Space::Wall => false,
+            Space::Box => {
+                if recursive_move_boxes(row_offset, col_offset, warehouse, &next_cell_pos) {
+                    *warehouse.get_cell_mut(next_cell_pos.row, next_cell_pos.col) = Space::Box;
+                    *warehouse.get_cell_mut(box_pos.row, box_pos.col) = Space::Empty;
+                    true
+                } else {
+                    false
+                }
+            },
+            Space::Empty => {
+                *warehouse.get_cell_mut(next_cell_pos.row, next_cell_pos.col) = Space::Box;
+                *warehouse.get_cell_mut(box_pos.row, box_pos.col) = Space::Empty;
+                true
+            }
+        }
+    }
+
+    match warehouse.get_cell(next_cell_pos.row, next_cell_pos.col) {
+        Space::Wall => (), // no move for wall
+        Space::Empty => *robot_pos = next_cell_pos, // move into the empty space
+        Space::Box => {
+            if recursive_move_boxes(row_offset, col_offset, warehouse, &next_cell_pos) {
+                *robot_pos = next_cell_pos;
+            }
+        },
+    }
 }
 
 fn calc_box_gps(box_pos: &GridPos) -> usize {
