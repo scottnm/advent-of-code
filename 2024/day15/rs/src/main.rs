@@ -1,6 +1,6 @@
 use input_helpers;
-use std::process::ExitCode;
 use simple_grid::{Grid, GridPos};
+use std::process::ExitCode;
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 enum Space {
@@ -23,7 +23,10 @@ fn read_input(filename: &str) -> Result<(Grid<Space>, GridPos, Vec<Move>), Strin
     let lines: Vec<String> = input_helpers::read_lines(filename).collect();
 
     if lines.len() < 4 {
-        return Err(format!("Invalid input! Require at least 4 lines. Had {}", lines.len()));
+        return Err(format!(
+            "Invalid input! Require at least 4 lines. Had {}",
+            lines.len()
+        ));
     }
 
     fn is_full_wall_line(line: &str) -> bool {
@@ -32,7 +35,10 @@ fn read_input(filename: &str) -> Result<(Grid<Space>, GridPos, Vec<Move>), Strin
 
     let first_grid_line = &lines[0];
     if !is_full_wall_line(first_grid_line) {
-        return Err(format!("Invalid input! First line must be all '#'! Found '{}'", first_grid_line));
+        return Err(format!(
+            "Invalid input! First line must be all '#'! Found '{}'",
+            first_grid_line
+        ));
     }
 
     let last_grid_line_idx = lines[1..]
@@ -40,17 +46,20 @@ fn read_input(filename: &str) -> Result<(Grid<Space>, GridPos, Vec<Move>), Strin
         .enumerate()
         .rev()
         .find(|(_idx, line)| is_full_wall_line(line))
-        .map(|(idx, _line)| idx+1) // +1 since we start iterating from 1
+        .map(|(idx, _line)| idx + 1) // +1 since we start iterating from 1
         .ok_or(String::from("Missing trailing wall line"))?;
 
-    let grid_lines = &lines[0..last_grid_line_idx+1];
+    let grid_lines = &lines[0..last_grid_line_idx + 1];
 
     let separator_line_idx = last_grid_line_idx + 1;
     if separator_line_idx >= lines.len() || lines[separator_line_idx] != "" {
-        return Err(format!("Expected empty line on line {}! Found '{}'", separator_line_idx, lines[separator_line_idx]));
+        return Err(format!(
+            "Expected empty line on line {}! Found '{}'",
+            separator_line_idx, lines[separator_line_idx]
+        ));
     }
 
-    let move_lines = &lines[separator_line_idx+1..];
+    let move_lines = &lines[separator_line_idx + 1..];
     if move_lines.is_empty() {
         return Err(String::from("Missing move line(s)"));
     }
@@ -71,9 +80,15 @@ fn read_input(filename: &str) -> Result<(Grid<Space>, GridPos, Vec<Move>), Strin
 
         for (chr_idx, c) in line.chars().enumerate() {
             if c == '@' {
-                let new_robot_pos = GridPos {row: line_idx as isize, col: chr_idx as isize };
+                let new_robot_pos = GridPos {
+                    row: line_idx as isize,
+                    col: chr_idx as isize,
+                };
                 if let Some(robot_pos) = robot_pos {
-                    return Err(format!("Repeat robot_pos found {}! First found at {}", new_robot_pos, robot_pos));
+                    return Err(format!(
+                        "Repeat robot_pos found {}! First found at {}",
+                        new_robot_pos, robot_pos
+                    ));
                 }
 
                 warehouse_cells.push(Space::Empty);
@@ -105,12 +120,12 @@ fn read_input(filename: &str) -> Result<(Grid<Space>, GridPos, Vec<Move>), Strin
         }
     }
 
-    let warehouse_grid  = Grid::<Space> {
+    let warehouse_grid = Grid::<Space> {
         width: width,
         height: height,
         cells: warehouse_cells,
     };
-    
+
     let result = (
         warehouse_grid,
         robot_pos.ok_or(String::from("Missing robot pos in input"))?,
@@ -121,10 +136,10 @@ fn read_input(filename: &str) -> Result<(Grid<Space>, GridPos, Vec<Move>), Strin
 }
 
 fn dump_warehouse(warehouse: &Warehouse, robot_pos: &GridPos) -> String {
-    let mut buf = String::with_capacity((warehouse.width+1) * warehouse.height);
+    let mut buf = String::with_capacity((warehouse.width + 1) * warehouse.height);
     for r in 0..(warehouse.height as isize) {
         for c in 0..(warehouse.width as isize) {
-            let cell_pos = GridPos {row: r, col: c};
+            let cell_pos = GridPos { row: r, col: c };
             let cell_char = if cell_pos == *robot_pos {
                 '@'
             } else {
@@ -156,19 +171,24 @@ fn do_move(warehouse: &mut Warehouse, robot_pos: &mut GridPos, move_instr: Move)
         Move::Right => (0, 1),
     };
 
-    let next_cell_pos = GridPos { row: robot_pos.row + row_offset, col: robot_pos.col + col_offset };
+    let next_cell_pos = GridPos {
+        row: robot_pos.row + row_offset,
+        col: robot_pos.col + col_offset,
+    };
     if warehouse.is_pos_out_of_bounds(next_cell_pos.row, next_cell_pos.col) {
         return;
     }
-    
-    fn recursive_move_boxes(
-        row_offset: isize, 
-        col_offset: isize, 
-        warehouse: &mut Warehouse,
-        box_pos: &GridPos
-        ) -> bool {
 
-        let next_cell_pos = GridPos { row: box_pos.row + row_offset, col: box_pos.col + col_offset };
+    fn recursive_move_boxes(
+        row_offset: isize,
+        col_offset: isize,
+        warehouse: &mut Warehouse,
+        box_pos: &GridPos,
+    ) -> bool {
+        let next_cell_pos = GridPos {
+            row: box_pos.row + row_offset,
+            col: box_pos.col + col_offset,
+        };
         if warehouse.is_pos_out_of_bounds(next_cell_pos.row, next_cell_pos.col) {
             return false;
         }
@@ -183,7 +203,7 @@ fn do_move(warehouse: &mut Warehouse, robot_pos: &mut GridPos, move_instr: Move)
                 } else {
                     false
                 }
-            },
+            }
             Space::Empty => {
                 *warehouse.get_cell_mut(next_cell_pos.row, next_cell_pos.col) = Space::Box;
                 *warehouse.get_cell_mut(box_pos.row, box_pos.col) = Space::Empty;
@@ -193,13 +213,13 @@ fn do_move(warehouse: &mut Warehouse, robot_pos: &mut GridPos, move_instr: Move)
     }
 
     match warehouse.get_cell(next_cell_pos.row, next_cell_pos.col) {
-        Space::Wall => (), // no move for wall
+        Space::Wall => (),                          // no move for wall
         Space::Empty => *robot_pos = next_cell_pos, // move into the empty space
         Space::Box => {
             if recursive_move_boxes(row_offset, col_offset, warehouse, &next_cell_pos) {
                 *robot_pos = next_cell_pos;
             }
-        },
+        }
     }
 }
 
@@ -209,7 +229,10 @@ fn calc_box_gps(box_pos: &GridPos) -> usize {
 
 fn run(args: &[String]) -> Result<(), String> {
     let filename: &str = input_helpers::get_nth_string_arg(args, 0)?;
-    let verbose = args.iter().find(|a| a.as_str() == "-v" || a.as_str() == "--verbose").is_some();
+    let verbose = args
+        .iter()
+        .find(|a| a.as_str() == "-v" || a.as_str() == "--verbose")
+        .is_some();
 
     let (mut warehouse, mut robot_pos, moves) = read_input(filename)?;
 
@@ -223,9 +246,10 @@ fn run(args: &[String]) -> Result<(), String> {
             if verbose {
                 if i < moves.len() {
                     print_warehouse(
-                        Some(&format!("after move {:03}", i)), 
-                        &warehouse, 
-                        &robot_pos);
+                        Some(&format!("after move {:03}", i)),
+                        &warehouse,
+                        &robot_pos,
+                    );
                 } else {
                     print_warehouse(Some("warehouse end"), &warehouse, &robot_pos);
                 }
@@ -236,7 +260,7 @@ fn run(args: &[String]) -> Result<(), String> {
         for r in 0..warehouse.height as isize {
             for c in 0..warehouse.width as isize {
                 if let Space::Box = warehouse.get_cell(r, c) {
-                    let box_pos = GridPos {row: r, col: c};
+                    let box_pos = GridPos { row: r, col: c };
                     let box_gps = calc_box_gps(&box_pos);
                     sum_gps_coords += box_gps;
                 }
