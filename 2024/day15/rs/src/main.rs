@@ -76,6 +76,7 @@ fn read_input(filename: &str) -> Result<(Grid<Space>, GridPos, Vec<Move>), Strin
                     return Err(format!("Repeat robot_pos found {}! First found at {}", new_robot_pos, robot_pos));
                 }
 
+                warehouse_cells.push(Space::Empty);
                 robot_pos = Some(new_robot_pos);
             } else {
                 let cell = match c {
@@ -147,54 +148,46 @@ fn print_warehouse(title: Option<&str>, warehouse: &Warehouse, robot_pos: &GridP
     println!("{}", dump_warehouse(warehouse, robot_pos));
 }
 
+fn do_move(warehouse: &mut Warehouse, robot_pos: &mut GridPos, move_instr: Move) {
+    //unimplemented!();
+}
+
+fn calc_box_gps(box_pos: &GridPos) -> usize {
+    ((100 * box_pos.row) + box_pos.col) as usize
+}
+
 fn run(args: &[String]) -> Result<(), String> {
     let filename: &str = input_helpers::get_nth_string_arg(args, 0)?;
 
-    let (warehouse, robot_pos, moves) = read_input(filename)?;
+    let (mut warehouse, mut robot_pos, moves) = read_input(filename)?;
 
-    dbg!(&warehouse.width);
-    dbg!(&warehouse.height);
-    dbg!(&warehouse.cells);
-    dbg!(&robot_pos);
-    dbg!(&moves);
-    /*
     {
-        let print_machines = claw_machines.len() < 10;
-        let mut total_min_tokens: Option<usize> = None;
-        for claw_machine in &claw_machines {
-            let solutions = find_all_solutions(claw_machine);
-            let min_cost_solution = solutions
-                .iter()
-                .enumerate()
-                .map(|(i, solution)| (i, count_tokens_for_solution(solution)))
-                .min_by_key(|(_i, solution_token_count)| solution_token_count.clone());
-            if let Some((solution_idx, min_cost_solution_token_count)) = min_cost_solution {
-                if let Some(token_count) = total_min_tokens {
-                    total_min_tokens = Some(token_count + min_cost_solution_token_count);
-                } else {
-                    total_min_tokens = Some(min_cost_solution_token_count);
-                }
-
-                if print_machines {
-                    println!("{}", claw_machine);
-                    println!("{}", solutions[solution_idx]);
-                    println!("");
-                }
+        print_warehouse(Some("warehouse start"), &warehouse, &robot_pos);
+        for (i, move_instr) in moves.iter().enumerate() {
+            do_move(&mut warehouse, &mut robot_pos, *move_instr);
+            if i < moves.len() {
+                print_warehouse(
+                    Some(&format!("after move {:03}", i)), 
+                    &warehouse, 
+                    &robot_pos);
             } else {
-                if print_machines {
-                    println!("{}", claw_machine);
-                    println!("NO SOLUTION");
-                    println!("");
+                print_warehouse(Some("warehouse end"), &warehouse, &robot_pos);
+            }
+        }
+
+        let mut sum_gps_coords = 0;
+        for r in 0..warehouse.height as isize {
+            for c in 0..warehouse.width as isize {
+                if let Space::Box = warehouse.get_cell(r, c) {
+                    let box_pos = GridPos {row: r, col: c};
+                    let box_gps = calc_box_gps(&box_pos);
+                    sum_gps_coords += box_gps;
                 }
             }
         }
 
-        if let Some(total_min_tokens) = total_min_tokens {
-            println!("Pt 1: min token count = {}", total_min_tokens);
-        } else {
-            println!("Pt 1: min token count = NO SOLUTIONS");
-        }
-    } */
+        println!("Pt 1: sum gps = {}", sum_gps_coords);
+    }
 
     Ok(())
 }
