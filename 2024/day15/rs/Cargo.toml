@@ -5,6 +5,4 @@ edition = "2021"
 
 [dependencies]
 input_helpers = { version = "0.1.0", path = "../../../2020/input_helpers" }
-itertools = "0.13.0"
-regex = "1.11.1"
 simple_grid = { version = "0.1.0", path = "../../../helpers/rs/simple_grid" }
