@@ -209,20 +209,26 @@ fn calc_box_gps(box_pos: &GridPos) -> usize {
 
 fn run(args: &[String]) -> Result<(), String> {
     let filename: &str = input_helpers::get_nth_string_arg(args, 0)?;
+    let verbose = args.iter().find(|a| a.as_str() == "-v" || a.as_str() == "--verbose").is_some();
 
     let (mut warehouse, mut robot_pos, moves) = read_input(filename)?;
 
     {
-        print_warehouse(Some("warehouse start"), &warehouse, &robot_pos);
+        if verbose {
+            print_warehouse(Some("warehouse start"), &warehouse, &robot_pos);
+        }
+
         for (i, move_instr) in moves.iter().enumerate() {
             do_move(&mut warehouse, &mut robot_pos, *move_instr);
-            if i < moves.len() {
-                print_warehouse(
-                    Some(&format!("after move {:03}", i)), 
-                    &warehouse, 
-                    &robot_pos);
-            } else {
-                print_warehouse(Some("warehouse end"), &warehouse, &robot_pos);
+            if verbose {
+                if i < moves.len() {
+                    print_warehouse(
+                        Some(&format!("after move {:03}", i)), 
+                        &warehouse, 
+                        &robot_pos);
+                } else {
+                    print_warehouse(Some("warehouse end"), &warehouse, &robot_pos);
+                }
             }
         }
 
