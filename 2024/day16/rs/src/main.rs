@@ -1,6 +1,6 @@
 use input_helpers;
 use simple_grid::{Grid, GridPos};
-use std::process::ExitCode;
+use std::{env::home_dir, process::ExitCode};
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 enum Space {
@@ -138,7 +138,93 @@ fn print_warehouse(title: Option<&str>, warehouse: &Warehouse, robot_pos: &GridP
 */
 
 fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direction, end_pos: GridPos) -> Vec<MazePath> {
-    unimplemented!();
+    #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+    struct VisitSpace {
+        space: Space,
+        visited: bool,
+    }
+
+    fn find_all_maze_paths_reversed_helper(
+        maze_tracker: &mut Grid<VisitSpace>, 
+        curr_pos: GridPos, 
+        curr_dir: Direction, 
+        end_pos: GridPos) -> Option<Vec<MazePath>> {
+
+        if curr_pos == end_pos {
+            // FIXME: there's probably a better return type here that doens't require each new path end to instantiate a vector
+            // and also require the caller to then copy that vector elsewhere. 
+            return Some(vec![]);
+        }
+
+        let mut paths = vec![];
+
+        // check forward move
+        {
+            let forward_move_offset = match curr_dir {
+                Direction::North => GridPos{row: -1, col: 0},
+                Direction::South => GridPos{row: 1, col: 0},
+                Direction::East => GridPos{row: 0, col: 1},
+                Direction::West => GridPos{row: 0, col: -1},
+            };
+
+            let forward_move_pos = GridPos {row: curr_pos.row + forward_move_offset.row, col: curr_pos.col + forward_move_offset.row};
+
+            let forward_move_dir = curr_dir;
+
+            if maze_tracker.is_pos_out_of_bounds(forward_move_pos.row, forward_move_pos.col) {
+                // noop; can't move to oob position
+            } else {
+                let forward_cell = maze_tracker.get_cell(forward_move_pos.row, forward_move_pos.col);
+                if forward_cell.visited {
+                    // noop; can't move to an already visited space
+                } else if let Space::Wall = forward_cell.space {
+                    // noop; can't move to a wall
+                } else {
+                    let found_maze_paths = find_all_maze_paths_reversed_helper(maze_tracker, forward_move_pos, forward_move_dir, end_pos);
+                    if let Some(mut found_maze_paths) = found_maze_paths {
+                        for path in found_maze_paths.iter_mut() {
+                            path.push(Move::Forward);
+                        }
+
+                        paths.append(&mut found_maze_paths);
+                    }
+                }
+            }
+        }
+
+        // check CW turn + move
+
+        // check CCW turn + move
+
+        // check 180 turn + move
+
+        if paths.len() == 0 {
+            None
+        } else {
+            Some(paths)
+        }
+    }
+
+    let mut maze_tracker = Grid::<VisitSpace> {
+        width: maze.width,
+        height: maze.height,
+        cells: maze.cells.iter().map(|space| VisitSpace {space: *space, visited: false }).collect(),
+    };
+
+    maze_tracker.get_cell_mut(start_pos.row, start_pos.col).visited = true;
+
+    let found_reversed_paths = find_all_maze_paths_reversed_helper(&mut maze_tracker, start_pos, start_dir, end_pos)
+        .unwrap_or(vec![]);
+
+    // paths are found reversed for to avoid a bunch of vector shifts. reverse the lifts before returning. 
+    found_reversed_paths
+        .iter()
+        .map(|path| {
+            let mut reversed_path = path.clone();
+            reversed_path.reverse();
+            reversed_path
+        })
+        .collect()
 }
 
 fn calculate_maze_move_score(maze_move: Move) -> usize {
