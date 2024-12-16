@@ -175,7 +175,7 @@ fn print_warehouse(title: Option<&str>, warehouse: &Warehouse, robot_pos: &GridP
 }
 */
 
-fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direction, end_pos: GridPos) -> Vec<MazePath> {
+fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direction, end_pos: GridPos) -> Option<usize> {
     #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
     struct VisitSpace {
         space: Space,
@@ -221,19 +221,18 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
         print!("{}", buf);
     }*/
 
-    fn find_all_maze_paths_reversed_helper(
+    fn find_min_maze_path_score_helper(
         maze_tracker: &mut Grid<VisitSpace>, 
         curr_pos: GridPos, 
         curr_dir: Direction, 
-        end_pos: GridPos) -> Option<Vec<MazePath>> {
+        end_pos: GridPos) -> Option<usize> {
 
         if curr_pos == end_pos {
             // FIXME: there's probably a better return type here that doens't require each new path end to instantiate a vector
             // and also require the caller to then copy that vector elsewhere. 
-            return Some(vec![vec![]]);
+            println!("Found solution!");
+            return Some(0);
         }
-
-        let mut paths = vec![];
 
         // mark the current cell as visited for the duration of this recursive call stack frame
         {
@@ -243,6 +242,7 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
         }
 
         // check forward move
+        let mut min_fwd_score: Option<usize> = None;
         {
             let forward_move_dir = curr_dir;
             let forward_move_pos = move_grid_position(curr_pos, forward_move_dir);
@@ -256,19 +256,17 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
                 } else if let Space::Wall = forward_cell.space {
                     // noop; can't move to a wall
                 } else {
-                    let found_maze_paths = find_all_maze_paths_reversed_helper(maze_tracker, forward_move_pos, forward_move_dir, end_pos);
-                    if let Some(mut found_maze_paths) = found_maze_paths {
-                        for path in found_maze_paths.iter_mut() {
-                            path.push(Move::Forward);
-                        }
-
-                        paths.append(&mut found_maze_paths);
+                    let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, forward_move_pos, forward_move_dir, end_pos);
+                    if let Some(subpath_min_score) = subpath_min_score {
+                        min_fwd_score = Some(subpath_min_score + 1); // +1 for move
+                        println!("Found FWD subpath solution(s) with score {}.", min_fwd_score.unwrap());
                     }
                 }
             }
         }
 
         // check CW turn + move
+        let mut min_cw_score: Option<usize> = None;
         {
             let cw_turn_dir = curr_dir.turn_cw();
             let cw_turn_move_pos = move_grid_position(curr_pos, cw_turn_dir);
@@ -282,21 +280,17 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
                 } else if let Space::Wall = cw_turn_move_cell.space {
                     // noop; can't move to a wall
                 } else {
-                    let found_maze_paths = find_all_maze_paths_reversed_helper(maze_tracker, cw_turn_move_pos, cw_turn_dir, end_pos);
-                    if let Some(mut found_maze_paths) = found_maze_paths {
-                        for path in found_maze_paths.iter_mut() {
-                            // n.b. add the moves in reverse order so we can push rather than push_front to our vector
-                            path.push(Move::Forward);
-                            path.push(Move::TurnCW);
-                        }
-
-                        paths.append(&mut found_maze_paths);
+                    let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, cw_turn_move_pos, cw_turn_dir, end_pos);
+                    if let Some(subpath_min_score) = subpath_min_score {
+                        min_cw_score = Some(subpath_min_score + 1001); // +1 for move; +1000 for CW turn
+                        println!("Found CW+MV subpath solution(s) with min {}.", min_cw_score.unwrap());
                     }
                 }
             }
         }
 
         // check CCW turn + move
+        let mut min_ccw_score: Option<usize> = None;
         {
             let ccw_turn_dir = curr_dir.turn_ccw();
             let ccw_turn_move_pos = move_grid_position(curr_pos, ccw_turn_dir);
@@ -310,21 +304,17 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
                 } else if let Space::Wall = ccw_turn_move_cell.space {
                     // noop; can't move to a wall
                 } else {
-                    let found_maze_paths = find_all_maze_paths_reversed_helper(maze_tracker, ccw_turn_move_pos, ccw_turn_dir, end_pos);
-                    if let Some(mut found_maze_paths) = found_maze_paths {
-                        for path in found_maze_paths.iter_mut() {
-                            // n.b. add the moves in reverse order so we can push rather than push_front to our vector
-                            path.push(Move::Forward);
-                            path.push(Move::TurnCCW);
-                        }
-
-                        paths.append(&mut found_maze_paths);
+                    let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, ccw_turn_move_pos, ccw_turn_dir, end_pos);
+                    if let Some(subpath_min_score) = subpath_min_score {
+                        min_ccw_score = Some(subpath_min_score + 1001); // +1 for move; +1000 for CCW turn
+                        println!("Found CCW+MV subpath solution(s) with min {}.", min_ccw_score.unwrap());
                     }
                 }
             }
         }
 
         // check 180 turn + move
+        let mut min_180_score: Option<usize> = None;
         {
             let half_turn_dir = curr_dir.turn_180();
             let half_turn_move_pos = move_grid_position(curr_pos, half_turn_dir);
@@ -338,29 +328,32 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
                 } else if let Space::Wall = half_turn_move_cell.space {
                     // noop; can't move to a wall
                 } else {
-                    let found_maze_paths = find_all_maze_paths_reversed_helper(maze_tracker, half_turn_move_pos, half_turn_dir, end_pos);
-                    if let Some(mut found_maze_paths) = found_maze_paths {
-                        for path in found_maze_paths.iter_mut() {
-                            // n.b. add the moves in reverse order so we can push rather than push_front to our vector
-                            path.push(Move::Forward);
-                            path.push(Move::TurnCW);
-                            path.push(Move::TurnCW);
-                        }
-
-                        paths.append(&mut found_maze_paths);
+                    let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, half_turn_move_pos, half_turn_dir, end_pos);
+                    if let Some(subpath_min_score) = subpath_min_score {
+                        min_180_score = Some(subpath_min_score + 2001); // +1 for move; +2000 for 2 CW turns
+                        println!("Found 180+MV subpath solution(s) with min {}.", min_180_score.unwrap());
                     }
                 }
             }
         }
 
-        // clear the visit flag now that we're done checking this path and don't want to block other recursive 
-        // callstacks from coming back through here
-        maze_tracker.get_cell_mut(curr_pos.row, curr_pos.col).visited = false;
+        let min_score = [("fwd", min_fwd_score), ("cw", min_cw_score), ("ccw", min_ccw_score), ("180", min_180_score)]
+            .iter()
+            .map(|(name, maybe_score)| {
+                if let Some(score) = maybe_score {
+                    Some((*name, *score))
+                } else {
+                    None
+                }
+            })
+            .filter_map(|f| f)
+            .min_by_key(|(_name, score)| *score);
 
-        if paths.len() == 0 {
-            None
+        if let Some((name, min_score)) = min_score {
+            println!("Picked {} solution with score {}", name, min_score);
+            Some(min_score)
         } else {
-            Some(paths)
+            None
         }
     }
 
@@ -370,18 +363,7 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
         cells: maze.cells.iter().map(|space| VisitSpace {space: *space, visited: false }).collect(),
     };
 
-    let found_reversed_paths = find_all_maze_paths_reversed_helper(&mut maze_tracker, start_pos, start_dir, end_pos)
-        .unwrap_or(vec![]);
-
-    // paths are found reversed for to avoid a bunch of vector shifts. reverse the lifts before returning. 
-    found_reversed_paths
-        .iter()
-        .map(|path| {
-            let mut reversed_path = path.clone();
-            reversed_path.reverse();
-            reversed_path
-        })
-        .collect()
+    find_min_maze_path_score_helper(&mut maze_tracker, start_pos, start_dir, end_pos)
 }
 
 fn calculate_maze_move_score(maze_move: Move) -> usize {
@@ -418,11 +400,7 @@ fn run(args: &[String]) -> Result<(), String> {
 
     {
         println!("Searching...");
-        let maze_paths = find_all_maze_paths(&maze, start_pos, starting_dir, end_pos);
-        let min_maze_path_score = maze_paths
-            .iter()
-            .map(|maze_path| calculate_maze_path_score(maze_path))
-            .min();
+        let min_maze_path_score = find_min_maze_path_score(&maze, start_pos, starting_dir, end_pos);
         if let Some(min_maze_path_score) = min_maze_path_score {
             println!("pt 1: min score {}", min_maze_path_score);
         } else {
