@@ -52,6 +52,58 @@ pub fn get_input_file_from_args() -> String {
     String::from(input_file)
 }
 
+pub fn get_nth_string_arg<'a>(args: &'a [String], n: usize) -> Result<&'a str, String> {
+    if args.len() <= n {
+        return Err(format!(
+            "Too few args! needed {}; had {}",
+            n + 1,
+            args.len()
+        ));
+    }
+
+    Ok(&args[n])
+}
+
+pub fn get_nth_string_arg_or_default<'a>(args: &'a [String], n: usize, default: &'static str) -> Result<&'a str, String> {
+    if args.len() <= n {
+        return Ok(default);
+    }
+
+    Ok(&args[n])
+}
+
+pub fn get_nth_parsed_arg<T>(args: &[String], n: usize) -> Result<T, String>
+where
+    T: std::str::FromStr,
+{
+    if args.len() <= n {
+        return Err(format!(
+            "Too few args! needed {}; had {}",
+            n + 1,
+            args.len()
+        ));
+    }
+
+    match args[n].parse() {
+        Ok(v) => Ok(v),
+        Err(_) => Err(format!("Failed to parse arg! '{}'", &args[n])),
+    }
+}
+
+pub fn get_nth_parsed_arg_or_default<T>(args: &[String], n: usize, default: T) -> Result<T, String>
+where
+    T: std::str::FromStr,
+{
+    if args.len() <= n {
+        return Ok(default);
+    }
+
+    match args[n].parse() {
+        Ok(v) => Ok(v),
+        Err(_) => Err(format!("Failed to parse arg! '{}'", &args[n])),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
