@@ -1,6 +1,6 @@
 use input_helpers;
 use simple_grid::{Grid, GridPos};
-use std::{env::home_dir, process::ExitCode};
+use std::process::ExitCode;
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 enum Space {
@@ -14,6 +14,44 @@ enum Direction {
     South,
     East,
     West,
+}
+
+impl Direction {
+    fn turn_cw(&self) -> Self {
+        match *self {
+            Direction::North => Direction::East,
+            Direction::South => Direction::West,
+            Direction::East => Direction::South,
+            Direction::West => Direction::North,
+        }
+    }
+
+    fn turn_ccw(&self) -> Self {
+        match *self {
+            Direction::North => Direction::West,
+            Direction::South => Direction::East,
+            Direction::East => Direction::North,
+            Direction::West => Direction::South,
+        }
+    }
+
+    fn turn_180(&self) -> Self {
+        match *self {
+            Direction::North => Direction::South,
+            Direction::South => Direction::North,
+            Direction::East => Direction::West,
+            Direction::West => Direction::East,
+        }
+    }
+}
+
+fn move_grid_position(pos: GridPos, dir: Direction) -> GridPos {
+    match dir {
+        Direction::North => GridPos{row: pos.row - 1, col: pos.col},
+        Direction::South => GridPos{row: pos.row + 1, col: pos.col},
+        Direction::East => GridPos{row: pos.row, col: pos.col + 1},
+        Direction::West => GridPos{row: pos.row, col: pos.col - 1},
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
@@ -144,6 +182,45 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
         visited: bool,
     }
 
+    /*FIXME: remove
+    fn dump_visit_state(
+        title: &str,
+        maze_tracker: &Grid<VisitSpace>, 
+        curr_pos: GridPos, 
+        curr_dir: Direction, 
+        end_pos: GridPos) {
+        let mut buf = String::with_capacity((maze_tracker.width + 1) * maze_tracker.height);
+        for r in 0..(maze_tracker.height as isize) {
+            for c in 0..(maze_tracker.width as isize) {
+                let cell_pos = GridPos { row: r, col: c };
+                let cell_char = if cell_pos == curr_pos {
+                    match curr_dir {
+                        Direction::North => '^',
+                        Direction::South => 'v',
+                        Direction::East => '<',
+                        Direction::West => '>',
+                    }
+                } else {
+                    let cell = maze_tracker.get_cell(r, c);
+                    match cell {
+                        VisitSpace { space: Space::Wall, visited: _ } => '#',
+                        VisitSpace { space: Space::Empty, visited: visited } => {
+                            if visited {
+                                'x'
+                            } else {
+                                '.'
+                            }
+                        },
+                    }
+                };
+                buf.push(cell_char);
+            }
+            buf.push('\n');
+        }
+        println!("{}:", title);
+        print!("{}", buf);
+    }*/
+
     fn find_all_maze_paths_reversed_helper(
         maze_tracker: &mut Grid<VisitSpace>, 
         curr_pos: GridPos, 
@@ -153,23 +230,22 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
         if curr_pos == end_pos {
             // FIXME: there's probably a better return type here that doens't require each new path end to instantiate a vector
             // and also require the caller to then copy that vector elsewhere. 
-            return Some(vec![]);
+            return Some(vec![vec![]]);
         }
 
         let mut paths = vec![];
 
+        // mark the current cell as visited for the duration of this recursive call stack frame
+        {
+            let curr_cell = maze_tracker.get_cell_mut(curr_pos.row, curr_pos.col);
+            assert!(!curr_cell.visited);
+            curr_cell.visited = true;
+        }
+
         // check forward move
         {
-            let forward_move_offset = match curr_dir {
-                Direction::North => GridPos{row: -1, col: 0},
-                Direction::South => GridPos{row: 1, col: 0},
-                Direction::East => GridPos{row: 0, col: 1},
-                Direction::West => GridPos{row: 0, col: -1},
-            };
-
-            let forward_move_pos = GridPos {row: curr_pos.row + forward_move_offset.row, col: curr_pos.col + forward_move_offset.row};
-
             let forward_move_dir = curr_dir;
+            let forward_move_pos = move_grid_position(curr_pos, forward_move_dir);
 
             if maze_tracker.is_pos_out_of_bounds(forward_move_pos.row, forward_move_pos.col) {
                 // noop; can't move to oob position
@@ -193,10 +269,93 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
         }
 
         // check CW turn + move
+        {
+            let cw_turn_dir = curr_dir.turn_cw();
+            let cw_turn_move_pos = move_grid_position(curr_pos, cw_turn_dir);
+
+            if maze_tracker.is_pos_out_of_bounds(cw_turn_move_pos.row, cw_turn_move_pos.col) {
+                // noop; can't move to oob position
+            } else {
+                let cw_turn_move_cell = maze_tracker.get_cell(cw_turn_move_pos.row, cw_turn_move_pos.col);
+                if cw_turn_move_cell.visited {
+                    // noop; can't move to an already visited space
+                } else if let Space::Wall = cw_turn_move_cell.space {
+                    // noop; can't move to a wall
+                } else {
+                    let found_maze_paths = find_all_maze_paths_reversed_helper(maze_tracker, cw_turn_move_pos, cw_turn_dir, end_pos);
+                    if let Some(mut found_maze_paths) = found_maze_paths {
+                        for path in found_maze_paths.iter_mut() {
+                            // n.b. add the moves in reverse order so we can push rather than push_front to our vector
+                            path.push(Move::Forward);
+                            path.push(Move::TurnCW);
+                        }
+
+                        paths.append(&mut found_maze_paths);
+                    }
+                }
+            }
+        }
 
         // check CCW turn + move
+        {
+            let ccw_turn_dir = curr_dir.turn_ccw();
+            let ccw_turn_move_pos = move_grid_position(curr_pos, ccw_turn_dir);
+
+            if maze_tracker.is_pos_out_of_bounds(ccw_turn_move_pos.row, ccw_turn_move_pos.col) {
+                // noop; can't move to oob position
+            } else {
+                let ccw_turn_move_cell = maze_tracker.get_cell(ccw_turn_move_pos.row, ccw_turn_move_pos.col);
+                if ccw_turn_move_cell.visited {
+                    // noop; can't move to an already visited space
+                } else if let Space::Wall = ccw_turn_move_cell.space {
+                    // noop; can't move to a wall
+                } else {
+                    let found_maze_paths = find_all_maze_paths_reversed_helper(maze_tracker, ccw_turn_move_pos, ccw_turn_dir, end_pos);
+                    if let Some(mut found_maze_paths) = found_maze_paths {
+                        for path in found_maze_paths.iter_mut() {
+                            // n.b. add the moves in reverse order so we can push rather than push_front to our vector
+                            path.push(Move::Forward);
+                            path.push(Move::TurnCCW);
+                        }
+
+                        paths.append(&mut found_maze_paths);
+                    }
+                }
+            }
+        }
 
         // check 180 turn + move
+        {
+            let half_turn_dir = curr_dir.turn_180();
+            let half_turn_move_pos = move_grid_position(curr_pos, half_turn_dir);
+
+            if maze_tracker.is_pos_out_of_bounds(half_turn_move_pos.row, half_turn_move_pos.col) {
+                // noop; can't move to oob position
+            } else {
+                let half_turn_move_cell = maze_tracker.get_cell(half_turn_move_pos.row, half_turn_move_pos.col);
+                if half_turn_move_cell.visited {
+                    // noop; can't move to an already visited space
+                } else if let Space::Wall = half_turn_move_cell.space {
+                    // noop; can't move to a wall
+                } else {
+                    let found_maze_paths = find_all_maze_paths_reversed_helper(maze_tracker, half_turn_move_pos, half_turn_dir, end_pos);
+                    if let Some(mut found_maze_paths) = found_maze_paths {
+                        for path in found_maze_paths.iter_mut() {
+                            // n.b. add the moves in reverse order so we can push rather than push_front to our vector
+                            path.push(Move::Forward);
+                            path.push(Move::TurnCW);
+                            path.push(Move::TurnCW);
+                        }
+
+                        paths.append(&mut found_maze_paths);
+                    }
+                }
+            }
+        }
+
+        // clear the visit flag now that we're done checking this path and don't want to block other recursive 
+        // callstacks from coming back through here
+        maze_tracker.get_cell_mut(curr_pos.row, curr_pos.col).visited = false;
 
         if paths.len() == 0 {
             None
@@ -210,8 +369,6 @@ fn find_all_maze_paths(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direct
         height: maze.height,
         cells: maze.cells.iter().map(|space| VisitSpace {space: *space, visited: false }).collect(),
     };
-
-    maze_tracker.get_cell_mut(start_pos.row, start_pos.col).visited = true;
 
     let found_reversed_paths = find_all_maze_paths_reversed_helper(&mut maze_tracker, start_pos, start_dir, end_pos)
         .unwrap_or(vec![]);
@@ -245,20 +402,22 @@ fn run(args: &[String]) -> Result<(), String> {
         .is_some();
 
     let StartingState {
-        maze: maze,
-        start_pos: start_pos,
-        end_pos: end_pos,
-        starting_dir: starting_dir,
+        maze,
+        start_pos,
+        end_pos,
+        starting_dir,
     } = read_input(filename)?;
 
-    dbg!(&maze.width);
-    dbg!(&maze.height);
-    dbg!(&maze.cells);
-    dbg!(&start_pos);
-    dbg!(&end_pos);
-    dbg!(&starting_dir);
+    // FIXME: remove
+    // dbg!(&maze.width);
+    // dbg!(&maze.height);
+    // dbg!(&maze.cells);
+    // dbg!(&start_pos);
+    // dbg!(&end_pos);
+    // dbg!(&starting_dir);
 
     {
+        println!("Searching...");
         let maze_paths = find_all_maze_paths(&maze, start_pos, starting_dir, end_pos);
         let min_maze_path_score = maze_paths
             .iter()
