@@ -2,6 +2,7 @@ use input_helpers;
 use simple_grid::{Grid, GridPos};
 use std::process::ExitCode;
 
+#[derive(Debug)]
 struct CpuState {
     instruction_pointer: usize,
     reg_a: usize,
@@ -21,6 +22,7 @@ impl std::fmt::Display for CpuState {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum LiteralOperand {
+    Lit0,
     Lit1,
     Lit2,
     Lit3,
@@ -44,6 +46,7 @@ enum ComboOperand {
 impl LiteralOperand {
     fn from_char(c: char) -> Result<Self, String> {
         let op = match c {
+            '0' => LiteralOperand::Lit0,
             '1' => LiteralOperand::Lit1,
             '2' => LiteralOperand::Lit2,
             '3' => LiteralOperand::Lit3,
@@ -59,6 +62,7 @@ impl LiteralOperand {
 
     fn to_char(&self) -> char {
         match *self {
+            LiteralOperand::Lit0 => '0',
             LiteralOperand::Lit1 => '1',
             LiteralOperand::Lit2 => '2',
             LiteralOperand::Lit3 => '3',
@@ -278,6 +282,9 @@ fn run(args: &[String]) -> Result<(), String> {
         .is_some();
 
     let (mut cpu_state, instructions) = read_initial_cpu_state(filename)?;
+
+    dbg!(&cpu_state);
+    dbg!(&instructions);
 
     {
         let mut output = vec![];
