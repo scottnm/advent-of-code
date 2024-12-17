@@ -32,17 +32,6 @@ enum LiteralOperand {
     Lit7,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum ComboOperand {
-    Lit0,
-    Lit1,
-    Lit2,
-    Lit3,
-    RegA,
-    RegB,
-    RegC,
-}
-
 impl LiteralOperand {
     fn from_char(c: char) -> Result<Self, String> {
         let op = match c {
@@ -72,6 +61,30 @@ impl LiteralOperand {
             LiteralOperand::Lit7 => '7',
         }
     }
+    
+    fn value(&self) -> usize {
+        match *self {
+            LiteralOperand::Lit0 => 0,
+            LiteralOperand::Lit1 => 1,
+            LiteralOperand::Lit2 => 2,
+            LiteralOperand::Lit3 => 3,
+            LiteralOperand::Lit4 => 4,
+            LiteralOperand::Lit5 => 5,
+            LiteralOperand::Lit6 => 6,
+            LiteralOperand::Lit7 => 7,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum ComboOperand {
+    Lit0,
+    Lit1,
+    Lit2,
+    Lit3,
+    RegA,
+    RegB,
+    RegC,
 }
 
 impl ComboOperand {
@@ -102,6 +115,18 @@ impl ComboOperand {
             ComboOperand::RegC => '6',
         }
     }
+}
+
+fn read_combo_operand(op: ComboOperand, cpu: &CpuState) -> usize {
+   match op {
+        ComboOperand::Lit0 => 0,
+        ComboOperand::Lit1 => 1,
+        ComboOperand::Lit2 => 2,
+        ComboOperand::Lit3 => 3,
+        ComboOperand::RegA => cpu.reg_a,
+        ComboOperand::RegB => cpu.reg_b,
+        ComboOperand::RegC => cpu.reg_c,
+   } 
 }
 
 fn ignored_op_from_char(c: char) -> Result<(), String> {
@@ -156,6 +181,58 @@ enum Instr {
     Out(OutInstr), // Op(5): [output] (op) % 8 
     Bdv(BdvInstr), // Op(6): RegB = RegA / 2^(op)
     Cdv(CdvInstr), // Op(7): RegC = RegA / 2^(op)
+}
+
+fn do_adv_instr(adv: &AdvInstr, cpu: &mut CpuState) {
+    let op = read_combo_operand(adv.op, cpu);
+    let divisor = (2_usize).pow(op as u32);
+    cpu.reg_a = cpu.reg_a / divisor;
+    cpu.instruction_pointer += 2;
+}
+
+fn do_bxl_instr(bxl: &BxlInstr, cpu: &mut CpuState) {
+    cpu.reg_b ^= bxl.op.value();
+    cpu.instruction_pointer += 2;
+}
+
+fn do_bst_instr(bst: &BstInstr, cpu: &mut CpuState) {
+    let op = read_combo_operand(bst.op, cpu);
+    cpu.reg_b = op % 8;
+    cpu.instruction_pointer += 2;
+}
+
+fn do_jnz_instr(jnz: &JnzInstr, cpu: &mut CpuState) {
+    if cpu.reg_a == 0 {
+        cpu.instruction_pointer += 2;
+    } else {
+        cpu.instruction_pointer = jnz.op.value();
+    }
+}
+
+fn do_bxc_instr(cpu: &mut CpuState) {
+    cpu.reg_b ^= cpu.reg_c;
+    cpu.instruction_pointer += 2;
+}
+
+fn do_out_instr(out: &OutInstr, cpu: &mut CpuState) -> usize {
+    let op = read_combo_operand(out.op, cpu);
+    let res = op % 8;
+    cpu.instruction_pointer += 2;
+    res
+}
+
+fn do_bdv_instr(bdv: &BdvInstr, cpu: &mut CpuState) {
+    let op = read_combo_operand(bdv.op, cpu);
+    let divisor = (2_usize).pow(op as u32);
+    cpu.reg_b = cpu.reg_a / divisor;
+    cpu.instruction_pointer += 2;
+}
+
+fn do_cdv_instr(cdv: &CdvInstr, cpu: &mut CpuState) {
+    let op = read_combo_operand(cdv.op, cpu);
+    let divisor = (2_usize).pow(op as u32);
+    cpu.reg_c = cpu.reg_a / divisor;
+    cpu.instruction_pointer += 2;
 }
 
 fn parse_register_line(line: &str, reg_prefix: &str) -> Result<usize, String> {
@@ -271,7 +348,49 @@ fn do_next_instruction(cpu: &mut CpuState, instructions: &[Instr]) -> Result<Opt
     if cpu.instruction_pointer % 2 != 0 {
         return Err(format!("instruction pointer @ {} not pointing to valid instruction", cpu.instruction_pointer));
     }
-    unimplemented!();
+
+    let next_instruction = instructions[cpu.instruction_pointer / 2];
+    match next_instruction {
+        Instr::Adv(adv) => {
+            do_adv_instr(&adv, cpu);
+            Ok(None)
+        },
+
+        Instr::Bxl(bxl) => {
+            do_bxl_instr(&bxl, cpu);
+            Ok(None)
+        },
+
+        Instr::Bst(bst) => {
+            do_bst_instr(&bst, cpu);
+            Ok(None)
+        },
+
+        Instr::Jnz(jnz) => {
+            do_jnz_instr(&jnz, cpu);
+            Ok(None)
+        },
+
+        Instr::Bxc => {
+            do_bxc_instr(cpu);
+            Ok(None)
+        },
+
+        Instr::Out(out) => {
+            let output = do_out_instr(&out, cpu);
+            Ok(Some(output))
+        },
+
+        Instr::Bdv(bdv) => {
+            do_bdv_instr(&bdv, cpu);
+            Ok(None)
+        },
+
+        Instr::Cdv(cdv) => {
+            do_cdv_instr(&cdv, cpu);
+            Ok(None)
+        },
+    }
 }
 
 fn run(args: &[String]) -> Result<(), String> {
@@ -302,6 +421,7 @@ fn run(args: &[String]) -> Result<(), String> {
             .join(",");
             
         println!("Pt 1: output = {}", output_str);
+        println!("CPU: {:?}", cpu_state);
     }
 
     Ok(())
