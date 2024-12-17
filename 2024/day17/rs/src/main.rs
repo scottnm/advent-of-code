@@ -455,6 +455,41 @@ fn run(args: &[String]) -> Result<(), String> {
         println!("CPU: {:?}", cpu_state);
     }
 
+    {
+        let correct_output = encode_instructions(&instructions);
+        let mut modified_reg_a = 0;
+        loop {
+            if verbose {
+                println!("Testing reg_a={} for pt 2", modified_reg_a);
+            }
+
+            let mut cpu_state = original_cpu_state.clone();
+            cpu_state.reg_a = modified_reg_a;
+            let mut output = vec![];
+            while cpu_state.instruction_pointer < (instructions.len() * 2) {
+                let instr_output = do_next_instruction(&mut cpu_state, &instructions)?;
+                if let Some(instr_output) = instr_output {
+                    output.push(instr_output);
+                }
+            }
+
+            if output == correct_output {
+                let output_str = output
+                    .iter()
+                    .map(|output_val| output_val.to_string())
+                    .collect::<Vec<String>>()
+                    .join(",");
+            
+                println!("Pt 2: reg_a = {}", modified_reg_a);
+                println!("CPU: {:?}", cpu_state);
+                println!("output: {}", output_str);
+                break;
+            }
+
+            modified_reg_a += 1;
+        }
+    }
+
     Ok(())
 }
 
