@@ -9,6 +9,17 @@ struct CpuState {
     reg_c: usize,
 }
 
+impl std::fmt::Display for CpuState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(IP:{}, A:{}, B:{}, C:{})", 
+            self.instruction_pointer,
+            self.reg_a,
+            self.reg_b,
+            self.reg_c)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum LiteralOperand {
     Lit1,
     Lit2,
@@ -19,6 +30,7 @@ enum LiteralOperand {
     Lit7,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum ComboOperand {
     Lit0,
     Lit1,
@@ -95,34 +107,42 @@ fn ignored_op_from_char(c: char) -> Result<(), String> {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct AdvInstr {
     op: ComboOperand,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct BxlInstr {
     op: LiteralOperand,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct BstInstr {
     op: ComboOperand,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct JnzInstr {
     op: LiteralOperand,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct OutInstr {
     op: ComboOperand,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct BdvInstr {
     op: ComboOperand,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct CdvInstr {
     op: ComboOperand,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Instr {
     Adv(AdvInstr), // Op(0): RegA = RegA / 2^(op)
     Bxl(BxlInstr), // Op(1): RegB = RegB ^ (lit)
@@ -134,229 +154,120 @@ enum Instr {
     Cdv(CdvInstr), // Op(7): RegC = RegA / 2^(op)
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
-enum Space {
-    Empty,
-    Box,
-    Wall,
+fn parse_register_line(line: &str, reg_prefix: &str) -> Result<usize, String> {
+    if !line.starts_with(reg_prefix) {
+        return Err(format!("register line missing prefix '{}'! '{}'", reg_prefix, line));
+    }
+
+    let reg_val_str = &line[reg_prefix.len()..];
+    reg_val_str.parse().map_err(|_| format!("Failed to parse register value '{}'", reg_val_str))
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
-enum Move {
-    Left,
-    Right,
-    Up,
-    Down,
-}
-
-type Warehouse = Grid<Space>;
-
-fn read_input(filename: &str) -> Result<(Grid<Space>, GridPos, Vec<Move>), String> {
+fn read_initial_cpu_state(filename: &str) -> Result<(CpuState, Vec<Instr>), String> {
     let lines: Vec<String> = input_helpers::read_lines(filename).collect();
 
-    if lines.len() < 4 {
+    if lines.len() != 5 {
         return Err(format!(
-            "Invalid input! Require at least 4 lines. Had {}",
+            "Invalid input! Expected 5 lines. Had {}",
             lines.len()
         ));
     }
 
-    fn is_full_wall_line(line: &str) -> bool {
-        !line.is_empty() && line.chars().all(|c| c == '#')
+    let reg_a_line = &lines[0];
+    let reg_b_line = &lines[1];
+    let reg_c_line = &lines[2];
+    let separator_line = &lines[3];
+    let program_line = &lines[4];
+
+    if separator_line != "" {
+        return Err(format!("invalid separator line! '{}'", separator_line));
     }
 
-    let first_grid_line = &lines[0];
-    if !is_full_wall_line(first_grid_line) {
-        return Err(format!(
-            "Invalid input! First line must be all '#'! Found '{}'",
-            first_grid_line
-        ));
-    }
-
-    let last_grid_line_idx = lines[1..]
-        .iter()
-        .enumerate()
-        .rev()
-        .find(|(_idx, line)| is_full_wall_line(line))
-        .map(|(idx, _line)| idx + 1) // +1 since we start iterating from 1
-        .ok_or(String::from("Missing trailing wall line"))?;
-
-    let grid_lines = &lines[0..last_grid_line_idx + 1];
-
-    let separator_line_idx = last_grid_line_idx + 1;
-    if separator_line_idx >= lines.len() || lines[separator_line_idx] != "" {
-        return Err(format!(
-            "Expected empty line on line {}! Found '{}'",
-            separator_line_idx, lines[separator_line_idx]
-        ));
-    }
-
-    let move_lines = &lines[separator_line_idx + 1..];
-    if move_lines.is_empty() {
-        return Err(String::from("Missing move line(s)"));
-    }
-
-    let width = first_grid_line.len();
-    let height = grid_lines.len();
-
-    let mut robot_pos = None;
-    let mut warehouse_cells: Vec<Space> = vec![];
-    for (line_idx, line) in grid_lines.iter().enumerate() {
-        if line.len() != width {
-            return Err(format!(
-                "Grid must have consistent line widths! Expected {} found {}",
-                width,
-                line.len()
-            ));
-        }
-
-        for (chr_idx, c) in line.chars().enumerate() {
-            if c == '@' {
-                let new_robot_pos = GridPos {
-                    row: line_idx as isize,
-                    col: chr_idx as isize,
-                };
-                if let Some(robot_pos) = robot_pos {
-                    return Err(format!(
-                        "Repeat robot_pos found {}! First found at {}",
-                        new_robot_pos, robot_pos
-                    ));
-                }
-
-                warehouse_cells.push(Space::Empty);
-                robot_pos = Some(new_robot_pos);
-            } else {
-                let cell = match c {
-                    '.' => Space::Empty,
-                    'O' => Space::Box,
-                    '#' => Space::Wall,
-                    _ => return Err(format!("Invalid warehouse char! {}", c)),
-                };
-                warehouse_cells.push(cell);
-            }
-        }
-    }
-
-    let mut moves = vec![];
-    for line in move_lines {
-        for c in line.chars() {
-            let move_instr = match c {
-                '<' => Move::Left,
-                '^' => Move::Up,
-                '>' => Move::Right,
-                'v' => Move::Down,
-                _ => return Err(format!("Invalid move char! {}", c)),
-            };
-
-            moves.push(move_instr);
-        }
-    }
-
-    let warehouse_grid = Grid::<Space> {
-        width: width,
-        height: height,
-        cells: warehouse_cells,
+    let cpu_state = {
+        let reg_a = parse_register_line(&reg_a_line, "Register A: ")?;
+        let reg_b = parse_register_line(&reg_b_line, "Register B: ")?;
+        let reg_c = parse_register_line(&reg_c_line, "Register C: ")?;
+        CpuState { instruction_pointer: 0, reg_a, reg_b, reg_c }
     };
 
-    let result = (
-        warehouse_grid,
-        robot_pos.ok_or(String::from("Missing robot pos in input"))?,
-        moves,
-    );
-
-    Ok(result)
-}
-
-fn dump_warehouse(warehouse: &Warehouse, robot_pos: &GridPos) -> String {
-    let mut buf = String::with_capacity((warehouse.width + 1) * warehouse.height);
-    for r in 0..(warehouse.height as isize) {
-        for c in 0..(warehouse.width as isize) {
-            let cell_pos = GridPos { row: r, col: c };
-            let cell_char = if cell_pos == *robot_pos {
-                '@'
-            } else {
-                match warehouse.get_cell(r, c) {
-                    Space::Empty => '.',
-                    Space::Box => 'O',
-                    Space::Wall => '#',
-                }
-            };
-            buf.push(cell_char);
-        }
-        buf.push('\n');
-    }
-    buf
-}
-
-fn print_warehouse(title: Option<&str>, warehouse: &Warehouse, robot_pos: &GridPos) {
-    if let Some(title) = title {
-        println!("{}: ", title);
-    }
-    println!("{}", dump_warehouse(warehouse, robot_pos));
-}
-
-fn do_move(warehouse: &mut Warehouse, robot_pos: &mut GridPos, move_instr: Move) {
-    let (row_offset, col_offset) = match move_instr {
-        Move::Up => (-1, 0),
-        Move::Left => (0, -1),
-        Move::Down => (1, 0),
-        Move::Right => (0, 1),
-    };
-
-    let next_cell_pos = GridPos {
-        row: robot_pos.row + row_offset,
-        col: robot_pos.col + col_offset,
-    };
-    if warehouse.is_pos_out_of_bounds(next_cell_pos.row, next_cell_pos.col) {
-        return;
+    const PROGRAM_LINE_PREFIX: &str = "Program: ";
+    if !program_line.starts_with(PROGRAM_LINE_PREFIX) {
+        return Err(format!("Invalid program line! '{}'", program_line))
     }
 
-    fn recursive_move_boxes(
-        row_offset: isize,
-        col_offset: isize,
-        warehouse: &mut Warehouse,
-        box_pos: &GridPos,
-    ) -> bool {
-        let next_cell_pos = GridPos {
-            row: box_pos.row + row_offset,
-            col: box_pos.col + col_offset,
+    let program_data = &program_line[PROGRAM_LINE_PREFIX.len()..];
+
+    let mut instructions = vec![];
+
+    fn verify_one_char(s: &str) -> Result<char, String> {
+        let mut s_chars = s.chars();
+        let c = if let Some(c) = s_chars.next() {
+            c
+        } else {
+            return Err(format!("'{}' is not a single char", s));
         };
-        if warehouse.is_pos_out_of_bounds(next_cell_pos.row, next_cell_pos.col) {
-            return false;
+
+        if let Some(_) = s_chars.next() {
+            return Err(format!("'{}' is not a single char", s));
         }
 
-        match warehouse.get_cell(next_cell_pos.row, next_cell_pos.col) {
-            Space::Wall => false,
-            Space::Box => {
-                if recursive_move_boxes(row_offset, col_offset, warehouse, &next_cell_pos) {
-                    *warehouse.get_cell_mut(next_cell_pos.row, next_cell_pos.col) = Space::Box;
-                    *warehouse.get_cell_mut(box_pos.row, box_pos.col) = Space::Empty;
-                    true
-                } else {
-                    false
-                }
-            }
-            Space::Empty => {
-                *warehouse.get_cell_mut(next_cell_pos.row, next_cell_pos.col) = Space::Box;
-                *warehouse.get_cell_mut(box_pos.row, box_pos.col) = Space::Empty;
-                true
-            }
-        }
+        Ok(c)
     }
 
-    match warehouse.get_cell(next_cell_pos.row, next_cell_pos.col) {
-        Space::Wall => (),                          // no move for wall
-        Space::Empty => *robot_pos = next_cell_pos, // move into the empty space
-        Space::Box => {
-            if recursive_move_boxes(row_offset, col_offset, warehouse, &next_cell_pos) {
-                *robot_pos = next_cell_pos;
-            }
-        }
+    let mut split_iter = program_data.split(',');
+    while let Some(next_operation) = split_iter.next() {
+        let next_operator_char = verify_one_char(next_operation)?;
+
+        let next_operand = split_iter.next().ok_or(format!("Missing operand for operator {}", next_operator_char))?;
+        let next_operand_char = verify_one_char(next_operand)?;
+
+        let instr = match next_operator_char {
+            '0' => { 
+                let op = ComboOperand::from_char(next_operand_char)?;
+                Instr::Adv(AdvInstr{op}) 
+            },
+            '1' => { 
+                let op = LiteralOperand::from_char(next_operand_char)?;
+                Instr::Bxl(BxlInstr{op}) 
+            },
+            '2' => { 
+                let op = ComboOperand::from_char(next_operand_char)?;
+                Instr::Bst(BstInstr{op}) 
+            },
+            '3' => { 
+                let op = LiteralOperand::from_char(next_operand_char)?;
+                Instr::Jnz(JnzInstr{op}) 
+            },
+            '4' => { 
+                ignored_op_from_char(next_operand_char)?;
+                Instr::Bxc
+            },
+            '5' => { 
+                let op = ComboOperand::from_char(next_operand_char)?;
+                Instr::Out(OutInstr{op}) 
+            },
+            '6' => { 
+                let op = ComboOperand::from_char(next_operand_char)?;
+                Instr::Bdv(BdvInstr{op}) 
+            },
+            '7' => { 
+                let op = ComboOperand::from_char(next_operand_char)?;
+                Instr::Cdv(CdvInstr{op}) 
+            },
+            _ => return Err(format!("Invalid operator! {}", next_operator_char)),
+        };
+
+        instructions.push(instr);
     }
+
+    Ok((cpu_state, instructions))
 }
 
-fn calc_box_gps(box_pos: &GridPos) -> usize {
-    ((100 * box_pos.row) + box_pos.col) as usize
+fn do_next_instruction(cpu: &mut CpuState, instructions: &[Instr]) -> Result<Option<usize>, String> {
+    if cpu.instruction_pointer % 2 != 0 {
+        return Err(format!("instruction pointer @ {} not pointing to valid instruction", cpu.instruction_pointer));
+    }
+    unimplemented!();
 }
 
 fn run(args: &[String]) -> Result<(), String> {
@@ -366,40 +277,24 @@ fn run(args: &[String]) -> Result<(), String> {
         .find(|a| a.as_str() == "-v" || a.as_str() == "--verbose")
         .is_some();
 
-    let (mut warehouse, mut robot_pos, moves) = read_input(filename)?;
+    let (mut cpu_state, instructions) = read_initial_cpu_state(filename)?;
 
     {
-        if verbose {
-            print_warehouse(Some("warehouse start"), &warehouse, &robot_pos);
-        }
-
-        for (i, move_instr) in moves.iter().enumerate() {
-            do_move(&mut warehouse, &mut robot_pos, *move_instr);
-            if verbose {
-                if i < moves.len() {
-                    print_warehouse(
-                        Some(&format!("after move {:03}", i)),
-                        &warehouse,
-                        &robot_pos,
-                    );
-                } else {
-                    print_warehouse(Some("warehouse end"), &warehouse, &robot_pos);
-                }
+        let mut output = vec![];
+        while cpu_state.instruction_pointer < (instructions.len() * 2) {
+            let instr_output = do_next_instruction(&mut cpu_state, &instructions)?;
+            if let Some(instr_output) = instr_output {
+                output.push(instr_output);
             }
         }
 
-        let mut sum_gps_coords = 0;
-        for r in 0..warehouse.height as isize {
-            for c in 0..warehouse.width as isize {
-                if let Space::Box = warehouse.get_cell(r, c) {
-                    let box_pos = GridPos { row: r, col: c };
-                    let box_gps = calc_box_gps(&box_pos);
-                    sum_gps_coords += box_gps;
-                }
-            }
-        }
-
-        println!("Pt 1: sum gps = {}", sum_gps_coords);
+        let output_str = output
+            .iter()
+            .map(|output_val| output_val.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+            
+        println!("Pt 1: output = {}", output_str);
     }
 
     Ok(())
