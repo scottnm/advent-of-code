@@ -9,7 +9,7 @@ struct CpuState {
     reg_c: isize,
 }
 
-enum Operand {
+enum LiteralOperand {
     Lit1,
     Lit2,
     Lit3,
@@ -17,46 +17,98 @@ enum Operand {
     Lit5,
     Lit6,
     Lit7,
-    ComboLit0,
-    ComboLit1,
-    ComboLit2,
-    ComboLit3,
-    ComboRegA,
-    ComboRegB,
-    ComboRegC,
 }
 
-impl Operand {
-    fn parse_literal_op(c: char) -> Result<Self, String> {
+enum ComboOperand {
+    Lit0,
+    Lit1,
+    Lit2,
+    Lit3,
+    RegA,
+    RegB,
+    RegC,
+}
+
+impl LiteralOperand {
+    fn from_char(c: char) -> Result<Self, String> {
         let op = match c {
-            '1' => Operand::Lit1,
-            '2' => Operand::Lit2,
-            '3' => Operand::Lit3,
-            '4' => Operand::Lit4,
-            '5' => Operand::Lit5,
-            '6' => Operand::Lit6,
-            '7' => Operand::Lit7,
+            '1' => LiteralOperand::Lit1,
+            '2' => LiteralOperand::Lit2,
+            '3' => LiteralOperand::Lit3,
+            '4' => LiteralOperand::Lit4,
+            '5' => LiteralOperand::Lit5,
+            '6' => LiteralOperand::Lit6,
+            '7' => LiteralOperand::Lit7,
             _ => return Err(format!("Invalid literal op '{}'", c)),
         };
 
         Ok(op)
     }
 
-    fn parse_combo_op(c: char) -> Result<Self, String> {
+    fn to_char(&self) -> char {
+        match *self {
+            LiteralOperand::Lit1 => '1',
+            LiteralOperand::Lit2 => '2',
+            LiteralOperand::Lit3 => '3',
+            LiteralOperand::Lit4 => '4',
+            LiteralOperand::Lit5 => '5',
+            LiteralOperand::Lit6 => '6',
+            LiteralOperand::Lit7 => '7',
+        }
+    }
+}
+
+impl ComboOperand {
+    fn from_char(c: char) -> Result<Self, String> {
         let op = match c {
-            '0' => Operand::ComboLit0,
-            '1' => Operand::ComboLit1,
-            '2' => Operand::ComboLit2,
-            '3' => Operand::ComboLit3,
-            '4' => Operand::ComboRegA,
-            '5' => Operand::ComboRegB,
-            '6' => Operand::ComboRegC,
+            '0' => ComboOperand::Lit0,
+            '1' => ComboOperand::Lit1,
+            '2' => ComboOperand::Lit2,
+            '3' => ComboOperand::Lit3,
+            '4' => ComboOperand::RegA,
+            '5' => ComboOperand::RegB,
+            '6' => ComboOperand::RegC,
             '7' => return Err(String::from("Combo operator 7 is reserved and invalid")),
             _ => return Err(format!("Invalid literal op '{}'", c)),
         };
 
         Ok(op)
     }
+
+    fn to_char(&self) -> char {
+        match *self {
+            ComboOperand::Lit0 => '0',
+            ComboOperand::Lit1 => '1',
+            ComboOperand::Lit2 => '2',
+            ComboOperand::Lit3 => '3',
+            ComboOperand::RegA => '4',
+            ComboOperand::RegB => '5',
+            ComboOperand::RegC => '6',
+        }
+    }
+}
+
+struct AdvInstr {
+    op: ComboOperand,
+}
+
+struct BxlInstr {
+    op: LiteralOperand,
+}
+
+struct BstInstr {
+    op: ComboOperand,
+}
+
+struct JnzInstr {
+    op: LiteralOperand,
+}
+
+enum Instr {
+    Adv(AdvInstr), // Op(0): RegA = RegA / 2^(op)
+    Bxl(BxlInstr), // Op(1): RegB = RegB ^ (lit)
+    Bst(BstInstr), // Op(2): RegB = (op) % 8
+    Jnz(JnzInstr), // Op(3): if (RegA!=0) *ip = (lit)
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
