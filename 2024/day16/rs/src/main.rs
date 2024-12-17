@@ -1,6 +1,6 @@
 use input_helpers;
 use simple_grid::{Grid, GridPos};
-use std::process::ExitCode;
+use std::{cell::Cell, process::ExitCode};
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 enum Space {
@@ -145,36 +145,6 @@ fn read_input(filename: &str) -> Result<StartingState, String> {
     Ok(result)
 }
 
-/* FIXME: remove if unneeded
-fn dump_warehouse(warehouse: &Warehouse, robot_pos: &GridPos) -> String {
-    let mut buf = String::with_capacity((warehouse.width + 1) * warehouse.height);
-    for r in 0..(warehouse.height as isize) {
-        for c in 0..(warehouse.width as isize) {
-            let cell_pos = GridPos { row: r, col: c };
-            let cell_char = if cell_pos == *robot_pos {
-                '@'
-            } else {
-                match warehouse.get_cell(r, c) {
-                    Space::Empty => '.',
-                    Space::Box => 'O',
-                    Space::Wall => '#',
-                }
-            };
-            buf.push(cell_char);
-        }
-        buf.push('\n');
-    }
-    buf
-}
-
-fn print_warehouse(title: Option<&str>, warehouse: &Warehouse, robot_pos: &GridPos) {
-    if let Some(title) = title {
-        println!("{}: ", title);
-    }
-    println!("{}", dump_warehouse(warehouse, robot_pos));
-}
-*/
-
 fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direction, end_pos: GridPos) -> Option<usize> {
     #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
     struct VisitSpace {
@@ -182,190 +152,267 @@ fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: D
         visited: bool,
     }
 
-    /*FIXME: remove
-    fn dump_visit_state(
-        title: &str,
-        maze_tracker: &Grid<VisitSpace>, 
-        curr_pos: GridPos, 
-        curr_dir: Direction, 
-        end_pos: GridPos) {
-        let mut buf = String::with_capacity((maze_tracker.width + 1) * maze_tracker.height);
-        for r in 0..(maze_tracker.height as isize) {
-            for c in 0..(maze_tracker.width as isize) {
-                let cell_pos = GridPos { row: r, col: c };
-                let cell_char = if cell_pos == curr_pos {
-                    match curr_dir {
-                        Direction::North => '^',
-                        Direction::South => 'v',
-                        Direction::East => '<',
-                        Direction::West => '>',
+    #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+    enum VisitDistance {
+        Unreachable,
+        MaxDist,
+        Dist(usize),
+    }
+
+    #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+    struct CellVisitDistance {
+        north: VisitDistance,
+        south: VisitDistance,
+        east: VisitDistance,
+        west: VisitDistance,
+    }
+
+    fn get_cell_visit_dir_mut(visit_dist: &mut CellVisitDistance, dir: Direction) -> &mut VisitDistance {
+        match dir {
+            Direction::North => &mut visit_dist.north,
+            Direction::South => &mut visit_dist.south,
+            Direction::East => &mut visit_dist.east,
+            Direction::West => &mut visit_dist.west,
+        }
+    }
+
+    fn get_min_cell_visit_dist(visit_dist: &CellVisitDistance) -> Option<usize> {
+        let mut min_val = None;
+        if let VisitDistance::Dist(dist) = visit_dist.north {
+            min_val = 
+            if let Some(old_min_val) = min_val {
+                Some(std::cmp::min(old_min_val, dist))
+            } else {
+                Some(dist)
+            };
+        }
+        if let VisitDistance::Dist(dist) = visit_dist.south {
+            min_val = 
+            if let Some(old_min_val) = min_val {
+                Some(std::cmp::min(old_min_val, dist))
+            } else {
+                Some(dist)
+            };
+        }
+        if let VisitDistance::Dist(dist) = visit_dist.east {
+            min_val = 
+            if let Some(old_min_val) = min_val {
+                Some(std::cmp::min(old_min_val, dist))
+            } else {
+                Some(dist)
+            };
+        }
+        if let VisitDistance::Dist(dist) = visit_dist.west {
+            min_val = 
+            if let Some(old_min_val) = min_val {
+                Some(std::cmp::min(old_min_val, dist))
+            } else {
+                Some(dist)
+            };
+        }
+
+        min_val
+    }
+
+    let mut maze_tracker = Grid::<CellVisitDistance> {
+        width: maze.width,
+        height: maze.height,
+        cells: maze.cells.iter().map(|space| {
+            let dist = match space {
+                Space::Empty => VisitDistance::MaxDist,
+                Space::Wall => VisitDistance::Unreachable,
+            };
+            
+            CellVisitDistance { north: dist, south: dist, east: dist, west: dist }
+        }).collect(),
+    };
+
+    let starting_pos_dist = VisitDistance::Dist(0);
+    *maze_tracker.get_cell_mut(start_pos.row, start_pos.col) = 
+            CellVisitDistance { north: starting_pos_dist, south: starting_pos_dist, east: starting_pos_dist, west: starting_pos_dist };
+
+    // initialize the unvisited set
+    type UnvisitedSet = std::collections::HashSet<(GridPos, Direction)>;
+    let mut unvisited_set = UnvisitedSet::new();
+    for r in 0..maze_tracker.height as isize {
+        for c in 0..maze_tracker.width as isize {
+            let pos = GridPos {row: r, col: c};
+            let cell = maze_tracker.get_cell(r, c);
+            let candidates = [
+                (Direction::North, cell.north),
+                (Direction::South, cell.south),
+                (Direction::East, cell.east),
+                (Direction::West, cell.west),
+                ];
+            for unvisited_cand in candidates {
+                if let VisitDistance::Unreachable = unvisited_cand.1 {
+                    // ignore walls
+                } else {
+                    unvisited_set.insert((pos, unvisited_cand.0));
+                }
+            }
+        }
+    }
+
+    fn find_next_current_node(maze_tracker: &Grid<CellVisitDistance>, unvisited_set: &UnvisitedSet) -> Option<(GridPos, Direction, usize)> {
+        let mut min_dist_unvisited_node: Option<(GridPos, Direction, usize)> = None;
+        for (candidate_pos, candidate_dir) in unvisited_set {
+            let candidate_cell = maze_tracker.get_cell(candidate_pos.row, candidate_pos.col);
+            let candidate_visit_dist = match candidate_dir {
+                Direction::North => candidate_cell.north,
+                Direction::South => candidate_cell.south,
+                Direction::East => candidate_cell.east,
+                Direction::West => candidate_cell.west,
+            };
+
+            if let VisitDistance::Dist(dist) = candidate_visit_dist {
+                if let Some(min_dist_unvisited_node_data) = min_dist_unvisited_node  {
+                    if dist < min_dist_unvisited_node_data.2 {
+                        min_dist_unvisited_node = Some((*candidate_pos, *candidate_dir, dist));
                     }
                 } else {
-                    let cell = maze_tracker.get_cell(r, c);
-                    match cell {
-                        VisitSpace { space: Space::Wall, visited: _ } => '#',
-                        VisitSpace { space: Space::Empty, visited: visited } => {
-                            if visited {
-                                'x'
-                            } else {
-                                '.'
-                            }
-                        },
-                    }
-                };
-                buf.push(cell_char);
+                    min_dist_unvisited_node = Some((*candidate_pos, *candidate_dir, dist));
+                }
             }
-            buf.push('\n');
-        }
-        println!("{}:", title);
-        print!("{}", buf);
-    }*/
-
-    fn find_min_maze_path_score_helper(
-        maze_tracker: &mut Grid<VisitSpace>, 
-        curr_pos: GridPos, 
-        curr_dir: Direction, 
-        end_pos: GridPos) -> Option<usize> {
-
-        if curr_pos == end_pos {
-            // FIXME: there's probably a better return type here that doens't require each new path end to instantiate a vector
-            // and also require the caller to then copy that vector elsewhere. 
-            //println!("Found solution!");
-            return Some(0);
         }
 
-        // mark the current cell as visited for the duration of this recursive call stack frame
-        {
-            let curr_cell = maze_tracker.get_cell_mut(curr_pos.row, curr_pos.col);
-            assert!(!curr_cell.visited);
-            curr_cell.visited = true;
-        }
+        min_dist_unvisited_node
+    } 
 
+    let mut curr_node_cand = (start_pos, start_dir, 0);
+    loop {
+        
         // check forward move
-        let mut min_fwd_score: Option<usize> = None;
         {
-            let forward_move_dir = curr_dir;
-            let forward_move_pos = move_grid_position(curr_pos, forward_move_dir);
+            let forward_move_dir = curr_node_cand.1;
+            let forward_move_pos = move_grid_position(curr_node_cand.0, forward_move_dir);
 
             if maze_tracker.is_pos_out_of_bounds(forward_move_pos.row, forward_move_pos.col) {
                 // noop; can't move to oob position
             } else {
-                let forward_cell = maze_tracker.get_cell(forward_move_pos.row, forward_move_pos.col);
-                if forward_cell.visited {
+                let forward_cell = maze_tracker.get_cell_mut(forward_move_pos.row, forward_move_pos.col);
+                if !unvisited_set.contains(&(forward_move_pos, forward_move_dir)) {
                     // noop; can't move to an already visited space
-                } else if let Space::Wall = forward_cell.space {
-                    // noop; can't move to a wall
                 } else {
-                    let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, forward_move_pos, forward_move_dir, end_pos);
-                    if let Some(subpath_min_score) = subpath_min_score {
-                        min_fwd_score = Some(subpath_min_score + 1); // +1 for move
-                        //FIXME:println!("Found FWD subpath solution(s) with score {}.", min_fwd_score.unwrap());
+                    let cell_visit_dist = get_cell_visit_dir_mut(forward_cell, forward_move_dir);
+                    let new_dist = curr_node_cand.2 + 1; // +1 forward
+                    match cell_visit_dist.clone() {
+                        VisitDistance::Dist(dist) => {
+                            *cell_visit_dist = VisitDistance::Dist(std::cmp::min(dist, new_dist));
+                        },
+                        VisitDistance::MaxDist => {
+                            *cell_visit_dist = VisitDistance::Dist(new_dist);
+                        },
+                        VisitDistance::Unreachable =>  {
+                            // noop
+                        }
                     }
                 }
             }
         }
 
         // check CW turn + move
-        let mut min_cw_score: Option<usize> = None;
         {
-            let cw_turn_dir = curr_dir.turn_cw();
-            let cw_turn_move_pos = move_grid_position(curr_pos, cw_turn_dir);
+            let cw_turn_dir = curr_node_cand.1.turn_cw();
+            let cw_turn_move_pos = move_grid_position(curr_node_cand.0, cw_turn_dir);
 
             if maze_tracker.is_pos_out_of_bounds(cw_turn_move_pos.row, cw_turn_move_pos.col) {
                 // noop; can't move to oob position
             } else {
-                let cw_turn_move_cell = maze_tracker.get_cell(cw_turn_move_pos.row, cw_turn_move_pos.col);
-                if cw_turn_move_cell.visited {
+                let cw_turn_cell = maze_tracker.get_cell_mut(cw_turn_move_pos.row, cw_turn_move_pos.col);
+                if !unvisited_set.contains(&(cw_turn_move_pos, cw_turn_dir)) {
                     // noop; can't move to an already visited space
-                } else if let Space::Wall = cw_turn_move_cell.space {
-                    // noop; can't move to a wall
                 } else {
-                    let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, cw_turn_move_pos, cw_turn_dir, end_pos);
-                    if let Some(subpath_min_score) = subpath_min_score {
-                        min_cw_score = Some(subpath_min_score + 1001); // +1 for move; +1000 for CW turn
-                        //FIXME:println!("Found CW+MV subpath solution(s) with min {}.", min_cw_score.unwrap());
+                    let cell_visit_dist = get_cell_visit_dir_mut(cw_turn_cell, cw_turn_dir);
+                    let new_dist = curr_node_cand.2 + 1001; // +1000 turn; +1 fwd
+                    match cell_visit_dist.clone() {
+                        VisitDistance::Dist(dist) => {
+                            *cell_visit_dist = VisitDistance::Dist(std::cmp::min(dist, new_dist));
+                        },
+                        VisitDistance::MaxDist => {
+                            *cell_visit_dist = VisitDistance::Dist(new_dist);
+                        },
+                        VisitDistance::Unreachable =>  {
+                            // noop
+                        }
                     }
                 }
             }
         }
 
         // check CCW turn + move
-        let mut min_ccw_score: Option<usize> = None;
         {
-            let ccw_turn_dir = curr_dir.turn_ccw();
-            let ccw_turn_move_pos = move_grid_position(curr_pos, ccw_turn_dir);
+            let ccw_turn_dir = curr_node_cand.1.turn_ccw();
+            let ccw_turn_move_pos = move_grid_position(curr_node_cand.0, ccw_turn_dir);
 
             if maze_tracker.is_pos_out_of_bounds(ccw_turn_move_pos.row, ccw_turn_move_pos.col) {
                 // noop; can't move to oob position
             } else {
-                let ccw_turn_move_cell = maze_tracker.get_cell(ccw_turn_move_pos.row, ccw_turn_move_pos.col);
-                if ccw_turn_move_cell.visited {
+                let ccw_turn_cell = maze_tracker.get_cell_mut(ccw_turn_move_pos.row, ccw_turn_move_pos.col);
+                if !unvisited_set.contains(&(ccw_turn_move_pos, ccw_turn_dir)) {
                     // noop; can't move to an already visited space
-                } else if let Space::Wall = ccw_turn_move_cell.space {
-                    // noop; can't move to a wall
                 } else {
-                    let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, ccw_turn_move_pos, ccw_turn_dir, end_pos);
-                    if let Some(subpath_min_score) = subpath_min_score {
-                        min_ccw_score = Some(subpath_min_score + 1001); // +1 for move; +1000 for CCW turn
-                        //FIXME:println!("Found CCW+MV subpath solution(s) with min {}.", min_ccw_score.unwrap());
+                    let cell_visit_dist = get_cell_visit_dir_mut(ccw_turn_cell, ccw_turn_dir);
+                    let new_dist = curr_node_cand.2 + 1001; // +1000 turn; +1 fwd
+                    match cell_visit_dist.clone() {
+                        VisitDistance::Dist(dist) => {
+                            *cell_visit_dist = VisitDistance::Dist(std::cmp::min(dist, new_dist));
+                        },
+                        VisitDistance::MaxDist => {
+                            *cell_visit_dist = VisitDistance::Dist(new_dist);
+                        },
+                        VisitDistance::Unreachable =>  {
+                            // noop
+                        }
                     }
                 }
             }
         }
 
         // check 180 turn + move
-        let mut min_180_score: Option<usize> = None;
         {
-            let half_turn_dir = curr_dir.turn_180();
-            let half_turn_move_pos = move_grid_position(curr_pos, half_turn_dir);
+            let half_turn_dir = curr_node_cand.1.turn_180();
+            let half_turn_move_pos = move_grid_position(curr_node_cand.0, half_turn_dir);
 
             if maze_tracker.is_pos_out_of_bounds(half_turn_move_pos.row, half_turn_move_pos.col) {
                 // noop; can't move to oob position
             } else {
-                let half_turn_move_cell = maze_tracker.get_cell(half_turn_move_pos.row, half_turn_move_pos.col);
-                if half_turn_move_cell.visited {
+                let half_turn_cell = maze_tracker.get_cell_mut(half_turn_move_pos.row, half_turn_move_pos.col);
+                if !unvisited_set.contains(&(half_turn_move_pos, half_turn_dir)) {
                     // noop; can't move to an already visited space
-                } else if let Space::Wall = half_turn_move_cell.space {
-                    // noop; can't move to a wall
                 } else {
-                    let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, half_turn_move_pos, half_turn_dir, end_pos);
-                    if let Some(subpath_min_score) = subpath_min_score {
-                        min_180_score = Some(subpath_min_score + 2001); // +1 for move; +2000 for 2 CW turns
-                        //FIXME:println!("Found 180+MV subpath solution(s) with min {}.", min_180_score.unwrap());
+                    let cell_visit_dist = get_cell_visit_dir_mut(half_turn_cell, half_turn_dir);
+                    let new_dist = curr_node_cand.2 + 2001; // +2000 2x turn; +1 forward
+                    match cell_visit_dist.clone() {
+                        VisitDistance::Dist(dist) => {
+                            *cell_visit_dist = VisitDistance::Dist(std::cmp::min(dist, new_dist));
+                        },
+                        VisitDistance::MaxDist => {
+                            *cell_visit_dist = VisitDistance::Dist(new_dist);
+                        },
+                        VisitDistance::Unreachable =>  {
+                            // noop
+                        }
                     }
                 }
             }
         }
 
-        maze_tracker.get_cell_mut(curr_pos.row, curr_pos.col).visited = false;
-
-        let min_score = [("fwd", min_fwd_score), ("cw", min_cw_score), ("ccw", min_ccw_score), ("180", min_180_score)]
-            .iter()
-            .map(|(name, maybe_score)| {
-                if let Some(score) = maybe_score {
-                    Some((*name, *score))
-                } else {
-                    None
-                }
-            })
-            .filter_map(|f| f)
-            .min_by_key(|(_name, score)| *score);
-
-        if let Some((name, min_score)) = min_score {
-            //FIXME:println!("Picked {} solution with score {}", name, min_score);
-            Some(min_score)
+        // end loop
+        unvisited_set.remove(&(curr_node_cand.0, curr_node_cand.1));
+        if let Some(next_curr_node) = find_next_current_node(&maze_tracker, &unvisited_set) {
+            if next_curr_node.0 == end_pos {
+                // FIXME: I'm not sure how correct this is...
+                println!("Breaking due to finding end_pos min dist!");
+                break;
+            }
+            curr_node_cand = next_curr_node;
         } else {
-            None
+            break;
         }
     }
 
-    let mut maze_tracker = Grid::<VisitSpace> {
-        width: maze.width,
-        height: maze.height,
-        cells: maze.cells.iter().map(|space| VisitSpace {space: *space, visited: false }).collect(),
-    };
-
-    find_min_maze_path_score_helper(&mut maze_tracker, start_pos, start_dir, end_pos)
+    get_min_cell_visit_dist(&maze_tracker.get_cell(end_pos.row, end_pos.col))
 }
 
 fn calculate_maze_move_score(maze_move: Move) -> usize {
