@@ -4,9 +4,9 @@ use std::process::ExitCode;
 
 struct CpuState {
     instruction_pointer: usize,
-    reg_a: isize,
-    reg_b: isize,
-    reg_c: isize,
+    reg_a: usize,
+    reg_b: usize,
+    reg_c: usize,
 }
 
 enum LiteralOperand {
@@ -88,6 +88,13 @@ impl ComboOperand {
     }
 }
 
+fn ignored_op_from_char(c: char) -> Result<(), String> {
+    match c {
+        '0'..='7' => Ok(()),
+        _ => Err(format!("Invalid op (ignored) '{}'", c)),
+    }
+}
+
 struct AdvInstr {
     op: ComboOperand,
 }
@@ -104,11 +111,27 @@ struct JnzInstr {
     op: LiteralOperand,
 }
 
+struct OutInstr {
+    op: ComboOperand,
+}
+
+struct BdvInstr {
+    op: ComboOperand,
+}
+
+struct CdvInstr {
+    op: ComboOperand,
+}
+
 enum Instr {
     Adv(AdvInstr), // Op(0): RegA = RegA / 2^(op)
     Bxl(BxlInstr), // Op(1): RegB = RegB ^ (lit)
     Bst(BstInstr), // Op(2): RegB = (op) % 8
     Jnz(JnzInstr), // Op(3): if (RegA!=0) *ip = (lit)
+    Bxc,           // Op(4): RegB = RegB ^ RegC    
+    Out(OutInstr), // Op(5): [output] (op) % 8 
+    Bdv(BdvInstr), // Op(6): RegB = RegA / 2^(op)
+    Cdv(CdvInstr), // Op(7): RegC = RegA / 2^(op)
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
