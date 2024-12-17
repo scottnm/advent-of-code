@@ -2,7 +2,7 @@ use input_helpers;
 use simple_grid::{Grid, GridPos};
 use std::process::ExitCode;
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 struct CpuState {
     instruction_pointer: usize,
     reg_a: usize,
@@ -115,6 +115,18 @@ impl ComboOperand {
             ComboOperand::RegC => '6',
         }
     }
+
+    fn encode(&self) -> usize {
+        match *self {
+            ComboOperand::Lit0 => 0,
+            ComboOperand::Lit1 => 1,
+            ComboOperand::Lit2 => 2,
+            ComboOperand::Lit3 => 3,
+            ComboOperand::RegA => 4,
+            ComboOperand::RegB => 5,
+            ComboOperand::RegC => 6,
+        }
+    }
 }
 
 fn read_combo_operand(op: ComboOperand, cpu: &CpuState) -> usize {
@@ -127,13 +139,6 @@ fn read_combo_operand(op: ComboOperand, cpu: &CpuState) -> usize {
         ComboOperand::RegB => cpu.reg_b,
         ComboOperand::RegC => cpu.reg_c,
    } 
-}
-
-fn ignored_op_from_char(c: char) -> Result<(), String> {
-    match c {
-        '0'..='7' => Ok(()),
-        _ => Err(format!("Invalid op (ignored) '{}'", c)),
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -157,6 +162,11 @@ struct JnzInstr {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct BxcInstr {
+    ignored_op: LiteralOperand,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct OutInstr {
     op: ComboOperand,
 }
@@ -177,7 +187,7 @@ enum Instr {
     Bxl(BxlInstr), // Op(1): RegB = RegB ^ (lit)
     Bst(BstInstr), // Op(2): RegB = (op) % 8
     Jnz(JnzInstr), // Op(3): if (RegA!=0) *ip = (lit)
-    Bxc,           // Op(4): RegB = RegB ^ RegC    
+    Bxc(BxcInstr), // Op(4): RegB = RegB ^ RegC    
     Out(OutInstr), // Op(5): [output] (op) % 8 
     Bdv(BdvInstr), // Op(6): RegB = RegA / 2^(op)
     Cdv(CdvInstr), // Op(7): RegC = RegA / 2^(op)
@@ -233,6 +243,26 @@ fn do_cdv_instr(cdv: &CdvInstr, cpu: &mut CpuState) {
     let divisor = (2_usize).pow(op as u32);
     cpu.reg_c = cpu.reg_a / divisor;
     cpu.instruction_pointer += 2;
+}
+
+fn encode_instructions(instructions: &[Instr]) -> Vec<usize> {
+    let mut encoded_instructions = Vec::with_capacity(instructions.len() * 2);
+    for instruction in instructions {
+        let (opcode, operand) = match instruction {
+            Instr::Adv(adv) => (0, adv.op.encode()),
+            Instr::Bxl(bxl) => (1, bxl.op.value()),
+            Instr::Bst(bst) => (2, bst.op.encode()),
+            Instr::Jnz(jnz) => (3, jnz.op.value()),
+            Instr::Bxc(bxc) => (4, bxc.ignored_op.value()),
+            Instr::Out(out) => (5, out.op.encode()),
+            Instr::Bdv(bdv) => (6, bdv.op.encode()),
+            Instr::Cdv(cdv) => (7, cdv.op.encode()),
+        };
+        encoded_instructions.push(opcode);
+        encoded_instructions.push(operand);
+    }
+
+    encoded_instructions
 }
 
 fn parse_register_line(line: &str, reg_prefix: &str) -> Result<usize, String> {
@@ -320,8 +350,8 @@ fn read_initial_cpu_state(filename: &str) -> Result<(CpuState, Vec<Instr>), Stri
                 Instr::Jnz(JnzInstr{op}) 
             },
             '4' => { 
-                ignored_op_from_char(next_operand_char)?;
-                Instr::Bxc
+                let ignored_op = LiteralOperand::from_char(next_operand_char)?;
+                Instr::Bxc(BxcInstr{ignored_op})
             },
             '5' => { 
                 let op = ComboOperand::from_char(next_operand_char)?;
@@ -371,7 +401,7 @@ fn do_next_instruction(cpu: &mut CpuState, instructions: &[Instr]) -> Result<Opt
             Ok(None)
         },
 
-        Instr::Bxc => {
+        Instr::Bxc(_) => {
             do_bxc_instr(cpu);
             Ok(None)
         },
@@ -400,12 +430,13 @@ fn run(args: &[String]) -> Result<(), String> {
         .find(|a| a.as_str() == "-v" || a.as_str() == "--verbose")
         .is_some();
 
-    let (mut cpu_state, instructions) = read_initial_cpu_state(filename)?;
+    let (original_cpu_state, instructions) = read_initial_cpu_state(filename)?;
 
-    dbg!(&cpu_state);
+    dbg!(&original_cpu_state);
     dbg!(&instructions);
 
     {
+        let mut cpu_state = original_cpu_state.clone();
         let mut output = vec![];
         while cpu_state.instruction_pointer < (instructions.len() * 2) {
             let instr_output = do_next_instruction(&mut cpu_state, &instructions)?;
