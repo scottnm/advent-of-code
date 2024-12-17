@@ -5,6 +5,58 @@ use std::process::ExitCode;
 struct CpuState {
     instruction_pointer: usize,
     reg_a: isize,
+    reg_b: isize,
+    reg_c: isize,
+}
+
+enum Operand {
+    Lit1,
+    Lit2,
+    Lit3,
+    Lit4,
+    Lit5,
+    Lit6,
+    Lit7,
+    ComboLit0,
+    ComboLit1,
+    ComboLit2,
+    ComboLit3,
+    ComboRegA,
+    ComboRegB,
+    ComboRegC,
+}
+
+impl Operand {
+    fn parse_literal_op(c: char) -> Result<Self, String> {
+        let op = match c {
+            '1' => Operand::Lit1,
+            '2' => Operand::Lit2,
+            '3' => Operand::Lit3,
+            '4' => Operand::Lit4,
+            '5' => Operand::Lit5,
+            '6' => Operand::Lit6,
+            '7' => Operand::Lit7,
+            _ => return Err(format!("Invalid literal op '{}'", c)),
+        };
+
+        Ok(op)
+    }
+
+    fn parse_combo_op(c: char) -> Result<Self, String> {
+        let op = match c {
+            '0' => Operand::ComboLit0,
+            '1' => Operand::ComboLit1,
+            '2' => Operand::ComboLit2,
+            '3' => Operand::ComboLit3,
+            '4' => Operand::ComboRegA,
+            '5' => Operand::ComboRegB,
+            '6' => Operand::ComboRegC,
+            '7' => return Err(String::from("Combo operator 7 is reserved and invalid")),
+            _ => return Err(format!("Invalid literal op '{}'", c)),
+        };
+
+        Ok(op)
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
