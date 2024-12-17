@@ -230,7 +230,7 @@ fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: D
         if curr_pos == end_pos {
             // FIXME: there's probably a better return type here that doens't require each new path end to instantiate a vector
             // and also require the caller to then copy that vector elsewhere. 
-            println!("Found solution!");
+            //println!("Found solution!");
             return Some(0);
         }
 
@@ -259,7 +259,7 @@ fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: D
                     let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, forward_move_pos, forward_move_dir, end_pos);
                     if let Some(subpath_min_score) = subpath_min_score {
                         min_fwd_score = Some(subpath_min_score + 1); // +1 for move
-                        println!("Found FWD subpath solution(s) with score {}.", min_fwd_score.unwrap());
+                        //FIXME:println!("Found FWD subpath solution(s) with score {}.", min_fwd_score.unwrap());
                     }
                 }
             }
@@ -283,7 +283,7 @@ fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: D
                     let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, cw_turn_move_pos, cw_turn_dir, end_pos);
                     if let Some(subpath_min_score) = subpath_min_score {
                         min_cw_score = Some(subpath_min_score + 1001); // +1 for move; +1000 for CW turn
-                        println!("Found CW+MV subpath solution(s) with min {}.", min_cw_score.unwrap());
+                        //FIXME:println!("Found CW+MV subpath solution(s) with min {}.", min_cw_score.unwrap());
                     }
                 }
             }
@@ -307,7 +307,7 @@ fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: D
                     let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, ccw_turn_move_pos, ccw_turn_dir, end_pos);
                     if let Some(subpath_min_score) = subpath_min_score {
                         min_ccw_score = Some(subpath_min_score + 1001); // +1 for move; +1000 for CCW turn
-                        println!("Found CCW+MV subpath solution(s) with min {}.", min_ccw_score.unwrap());
+                        //FIXME:println!("Found CCW+MV subpath solution(s) with min {}.", min_ccw_score.unwrap());
                     }
                 }
             }
@@ -331,11 +331,13 @@ fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: D
                     let subpath_min_score = find_min_maze_path_score_helper(maze_tracker, half_turn_move_pos, half_turn_dir, end_pos);
                     if let Some(subpath_min_score) = subpath_min_score {
                         min_180_score = Some(subpath_min_score + 2001); // +1 for move; +2000 for 2 CW turns
-                        println!("Found 180+MV subpath solution(s) with min {}.", min_180_score.unwrap());
+                        //FIXME:println!("Found 180+MV subpath solution(s) with min {}.", min_180_score.unwrap());
                     }
                 }
             }
         }
+
+        maze_tracker.get_cell_mut(curr_pos.row, curr_pos.col).visited = false;
 
         let min_score = [("fwd", min_fwd_score), ("cw", min_cw_score), ("ccw", min_ccw_score), ("180", min_180_score)]
             .iter()
@@ -350,7 +352,7 @@ fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: D
             .min_by_key(|(_name, score)| *score);
 
         if let Some((name, min_score)) = min_score {
-            println!("Picked {} solution with score {}", name, min_score);
+            //FIXME:println!("Picked {} solution with score {}", name, min_score);
             Some(min_score)
         } else {
             None
