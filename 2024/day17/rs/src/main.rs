@@ -425,6 +425,10 @@ fn do_next_instruction(cpu: &mut CpuState, instructions: &[Instr]) -> Result<Opt
 
 fn run(args: &[String]) -> Result<(), String> {
     let filename: &str = input_helpers::get_nth_string_arg(args, 0)?;
+    let do_pt2 = args
+        .iter()
+        .find(|a| a.as_str() == "-2" || a.as_str() == "--pt2")
+        .is_some();
     let verbose = args
         .iter()
         .find(|a| a.as_str() == "-v" || a.as_str() == "--verbose")
@@ -455,11 +459,11 @@ fn run(args: &[String]) -> Result<(), String> {
         println!("CPU: {:?}", cpu_state);
     }
 
-    {
+    if do_pt2 {
         let correct_output = encode_instructions(&instructions);
         let mut modified_reg_a = 0;
         loop {
-            if verbose {
+            if verbose || (modified_reg_a % 100_000 == 0){
                 println!("Testing reg_a={} for pt 2", modified_reg_a);
             }
 
