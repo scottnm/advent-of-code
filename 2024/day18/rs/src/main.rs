@@ -188,7 +188,7 @@ fn dump_dist_grid(memory_grid: &Grid<Space>, dist_tracker: &Grid<DijDist>) -> St
         }
         buf.push(']');
         buf
-    };
+    }
 
     let mut buf = String::with_capacity((memory_grid.width + 1) * memory_grid.height);
     for r in 0..(memory_grid.height as isize) {
