@@ -338,13 +338,13 @@ fn find_min_safe_path(
         for unvisited_neighbor_pos in unvisited_neighbors {
             let neighbor_dist_cell =
                 dist_tracker.get_cell_mut(unvisited_neighbor_pos.row, unvisited_neighbor_pos.col);
-            let neighbor_dist_path_cell =
-                dist_path_tracker.get_cell_mut(unvisited_neighbor_pos.row, unvisited_neighbor_pos.col);
+            let neighbor_dist_path_cell = dist_path_tracker
+                .get_cell_mut(unvisited_neighbor_pos.row, unvisited_neighbor_pos.col);
 
             let path_to_neighbor_dist = current_dist + 1;
 
             let update_path = match neighbor_dist_cell.clone() {
-                DijDist::Dist(dist) => path_to_neighbor_dist < dist, 
+                DijDist::Dist(dist) => path_to_neighbor_dist < dist,
                 DijDist::Inf => true,
             };
 
@@ -396,7 +396,7 @@ fn find_min_safe_path(
                 reverse_path
             };
             Some(path)
-        },
+        }
         DijDist::Inf => None,
     }
 }
@@ -432,8 +432,7 @@ fn run(args: &[String]) -> Result<(), String> {
             print_memory_safety_grid(Some("memory after corruption"), &corrupted_memory_grid);
         }
 
-        let min_safe_path =
-            find_min_safe_path(&corrupted_memory_grid, start_pos, end_pos, verbose);
+        let min_safe_path = find_min_safe_path(&corrupted_memory_grid, start_pos, end_pos, verbose);
         if let Some(min_safe_path) = min_safe_path {
             println!("Pt 1: min path len = {}", min_safe_path.len() - 1);
         } else {
@@ -445,33 +444,46 @@ fn run(args: &[String]) -> Result<(), String> {
         let mut corrupted_memory_grid = initial_memory_safety_grid.clone();
 
         let mut min_path = find_min_safe_path(&corrupted_memory_grid, start_pos, end_pos, verbose)
-            .expect("Initial memory grid should be uncorrupted so there must be a path from start to end");
+            .expect(
+            "Initial memory grid should be uncorrupted so there must be a path from start to end",
+        );
 
         let mut first_blocking_byte = None;
         for (corrupted_byte_idx, corrupted_byte_pos) in corrupted_bytes.iter().enumerate() {
             // corrupt the next byte
             if verbose {
-                println!("corrupting byte #{} @ {}", corrupted_byte_idx, corrupted_byte_pos);
+                println!(
+                    "corrupting byte #{} @ {}",
+                    corrupted_byte_idx, corrupted_byte_pos
+                );
             }
             corrupt_bytes(
                 &mut corrupted_memory_grid,
-                &corrupted_bytes[corrupted_byte_idx..corrupted_byte_idx+1],
+                &corrupted_bytes[corrupted_byte_idx..corrupted_byte_idx + 1],
             );
 
             // if the corrupted byte blocked our path, recalculate it.
             if min_path.contains(corrupted_byte_pos) {
                 if verbose {
-                    println!("    corrupted byte @ {} blocked path. Recalculating path", corrupted_byte_pos);
+                    println!(
+                        "    corrupted byte @ {} blocked path. Recalculating path",
+                        corrupted_byte_pos
+                    );
                 }
 
-                if let Some(new_min_path) = find_min_safe_path(&corrupted_memory_grid, start_pos, end_pos, verbose) {
+                if let Some(new_min_path) =
+                    find_min_safe_path(&corrupted_memory_grid, start_pos, end_pos, verbose)
+                {
                     min_path = new_min_path;
                     if verbose {
                         println!("    new path found");
                     }
                 } else {
                     if verbose {
-                        println!("    no new path found! corrupting byte @ {} has blocked path", corrupted_byte_pos);
+                        println!(
+                            "    no new path found! corrupting byte @ {} has blocked path",
+                            corrupted_byte_pos
+                        );
                     }
                     first_blocking_byte = Some((corrupted_byte_idx, corrupted_byte_pos));
                     break;
@@ -480,7 +492,10 @@ fn run(args: &[String]) -> Result<(), String> {
         }
 
         if let Some((first_blocking_byte_idx, first_blocking_byte_pos)) = first_blocking_byte {
-            println!("Pt 2: byte #{} @ {} blocked end", first_blocking_byte_idx, first_blocking_byte_pos);
+            println!(
+                "Pt 2: byte #{} @ {} blocked end",
+                first_blocking_byte_idx, first_blocking_byte_pos
+            );
         } else {
             println!("Pt 2: no corrupted bytes ever blocked path");
         }
