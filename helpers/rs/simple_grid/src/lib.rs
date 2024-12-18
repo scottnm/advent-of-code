@@ -10,6 +10,7 @@ impl std::fmt::Display for GridPos {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Grid<T>
 where
     T: Clone + Copy,
