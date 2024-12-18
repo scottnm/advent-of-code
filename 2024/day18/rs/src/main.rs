@@ -137,6 +137,10 @@ fn run(args: &[String]) -> Result<(), String> {
         .is_some();
 
     let (initial_memory_safety_grid, corrupted_bytes) = read_input(filename)?;
+    
+    // FIXME: remove
+    dbg!(&initial_memory_safety_grid);
+    dbg!(&corrupted_bytes);
 
     {
         let mut corrupted_memory_grid = initial_memory_safety_grid.clone();
