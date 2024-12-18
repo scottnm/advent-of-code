@@ -337,9 +337,13 @@ fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: D
         }).collect(),
     };
 
-    let starting_pos_dist = VisitDistance::Dist(0);
     *maze_tracker.get_cell_mut(start_pos.row, start_pos.col) = 
-            CellVisitDistance { north: starting_pos_dist, south: starting_pos_dist, east: starting_pos_dist, west: starting_pos_dist };
+            CellVisitDistance { 
+                // start facing east so distance from facing east is 0 and distance from all other positions requires a turn.
+                north: VisitDistance::Dist(1000), 
+                south: VisitDistance::Dist(1000), 
+                east: VisitDistance::Dist(0), 
+                west: VisitDistance::Dist(2000) };
 
     // initialize the unvisited set
     type UnvisitedSet = std::collections::HashSet<(GridPos, Direction)>;
