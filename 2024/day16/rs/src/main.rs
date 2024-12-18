@@ -9,6 +9,74 @@ enum Space {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+struct VisitSpace {
+    space: Space,
+    visited: bool,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+enum VisitDistance {
+    Unreachable,
+    MaxDist,
+    Dist(usize),
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+struct CellVisitDistance {
+    north: VisitDistance,
+    south: VisitDistance,
+    east: VisitDistance,
+    west: VisitDistance,
+}
+
+fn get_cell_visit_dir_mut(visit_dist: &mut CellVisitDistance, dir: Direction) -> &mut VisitDistance {
+    match dir {
+        Direction::North => &mut visit_dist.north,
+        Direction::South => &mut visit_dist.south,
+        Direction::East => &mut visit_dist.east,
+        Direction::West => &mut visit_dist.west,
+    }
+}
+
+fn get_min_cell_visit_dist(visit_dist: &CellVisitDistance) -> Option<usize> {
+    let mut min_val = None;
+    if let VisitDistance::Dist(dist) = visit_dist.north {
+        min_val = 
+        if let Some(old_min_val) = min_val {
+            Some(std::cmp::min(old_min_val, dist))
+        } else {
+            Some(dist)
+        };
+    }
+    if let VisitDistance::Dist(dist) = visit_dist.south {
+        min_val = 
+        if let Some(old_min_val) = min_val {
+            Some(std::cmp::min(old_min_val, dist))
+        } else {
+            Some(dist)
+        };
+    }
+    if let VisitDistance::Dist(dist) = visit_dist.east {
+        min_val = 
+        if let Some(old_min_val) = min_val {
+            Some(std::cmp::min(old_min_val, dist))
+        } else {
+            Some(dist)
+        };
+    }
+    if let VisitDistance::Dist(dist) = visit_dist.west {
+        min_val = 
+        if let Some(old_min_val) = min_val {
+            Some(std::cmp::min(old_min_val, dist))
+        } else {
+            Some(dist)
+        };
+    }
+
+    min_val
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 enum Direction {
     North,
     South,
@@ -145,75 +213,117 @@ fn read_input(filename: &str) -> Result<StartingState, String> {
     Ok(result)
 }
 
+fn dump_dist_grid(maze: &Grid<Space>, maze_dist_tracker: &Grid<CellVisitDistance>) -> String {
+    fn count_digits(n: usize) -> usize {
+        let mut n = n;
+        let mut digit_count = 1;
+        while n > 9 {
+            n /= 10;
+            digit_count += 1;
+        }
+        digit_count
+    }
+
+    let max_digit_count = maze_dist_tracker
+        .cells
+        .iter()
+        .map(|dist| {
+            if let Some(dist) = get_min_cell_visit_dist(dist) {
+                count_digits(dist)
+            } else {
+                3 // "Inf"
+            }
+        })
+        .max()
+        .unwrap_or(0);
+
+    let wall_cell_str = {
+        let mut buf = String::new();
+        buf.push('[');
+        for _ in 0..max_digit_count {
+            buf.push('#');
+        }
+        buf.push(']');
+        buf
+    };
+
+    let inf_cell_str = {
+        assert!(max_digit_count >= "INF".len());
+        let mut buf = String::new();
+        buf.push('[');
+        for _ in 0..(max_digit_count / 2 - 1) {
+            buf.push(' ');
+        }
+        buf.push('I');
+        buf.push('N');
+        buf.push('F');
+        let remaining_digit_spaces = max_digit_count - (max_digit_count / 2 + 3 - 1);
+        for _ in 0..remaining_digit_spaces {
+            buf.push(' ');
+        }
+        buf.push(']');
+        buf
+    };
+
+    let unreachable_cell_str = {
+        assert!(max_digit_count >= "---".len());
+        let mut buf = String::new();
+        buf.push('[');
+        for _ in 0..(max_digit_count / 2 - 1) {
+            buf.push(' ');
+        }
+        buf.push('-');
+        buf.push('-');
+        buf.push('-');
+        let remaining_digit_spaces = max_digit_count - (max_digit_count / 2 + 3 - 1);
+        for _ in 0..remaining_digit_spaces {
+            buf.push(' ');
+        }
+        buf.push(']');
+        buf
+    };
+
+    fn fmt_num_cell(n: usize, max_digit_count: usize) -> String {
+        let digit_count = count_digits(n);
+        assert!(max_digit_count >= digit_count);
+        let mut buf = String::new();
+        buf.push('[');
+        for _ in 0..(max_digit_count / 2 - digit_count / 2) {
+            buf.push(' ');
+        }
+        buf.push_str(&n.to_string());
+        let remaining_digit_spaces =
+            max_digit_count - (max_digit_count / 2 - digit_count / 2) - (digit_count);
+        for _ in 0..remaining_digit_spaces {
+            buf.push(' ');
+        }
+        buf.push(']');
+        buf
+    };
+
+    let mut buf = String::with_capacity((maze.width + 1) * maze.height);
+    for r in 0..(maze.height as isize) {
+        for c in 0..(maze.width as isize) {
+            let cell_str = 
+            if let Space::Wall = maze.get_cell(r, c) {
+                wall_cell_str.clone()                
+            } else {
+                let cell = maze_dist_tracker.get_cell(r, c);
+                if let Some(dist) = get_min_cell_visit_dist(&cell) {
+                    fmt_num_cell(dist, max_digit_count)
+                } else {
+                    inf_cell_str.clone()
+                }
+            };
+            buf.push_str(&cell_str);
+        }
+        buf.push('\n');
+    }
+    buf
+}
+
+
 fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: Direction, end_pos: GridPos) -> Option<usize> {
-    #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
-    struct VisitSpace {
-        space: Space,
-        visited: bool,
-    }
-
-    #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
-    enum VisitDistance {
-        Unreachable,
-        MaxDist,
-        Dist(usize),
-    }
-
-    #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
-    struct CellVisitDistance {
-        north: VisitDistance,
-        south: VisitDistance,
-        east: VisitDistance,
-        west: VisitDistance,
-    }
-
-    fn get_cell_visit_dir_mut(visit_dist: &mut CellVisitDistance, dir: Direction) -> &mut VisitDistance {
-        match dir {
-            Direction::North => &mut visit_dist.north,
-            Direction::South => &mut visit_dist.south,
-            Direction::East => &mut visit_dist.east,
-            Direction::West => &mut visit_dist.west,
-        }
-    }
-
-    fn get_min_cell_visit_dist(visit_dist: &CellVisitDistance) -> Option<usize> {
-        let mut min_val = None;
-        if let VisitDistance::Dist(dist) = visit_dist.north {
-            min_val = 
-            if let Some(old_min_val) = min_val {
-                Some(std::cmp::min(old_min_val, dist))
-            } else {
-                Some(dist)
-            };
-        }
-        if let VisitDistance::Dist(dist) = visit_dist.south {
-            min_val = 
-            if let Some(old_min_val) = min_val {
-                Some(std::cmp::min(old_min_val, dist))
-            } else {
-                Some(dist)
-            };
-        }
-        if let VisitDistance::Dist(dist) = visit_dist.east {
-            min_val = 
-            if let Some(old_min_val) = min_val {
-                Some(std::cmp::min(old_min_val, dist))
-            } else {
-                Some(dist)
-            };
-        }
-        if let VisitDistance::Dist(dist) = visit_dist.west {
-            min_val = 
-            if let Some(old_min_val) = min_val {
-                Some(std::cmp::min(old_min_val, dist))
-            } else {
-                Some(dist)
-            };
-        }
-
-        min_val
-    }
-
     let mut maze_tracker = Grid::<CellVisitDistance> {
         width: maze.width,
         height: maze.height,
@@ -411,6 +521,9 @@ fn find_min_maze_path_score(maze: &Grid<Space>, start_pos: GridPos, start_dir: D
             break;
         }
     }
+
+    let dist_grid_str = dump_dist_grid(maze, &maze_tracker);
+    println!("result dist grid:\n{}", dist_grid_str);
 
     get_min_cell_visit_dist(&maze_tracker.get_cell(end_pos.row, end_pos.col))
 }
