@@ -1,12 +1,18 @@
+use core::fmt;
 use input_helpers;
 use simple_grid::{Grid, GridPos};
-use core::fmt;
 use std::process::ExitCode;
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 enum Space {
     Safe,
     Corrupted,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+enum DijDist {
+    Dist(usize),
+    Inf,
 }
 
 fn read_input(filename: &str) -> Result<(Grid<Space>, Vec<GridPos>), String> {
@@ -115,6 +121,91 @@ fn print_memory_safety_grid(title: Option<&str>, memory_grid: &Grid<Space>) {
     println!("{}", dump_memory_safety_grid(memory_grid));
 }
 
+fn dump_dist_grid(memory_grid: &Grid<Space>, dist_tracker: &Grid<DijDist>) -> String {
+    fn count_digits(n: usize) -> usize {
+        let mut n = n;
+        let mut digit_count = 1;
+        while n > 9 {
+            n /= 10;
+            digit_count += 1;
+        }
+        digit_count
+    }
+
+    let max_digit_count = dist_tracker
+        .cells
+        .iter()
+        .map(|dist| {
+            match dist {
+                DijDist::Dist(d) => count_digits(*d),
+                DijDist::Inf => 3, // "Inf"
+            }
+        })
+        .max()
+        .unwrap_or(0);
+
+    let corrupted_cell_str = {
+        let mut buf = String::new();
+        buf.push('[');
+        for _ in 0..max_digit_count {
+            buf.push('#');
+        }
+        buf.push(']');
+        buf
+    };
+
+    let inf_cell_str = {
+        assert!(max_digit_count >= "INF".len());
+        let mut buf = String::new();
+        buf.push('[');
+        for _ in 0..(max_digit_count / 2 - 1) {
+            buf.push(' ');
+        }
+        buf.push('I');
+        buf.push('N');
+        buf.push('F');
+        let remaining_digit_spaces = max_digit_count - (max_digit_count / 2 + 3 - 1);
+        for _ in 0..remaining_digit_spaces {
+            buf.push(' ');
+        }
+        buf.push(']');
+        buf
+    };
+
+    fn fmt_num_cell(n: usize, max_digit_count: usize) -> String {
+        let digit_count = count_digits(n);
+        assert!(max_digit_count >= digit_count);
+        let mut buf = String::new();
+        buf.push('[');
+        for _ in 0..(max_digit_count / 2 - digit_count / 2) {
+            buf.push(' ');
+        }
+        buf.push_str(&n.to_string());
+        let remaining_digit_spaces =
+            max_digit_count - (max_digit_count / 2 - digit_count / 2) - (digit_count);
+        for _ in 0..remaining_digit_spaces {
+            buf.push(' ');
+        }
+        buf.push(']');
+        buf
+    };
+
+    let mut buf = String::with_capacity((memory_grid.width + 1) * memory_grid.height);
+    for r in 0..(memory_grid.height as isize) {
+        for c in 0..(memory_grid.width as isize) {
+            let cell_str = match memory_grid.get_cell(r, c) {
+                Space::Safe => match dist_tracker.get_cell(r, c) {
+                    DijDist::Dist(dist) => fmt_num_cell(dist, max_digit_count),
+                    DijDist::Inf => inf_cell_str.clone(),
+                },
+                Space::Corrupted => corrupted_cell_str.clone(),
+            };
+            buf.push_str(&cell_str);
+        }
+        buf.push('\n');
+    }
+    buf
+}
 fn corrupt_bytes(memory_grid: &mut Grid<Space>, byte_positions_to_corrupt: &[GridPos]) {
     for byte_pos in byte_positions_to_corrupt {
         *memory_grid.get_cell_mut(byte_pos.row, byte_pos.col) = Space::Corrupted;
@@ -127,13 +218,6 @@ fn find_min_safe_path_length(
     end_pos: GridPos,
     verbose: bool,
 ) -> Option<usize> {
-
-    #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
-    enum DijDist {
-        Dist(usize),
-        Inf
-    }
-
     let mut dist_tracker = Grid::<DijDist> {
         width: memory_grid.width,
         height: memory_grid.height,
@@ -144,7 +228,7 @@ fn find_min_safe_path_length(
     for r in 0..(memory_grid.height as isize) {
         for c in 0..(memory_grid.width as isize) {
             if let Space::Safe = memory_grid.get_cell(r, c) {
-                let reachable_cell_pos = GridPos{row: r, col: c};
+                let reachable_cell_pos = GridPos { row: r, col: c };
                 unvisited_cells.insert(reachable_cell_pos);
             }
         }
@@ -154,15 +238,15 @@ fn find_min_safe_path_length(
 
     fn get_unvisited_node_with_min_dist(
         unvisited_cells: &std::collections::HashSet<GridPos>,
-        dist_tracker: &Grid<DijDist>
-        ) -> Option<GridPos>
-    {
+        dist_tracker: &Grid<DijDist>,
+    ) -> Option<GridPos> {
         let mut min_dist_cell: Option<(GridPos, usize)> = None;
         for unvisited_cell_pos in unvisited_cells {
-            let unvisited_cell_dist = match dist_tracker.get_cell(unvisited_cell_pos.row, unvisited_cell_pos.col) {
-                DijDist::Dist(dist) => dist,
-                DijDist::Inf => continue,
-            };
+            let unvisited_cell_dist =
+                match dist_tracker.get_cell(unvisited_cell_pos.row, unvisited_cell_pos.col) {
+                    DijDist::Dist(dist) => dist,
+                    DijDist::Inf => continue,
+                };
 
             if let Some((_, min_dist_cell_dist)) = min_dist_cell {
                 if unvisited_cell_dist < min_dist_cell_dist {
@@ -181,9 +265,12 @@ fn find_min_safe_path_length(
         offset_row: isize,
         offset_col: isize,
         unvisited_cells: &std::collections::HashSet<GridPos>,
-        memory_grid: &Grid<Space>
-        ) -> Option<GridPos> {
-        let offset_pos = GridPos{row: pos.row + offset_row, col: pos.col + offset_col};
+        memory_grid: &Grid<Space>,
+    ) -> Option<GridPos> {
+        let offset_pos = GridPos {
+            row: pos.row + offset_row,
+            col: pos.col + offset_col,
+        };
         if memory_grid.is_pos_out_of_bounds(offset_pos.row, offset_pos.col) {
             return None;
         }
@@ -202,7 +289,7 @@ fn find_min_safe_path_length(
 
     let mut current_node_pos: GridPos = start_pos;
     loop {
-        let mut unvisited_neighbors_buffer = [GridPos{row: 0, col: 0}; 4];
+        let mut unvisited_neighbors_buffer = [GridPos { row: 0, col: 0 }; 4];
         let mut unvisited_neighbor_count = 0;
         let current_dist = match dist_tracker.get_cell(current_node_pos.row, current_node_pos.col) {
             DijDist::Dist(dist) => dist,
@@ -210,42 +297,53 @@ fn find_min_safe_path_length(
         };
 
         // see if we have an 'up' neighbor to check
-        if let Some(neighbor_pos) = get_unvisited_neighbor(current_node_pos, -1, 0, &unvisited_cells, memory_grid) {
+        if let Some(neighbor_pos) =
+            get_unvisited_neighbor(current_node_pos, -1, 0, &unvisited_cells, memory_grid)
+        {
             unvisited_neighbors_buffer[unvisited_neighbor_count] = neighbor_pos;
             unvisited_neighbor_count += 1;
         }
 
         // see if we have an 'down' neighbor to check
-        if let Some(neighbor_pos) = get_unvisited_neighbor(current_node_pos, 1, 0, &unvisited_cells, memory_grid) {
+        if let Some(neighbor_pos) =
+            get_unvisited_neighbor(current_node_pos, 1, 0, &unvisited_cells, memory_grid)
+        {
             unvisited_neighbors_buffer[unvisited_neighbor_count] = neighbor_pos;
             unvisited_neighbor_count += 1;
         }
 
         // see if we have an 'left' neighbor to check
-        if let Some(neighbor_pos) = get_unvisited_neighbor(current_node_pos, 0, -1, &unvisited_cells, memory_grid) {
+        if let Some(neighbor_pos) =
+            get_unvisited_neighbor(current_node_pos, 0, -1, &unvisited_cells, memory_grid)
+        {
             unvisited_neighbors_buffer[unvisited_neighbor_count] = neighbor_pos;
             unvisited_neighbor_count += 1;
         }
 
         // see if we have an 'right' neighbor to check
-        if let Some(neighbor_pos) = get_unvisited_neighbor(current_node_pos, 0, 1, &unvisited_cells, memory_grid) {
+        if let Some(neighbor_pos) =
+            get_unvisited_neighbor(current_node_pos, 0, 1, &unvisited_cells, memory_grid)
+        {
             unvisited_neighbors_buffer[unvisited_neighbor_count] = neighbor_pos;
             unvisited_neighbor_count += 1;
         }
 
         let unvisited_neighbors = &unvisited_neighbors_buffer[0..unvisited_neighbor_count];
         for unvisited_neighbor_pos in unvisited_neighbors {
-            let neighbor_dist_cell = dist_tracker.get_cell_mut(unvisited_neighbor_pos.row, unvisited_neighbor_pos.col);
+            let neighbor_dist_cell =
+                dist_tracker.get_cell_mut(unvisited_neighbor_pos.row, unvisited_neighbor_pos.col);
             let new_neighbor_dist = match neighbor_dist_cell {
                 DijDist::Dist(dist) => std::cmp::min(current_dist + 1, *dist),
-                DijDist::Inf => current_dist+1,
+                DijDist::Inf => current_dist + 1,
             };
             *neighbor_dist_cell = DijDist::Dist(new_neighbor_dist);
         }
 
         unvisited_cells.remove(&current_node_pos);
 
-        if let Some(next_node_pos) = get_unvisited_node_with_min_dist(&unvisited_cells, &dist_tracker) {
+        if let Some(next_node_pos) =
+            get_unvisited_node_with_min_dist(&unvisited_cells, &dist_tracker)
+        {
             if next_node_pos == end_pos {
                 break;
             } else {
@@ -257,94 +355,6 @@ fn find_min_safe_path_length(
     }
 
     if verbose {
-        fn count_digits(n: usize) -> usize {
-            let mut n = n;
-            let mut digit_count = 1;
-            while n > 9 {
-                n /= 10;
-                digit_count += 1;
-            }
-            digit_count
-        }
-
-        fn dump_dist_grid(
-            memory_grid: &Grid<Space>, 
-            dist_tracker: &Grid<DijDist>) -> String {
-
-            let max_digit_count = dist_tracker
-                .cells
-                .iter()
-                .map(|dist| {
-                    match dist {
-                        DijDist::Dist(d) => count_digits(*d),
-                        DijDist::Inf => 3, // "Inf"
-                    }
-                }).max().unwrap_or(0);
-
-            let min_cell_width = max_digit_count + 2;
-
-            let corrupted_cell_str = {
-                let mut buf = String::new();
-                buf.push('[');
-                for _ in 0..max_digit_count {
-                    buf.push('#');
-                }
-                buf.push(']');
-                buf
-            };
-
-            let inf_cell_str = {
-                assert!(max_digit_count >= "INF".len());
-                let mut buf = String::new();
-                buf.push('[');
-                for _ in 0..(max_digit_count/2-1) {
-                    buf.push(' ');
-                }
-                buf.push('I');
-                buf.push('N');
-                buf.push('F');
-                let remaining_digit_spaces = max_digit_count - (max_digit_count/2 + 3 - 1);
-                for _ in 0..remaining_digit_spaces {
-                    buf.push(' ');
-                }
-                buf.push(']');
-                buf
-            };
-
-            let fmt_num_cell = |n: usize| {
-                let digit_count = count_digits(n);
-                assert!(max_digit_count >= digit_count);
-                let mut buf = String::new();
-                buf.push('[');
-                for _ in 0..(max_digit_count/2-digit_count/2) {
-                    buf.push(' ');
-                }
-                buf.push_str(&n.to_string());
-                let remaining_digit_spaces = max_digit_count - (max_digit_count/2 - digit_count/2) - (digit_count);
-                for _ in 0..remaining_digit_spaces {
-                    buf.push(' ');
-                }
-                buf.push(']');
-                buf
-            };
-
-            let mut buf = String::with_capacity((memory_grid.width + 1) * memory_grid.height);
-            for r in 0..(memory_grid.height as isize) {
-                for c in 0..(memory_grid.width as isize) {
-                    let cell_str = match memory_grid.get_cell(r, c) {
-                        Space::Safe => match dist_tracker.get_cell(r, c) {
-                            DijDist::Dist(dist) => fmt_num_cell(dist),
-                            DijDist::Inf => inf_cell_str.clone(),
-                        },
-                        Space::Corrupted => corrupted_cell_str.clone(),
-                    };
-                    buf.push_str(&cell_str);
-                }
-                buf.push('\n');
-            }
-            buf
-        }
-
         let dist_grid_str = dump_dist_grid(memory_grid, &dist_tracker);
         println!("result grid distances:");
         print!("{}", dist_grid_str);
@@ -365,7 +375,7 @@ fn run(args: &[String]) -> Result<(), String> {
         .is_some();
 
     let (initial_memory_safety_grid, corrupted_bytes) = read_input(filename)?;
-    
+
     {
         let mut corrupted_memory_grid = initial_memory_safety_grid.clone();
         corrupt_bytes(
