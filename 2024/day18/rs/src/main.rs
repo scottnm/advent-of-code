@@ -188,7 +188,7 @@ fn dump_dist_grid(memory_grid: &Grid<Space>, dist_tracker: &Grid<DijDist>) -> St
         }
         buf.push(']');
         buf
-    };
+    }
 
     let mut buf = String::with_capacity((memory_grid.width + 1) * memory_grid.height);
     for r in 0..(memory_grid.height as isize) {
@@ -206,6 +206,7 @@ fn dump_dist_grid(memory_grid: &Grid<Space>, dist_tracker: &Grid<DijDist>) -> St
     }
     buf
 }
+
 fn corrupt_bytes(memory_grid: &mut Grid<Space>, byte_positions_to_corrupt: &[GridPos]) {
     for byte_pos in byte_positions_to_corrupt {
         *memory_grid.get_cell_mut(byte_pos.row, byte_pos.col) = Space::Corrupted;
