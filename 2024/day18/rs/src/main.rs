@@ -212,16 +212,22 @@ fn corrupt_bytes(memory_grid: &mut Grid<Space>, byte_positions_to_corrupt: &[Gri
     }
 }
 
-fn find_min_safe_path_length(
+fn find_min_safe_path(
     memory_grid: &Grid<Space>,
     start_pos: GridPos,
     end_pos: GridPos,
     verbose: bool,
-) -> Option<usize> {
+) -> Option<Vec<GridPos>> {
     let mut dist_tracker = Grid::<DijDist> {
         width: memory_grid.width,
         height: memory_grid.height,
         cells: vec![DijDist::Inf; memory_grid.width * memory_grid.height],
+    };
+
+    let mut dist_path_tracker = Grid::<Option<GridPos>> {
+        width: memory_grid.width,
+        height: memory_grid.height,
+        cells: vec![None; memory_grid.width * memory_grid.height],
     };
 
     let mut unvisited_cells = std::collections::HashSet::<GridPos>::new();
@@ -332,11 +338,20 @@ fn find_min_safe_path_length(
         for unvisited_neighbor_pos in unvisited_neighbors {
             let neighbor_dist_cell =
                 dist_tracker.get_cell_mut(unvisited_neighbor_pos.row, unvisited_neighbor_pos.col);
-            let new_neighbor_dist = match neighbor_dist_cell {
-                DijDist::Dist(dist) => std::cmp::min(current_dist + 1, *dist),
-                DijDist::Inf => current_dist + 1,
+            let neighbor_dist_path_cell = dist_path_tracker
+                .get_cell_mut(unvisited_neighbor_pos.row, unvisited_neighbor_pos.col);
+
+            let path_to_neighbor_dist = current_dist + 1;
+
+            let update_path = match neighbor_dist_cell.clone() {
+                DijDist::Dist(dist) => path_to_neighbor_dist < dist,
+                DijDist::Inf => true,
             };
-            *neighbor_dist_cell = DijDist::Dist(new_neighbor_dist);
+
+            if update_path {
+                *neighbor_dist_cell = DijDist::Dist(path_to_neighbor_dist);
+                *neighbor_dist_path_cell = Some(current_node_pos);
+            }
         }
 
         unvisited_cells.remove(&current_node_pos);
@@ -361,43 +376,128 @@ fn find_min_safe_path_length(
     }
 
     match dist_tracker.get_cell(end_pos.row, end_pos.col) {
-        DijDist::Dist(end_pos_dist_from_start) => Some(end_pos_dist_from_start),
+        DijDist::Dist(end_pos_dist_from_start) => {
+            let path = {
+                let mut reverse_path = Vec::with_capacity(end_pos_dist_from_start);
+
+                let mut curr_pos = end_pos;
+                loop {
+                    reverse_path.push(curr_pos);
+                    if let Some(prev_pos) = dist_path_tracker.get_cell(curr_pos.row, curr_pos.col) {
+                        curr_pos = prev_pos;
+                    } else {
+                        assert!(curr_pos == start_pos);
+                        break;
+                    }
+                }
+
+                assert!(reverse_path.len() == (end_pos_dist_from_start + 1));
+                reverse_path.reverse();
+                reverse_path
+            };
+            Some(path)
+        }
         DijDist::Inf => None,
     }
 }
 
 fn run(args: &[String]) -> Result<(), String> {
     let filename: &str = input_helpers::get_nth_string_arg(args, 0)?;
-    let num_bytes_to_simulate: usize = input_helpers::get_nth_parsed_arg(args, 1)?;
+    let num_bytes_to_simulate_in_pt1: usize = input_helpers::get_nth_parsed_arg(args, 1)?;
     let verbose = args
         .iter()
         .find(|a| a.as_str() == "-v" || a.as_str() == "--verbose")
         .is_some();
+    let do_pt2 = args
+        .iter()
+        .find(|a| a.as_str() == "-2" || a.as_str() == "--pt2")
+        .is_some();
 
     let (initial_memory_safety_grid, corrupted_bytes) = read_input(filename)?;
+
+    let start_pos = GridPos { row: 0, col: 0 };
+    let end_pos = GridPos {
+        row: (initial_memory_safety_grid.height - 1) as isize,
+        col: (initial_memory_safety_grid.width - 1) as isize,
+    };
 
     {
         let mut corrupted_memory_grid = initial_memory_safety_grid.clone();
         corrupt_bytes(
             &mut corrupted_memory_grid,
-            &corrupted_bytes[..num_bytes_to_simulate],
+            &corrupted_bytes[..num_bytes_to_simulate_in_pt1],
         );
 
         if verbose {
             print_memory_safety_grid(Some("memory after corruption"), &corrupted_memory_grid);
         }
 
-        let start_pos = GridPos { row: 0, col: 0 };
-        let end_pos = GridPos {
-            row: (corrupted_memory_grid.height - 1) as isize,
-            col: (corrupted_memory_grid.width - 1) as isize,
-        };
-        let min_safe_path_length =
-            find_min_safe_path_length(&corrupted_memory_grid, start_pos, end_pos, verbose);
-        if let Some(min_safe_path_length) = min_safe_path_length {
-            println!("Pt 1: min path len = {}", min_safe_path_length);
+        let min_safe_path = find_min_safe_path(&corrupted_memory_grid, start_pos, end_pos, verbose);
+        if let Some(min_safe_path) = min_safe_path {
+            println!("Pt 1: min path len = {}", min_safe_path.len() - 1);
         } else {
             println!("Pt 1: min path len = NO SOLUTION");
+        }
+    }
+
+    if do_pt2 {
+        let mut corrupted_memory_grid = initial_memory_safety_grid.clone();
+
+        let mut min_path = find_min_safe_path(&corrupted_memory_grid, start_pos, end_pos, verbose)
+            .expect(
+            "Initial memory grid should be uncorrupted so there must be a path from start to end",
+        );
+
+        let mut first_blocking_byte = None;
+        for (corrupted_byte_idx, corrupted_byte_pos) in corrupted_bytes.iter().enumerate() {
+            // corrupt the next byte
+            if verbose {
+                println!(
+                    "corrupting byte #{} @ {}",
+                    corrupted_byte_idx, corrupted_byte_pos
+                );
+            }
+            corrupt_bytes(
+                &mut corrupted_memory_grid,
+                &corrupted_bytes[corrupted_byte_idx..corrupted_byte_idx + 1],
+            );
+
+            // if the corrupted byte blocked our path, recalculate it.
+            if min_path.contains(corrupted_byte_pos) {
+                if verbose {
+                    println!(
+                        "    corrupted byte @ {} blocked path. Recalculating path",
+                        corrupted_byte_pos
+                    );
+                }
+
+                if let Some(new_min_path) =
+                    find_min_safe_path(&corrupted_memory_grid, start_pos, end_pos, verbose)
+                {
+                    min_path = new_min_path;
+                    if verbose {
+                        println!("    new path found");
+                    }
+                } else {
+                    if verbose {
+                        println!(
+                            "    no new path found! corrupting byte @ {} has blocked path",
+                            corrupted_byte_pos
+                        );
+                    }
+                    first_blocking_byte = Some((corrupted_byte_idx, corrupted_byte_pos));
+                    break;
+                }
+            }
+        }
+
+        if let Some((first_blocking_byte_idx, first_blocking_byte_pos)) = first_blocking_byte {
+            println!(
+                "Pt 2: byte #{} @ {} blocked end",
+                first_blocking_byte_idx, first_blocking_byte_pos
+            );
+        } else {
+            println!("Pt 2: no corrupted bytes ever blocked path");
         }
     }
 
