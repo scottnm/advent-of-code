@@ -1,5 +1,5 @@
 use input_helpers;
-use std::process::ExitCode;
+use std::{env::var, process::ExitCode};
 
 type TowelPattern = String;
 type TargetDesign = String;
@@ -76,14 +76,27 @@ fn is_target_design_possible(target_design: &str, available_patterns: &[TowelPat
     is_target_design_possible_helper(target_design, available_patterns)
 }
 
-fn count_possible_target_design_variants(target_design: &str, available_patterns: &[TowelPattern]) -> usize {
+type DesignVariantMemoizer = std::collections::HashMap<String, usize>;
+
+fn count_and_memo_possible_target_design_variants(
+    target_design: &str, 
+    available_patterns: &[TowelPattern],
+    variant_memo: &mut DesignVariantMemoizer) -> usize {
     if !is_valid_stripe_sequence(target_design) {
         return 0;
     }
 
-    fn count_possible_target_design_variants_helper(target_design: &str, available_patterns: &[TowelPattern]) -> usize {
+    fn count_possible_target_design_variants_helper(
+        target_design: &str, 
+        available_patterns: &[TowelPattern],
+        variant_memo: &mut DesignVariantMemoizer) -> usize {
+
         if target_design == "" {
             return 1;
+        }
+
+        if let Some(memod_count) = variant_memo.get(target_design) {
+            return *memod_count;
         }
 
         let mut possible_design_count = 0;
@@ -92,14 +105,16 @@ fn count_possible_target_design_variants(target_design: &str, available_patterns
                 possible_design_count += count_possible_target_design_variants_helper(
                     &target_design[available_pattern.len()..],
                     available_patterns,
+                    variant_memo,
                 );
             }
         }
 
+        variant_memo.insert(target_design.to_string(), possible_design_count);
         possible_design_count
     }
 
-    count_possible_target_design_variants_helper(target_design, available_patterns)
+    count_possible_target_design_variants_helper(target_design, available_patterns, variant_memo)
 }
 
 
@@ -138,9 +153,10 @@ fn run(args: &[String]) -> Result<(), String> {
     };
 
     if do_pt2 {
+        let mut variant_count_memo = DesignVariantMemoizer::new();
         let possible_design_variant_counts: Vec<usize> = possible_designs
             .iter()
-            .map(|design| count_possible_target_design_variants(&design, &available_patterns))
+            .map(|design| count_and_memo_possible_target_design_variants(&design, &available_patterns, &mut variant_count_memo))
             .collect();
         let sum_total_design_variant_counts: usize = possible_design_variant_counts.iter().sum();
         println!("Pt 2: {} sum total design variants", sum_total_design_variant_counts);
