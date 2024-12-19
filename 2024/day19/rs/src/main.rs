@@ -36,7 +36,10 @@ fn read_input(filename: &str) -> Result<(Vec<TowelPattern>, Vec<TargetDesign>), 
     let towel_patterns: Vec<String> = lines[0].split(", ").map(|s| s.to_string()).collect();
     for towel_pattern in &towel_patterns {
         if let Some(invalid_stripe_char) = find_invalid_stripe(&towel_pattern) {
-            return Err(format!("Invalid towel pattern char '{}'", invalid_stripe_char));
+            return Err(format!(
+                "Invalid towel pattern char '{}'",
+                invalid_stripe_char
+            ));
         }
     }
 
@@ -46,20 +49,31 @@ fn read_input(filename: &str) -> Result<(Vec<TowelPattern>, Vec<TargetDesign>), 
 }
 
 fn is_target_design_possible(target_design: &str, available_patterns: &[TowelPattern]) -> bool {
-    if target_design == "" {
-        return true;
+    if !is_valid_stripe_sequence(target_design) {
+        return false;
     }
 
-    for available_pattern in available_patterns {
-        if target_design.starts_with(available_pattern) {
-            let design_possible = is_target_design_possible(&target_design[available_pattern.len()..], available_patterns);
-            if design_possible {
-                return true;
+    fn is_target_design_possible_helper(target_design: &str, available_patterns: &[TowelPattern]) -> bool {
+        if target_design == "" {
+            return true;
+        }
+
+        for available_pattern in available_patterns {
+            if target_design.starts_with(available_pattern) {
+                let design_possible = is_target_design_possible(
+                    &target_design[available_pattern.len()..],
+                    available_patterns,
+                );
+                if design_possible {
+                    return true;
+                }
             }
         }
+
+        false
     }
 
-    false
+    is_target_design_possible_helper(target_design, available_patterns)
 }
 
 fn run(args: &[String]) -> Result<(), String> {
