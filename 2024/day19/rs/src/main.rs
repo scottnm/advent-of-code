@@ -76,15 +76,38 @@ fn is_target_design_possible(target_design: &str, available_patterns: &[TowelPat
     is_target_design_possible_helper(target_design, available_patterns)
 }
 
+fn count_possible_target_design_variants(target_design: &str, available_patterns: &[TowelPattern]) -> usize {
+    if !is_valid_stripe_sequence(target_design) {
+        return 0;
+    }
+
+    fn count_possible_target_design_variants_helper(target_design: &str, available_patterns: &[TowelPattern]) -> usize {
+        if target_design == "" {
+            return 1;
+        }
+
+        let mut possible_design_count = 0;
+        for available_pattern in available_patterns {
+            if target_design.starts_with(available_pattern) {
+                possible_design_count += count_possible_target_design_variants_helper(
+                    &target_design[available_pattern.len()..],
+                    available_patterns,
+                );
+            }
+        }
+
+        possible_design_count
+    }
+
+    count_possible_target_design_variants_helper(target_design, available_patterns)
+}
+
+
 fn run(args: &[String]) -> Result<(), String> {
     let filename: &str = input_helpers::get_nth_string_arg(args, 0)?;
     let verbose = args
         .iter()
         .find(|a| a.as_str() == "-v" || a.as_str() == "--verbose")
-        .is_some();
-    let skip_pt1 = args
-        .iter()
-        .find(|a| a.as_str() == "-n1" || a.as_str() == "--skip-pt1")
         .is_some();
     let do_pt2 = args
         .iter()
@@ -96,7 +119,7 @@ fn run(args: &[String]) -> Result<(), String> {
     dbg!(&available_patterns);
     dbg!(&target_designs);
 
-    if !skip_pt1 {
+    let possible_designs = {
         let possible_designs: Vec<TargetDesign> = target_designs
             .iter()
             .filter(|design| is_target_design_possible(design, &available_patterns))
@@ -106,14 +129,27 @@ fn run(args: &[String]) -> Result<(), String> {
         println!("Pt 1: {} designs possible", possible_designs.len());
         if verbose {
             println!("possible designs:");
-            for design in possible_designs {
+            for design in &possible_designs {
                 println!("  - {}", design);
             }
         }
-    }
+
+        possible_designs
+    };
 
     if do_pt2 {
-        unimplemented!();
+        let possible_design_variant_counts: Vec<usize> = possible_designs
+            .iter()
+            .map(|design| count_possible_target_design_variants(&design, &available_patterns))
+            .collect();
+        let sum_total_design_variant_counts: usize = possible_design_variant_counts.iter().sum();
+        println!("Pt 2: {} sum total design variants", sum_total_design_variant_counts);
+        if verbose {
+            println!("variant counts:");
+            for (design, variant_count) in possible_designs.iter().zip(possible_design_variant_counts.iter()) {
+                println!("  - ({}) {}", variant_count, design);
+            }
+        }
     }
 
     Ok(())
