@@ -48,7 +48,12 @@ fn read_input(filename: &str) -> Result<(Vec<TowelPattern>, Vec<TargetDesign>), 
     Ok((towel_patterns, target_designs))
 }
 
-fn is_target_design_possible(target_design: &str, available_patterns: &[TowelPattern]) -> bool {
+type DesignTestMemoizer = std::collections::HashMap<String, bool>;
+fn is_target_design_possible(
+    target_design: &str,
+    available_patterns: &[TowelPattern],
+    memo: &mut DesignTestMemoizer,
+) -> bool {
     if !is_valid_stripe_sequence(target_design) {
         return false;
     }
@@ -56,27 +61,36 @@ fn is_target_design_possible(target_design: &str, available_patterns: &[TowelPat
     fn is_target_design_possible_helper(
         target_design: &str,
         available_patterns: &[TowelPattern],
+        memo: &mut DesignTestMemoizer,
     ) -> bool {
         if target_design == "" {
             return true;
         }
 
+        if let Some(is_design_possible_memo) = memo.get(target_design) {
+            return *is_design_possible_memo;
+        }
+
         for available_pattern in available_patterns {
             if target_design.starts_with(available_pattern) {
-                let design_possible = is_target_design_possible(
+                let design_possible = is_target_design_possible_helper(
                     &target_design[available_pattern.len()..],
                     available_patterns,
+                    memo,
                 );
                 if design_possible {
+                    memo.insert(target_design.to_string(), true);
                     return true;
                 }
             }
         }
 
+        memo.insert(target_design.to_string(), false);
         false
     }
 
-    is_target_design_possible_helper(target_design, available_patterns)
+    println!("Testing {}", target_design);
+    is_target_design_possible_helper(target_design, available_patterns, memo)
 }
 
 type DesignVariantMemoizer = std::collections::HashMap<String, usize>;
@@ -138,9 +152,12 @@ fn run(args: &[String]) -> Result<(), String> {
     dbg!(&target_designs);
 
     let possible_designs = {
+        let mut design_test_memo = DesignTestMemoizer::new();
         let possible_designs: Vec<TargetDesign> = target_designs
             .iter()
-            .filter(|design| is_target_design_possible(design, &available_patterns))
+            .filter(|design| {
+                is_target_design_possible(design, &available_patterns, &mut design_test_memo)
+            })
             .cloned()
             .collect();
 
