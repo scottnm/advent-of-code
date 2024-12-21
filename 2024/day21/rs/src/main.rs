@@ -383,20 +383,24 @@ fn read_input(filename: &str) -> Result<Vec<Code>, String> {
 
 fn build_shortest_numpad_control_seq(btns: &[NumpadButton]) -> Vec<DirButton> {
     let mut dirs = vec![];
-    for i in 0..btns.len()-1 {
-        let mut next_btn_dirs = get_numpad_move_btn_sequence(btns[i], btns[i+1]);
+    let mut prev_button = NumpadButton::BtnA;
+    for next_button in btns {
+        let mut next_btn_dirs = get_numpad_move_btn_sequence(prev_button, *next_button);
         dirs.append(&mut next_btn_dirs);
         dirs.push(DirButton::BtnA);
+        prev_button = *next_button;
     }
     dirs
 }
 
 fn build_shortest_dirpad_control_seq(btns: &[DirButton]) -> Vec<DirButton> {
     let mut dirs = vec![];
-    for i in 0..btns.len()-1 {
-        let mut next_btn_dirs = get_dirpad_move_btn_sequence(btns[i], btns[i+1]);
+    let mut prev_button = DirButton::BtnA;
+    for next_button in btns {
+        let mut next_btn_dirs = get_dirpad_move_btn_sequence(prev_button, *next_button);
         dirs.append(&mut next_btn_dirs);
         dirs.push(DirButton::BtnA);
+        prev_button = *next_button;
     }
     dirs
 }
@@ -417,7 +421,7 @@ fn run(args: &[String]) -> Result<(), String> {
     dbg!(&codes);
 
     {
-        let mut sum_complexity = 0;
+        let mut code_complexities = vec![];
         for code in &codes {
             if verbose {
                 println!("     code: {}", NumpadButton::stringify_seq(code));
@@ -439,7 +443,11 @@ fn run(args: &[String]) -> Result<(), String> {
             }
 
             let code_complexity = final_human_dir_sequence.len() * NumpadButton::get_numeric(code);
+            code_complexities.push(code_complexity);
         }
+
+        let sum_complexity: usize = code_complexities.iter().sum();
+        println!("Pt 1: sum of code complexities = {}", sum_complexity);
         /*
         let mut design_test_memo = DesignTestMemoizer::new();
         let possible_designs: Vec<TargetDesign> = target_designs
