@@ -2,7 +2,7 @@ use input_helpers;
 use core::num;
 use std::{mem::discriminant, process::ExitCode};
 
-#[derive(Clone, Copy, Debug, Hash)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 enum NumpadButton {
     Btn0,
     Btn1,
@@ -33,9 +33,38 @@ impl NumpadButton {
             NumpadButton::BtnA => 'A',
         }
     }
+
+    fn as_num(&self) -> usize {
+        match *self {
+            NumpadButton::Btn0 => 0,
+            NumpadButton::Btn1 => 1,
+            NumpadButton::Btn2 => 2,
+            NumpadButton::Btn3 => 3,
+            NumpadButton::Btn4 => 4,
+            NumpadButton::Btn5 => 5,
+            NumpadButton::Btn6 => 6,
+            NumpadButton::Btn7 => 7,
+            NumpadButton::Btn8 => 8,
+            NumpadButton::Btn9 => 9,
+            NumpadButton::BtnA => panic!("invalid as_num call on BtnA"),
+        }
+    }
+
+    fn stringify_seq(btns: &[Self]) -> String {
+        let mut seq_str = String::with_capacity(btns.len());
+        for btn in btns {
+            seq_str.push(btn.as_char());
+        }
+        seq_str
+    }
+
+    fn get_numeric(btns: &[Self; 4]) -> usize {
+        assert!(btns[3] == NumpadButton::BtnA);
+        (btns[0].as_num() * 100) + (btns[1].as_num() * 10) + (btns[2].as_num())
+    }
 }
 
-#[derive(Clone, Copy, Debug, Hash)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 enum DirButton {
     BtnUp,
     BtnDown,
@@ -53,6 +82,14 @@ impl DirButton {
             DirButton::BtnRight => '>',
             DirButton::BtnA => 'A',
         }
+    }
+
+    fn stringify_seq(btns: &[Self]) -> String {
+        let mut seq_str = String::with_capacity(btns.len());
+        for btn in btns {
+            seq_str.push(btn.as_char());
+        }
+        seq_str
     }
 }
 
@@ -380,6 +417,29 @@ fn run(args: &[String]) -> Result<(), String> {
     dbg!(&codes);
 
     {
+        let mut sum_complexity = 0;
+        for code in &codes {
+            if verbose {
+                println!("     code: {}", NumpadButton::stringify_seq(code));
+            }
+            let first_robot_dir_sequence = build_shortest_numpad_control_seq(code);
+            if verbose {
+                println!("1st robot: {}", DirButton::stringify_seq(&first_robot_dir_sequence));
+                println!("           length = {}", first_robot_dir_sequence.len());
+            }
+            let second_robot_dir_sequence = build_shortest_dirpad_control_seq(&first_robot_dir_sequence);
+            if verbose {
+                println!("2nd robot: {}", DirButton::stringify_seq(&second_robot_dir_sequence));
+                println!("           length = {}", second_robot_dir_sequence.len());
+            }
+            let final_human_dir_sequence = build_shortest_dirpad_control_seq(&second_robot_dir_sequence);
+            if verbose {
+                println!("    human: {}", DirButton::stringify_seq(&final_human_dir_sequence));
+                println!("           length = {}", final_human_dir_sequence.len());
+            }
+
+            let code_complexity = final_human_dir_sequence.len() * NumpadButton::get_numeric(code);
+        }
         /*
         let mut design_test_memo = DesignTestMemoizer::new();
         let possible_designs: Vec<TargetDesign> = target_designs
