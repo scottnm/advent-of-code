@@ -331,23 +331,37 @@ fn read_code_line(line: &str) -> Result<Code, String> {
 fn read_input(filename: &str) -> Result<Vec<Code>, String> {
     let lines: Vec<String> = input_helpers::read_lines(filename).collect();
 
-    if lines.len() != 5 {
-        return Err(format!(
-            "Invalid input! Require exactly 5 lines. Had {}",
-            lines.len()
-        ));
+    if lines.is_empty() {
+        return Err(String::from("Invalid input! Missing numpad codes!"));
     }
 
-
-    let codes = vec![
-        read_code_line(&lines[0])?,
-        read_code_line(&lines[1])?,
-        read_code_line(&lines[2])?,
-        read_code_line(&lines[3])?,
-        read_code_line(&lines[4])?,
-    ];
+    let mut codes = vec![];
+    for line in lines {
+        let next_code = read_code_line(&line)?;
+        codes.push(next_code);
+    }
 
     Ok(codes)
+}
+
+fn build_shortest_numpad_control_seq(btns: &[NumpadButton]) -> Vec<DirButton> {
+    let mut dirs = vec![];
+    for i in 0..btns.len()-1 {
+        let mut next_btn_dirs = get_numpad_move_btn_sequence(btns[i], btns[i+1]);
+        dirs.append(&mut next_btn_dirs);
+        dirs.push(DirButton::BtnA);
+    }
+    dirs
+}
+
+fn build_shortest_dirpad_control_seq(btns: &[DirButton]) -> Vec<DirButton> {
+    let mut dirs = vec![];
+    for i in 0..btns.len()-1 {
+        let mut next_btn_dirs = get_dirpad_move_btn_sequence(btns[i], btns[i+1]);
+        dirs.append(&mut next_btn_dirs);
+        dirs.push(DirButton::BtnA);
+    }
+    dirs
 }
 
 fn run(args: &[String]) -> Result<(), String> {
