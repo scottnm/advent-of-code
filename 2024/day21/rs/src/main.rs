@@ -1,6 +1,6 @@
 use input_helpers;
 use core::num;
-use std::process::ExitCode;
+use std::{mem::discriminant, process::ExitCode};
 
 #[derive(Clone, Copy, Debug, Hash)]
 enum NumpadButton {
@@ -137,30 +137,30 @@ fn get_numpad_move_btn_sequence(start_btn: NumpadButton, end_btn: NumpadButton) 
             NumpadButton::BtnA => vec![DirButton::BtnRight, DirButton::BtnRight, DirButton::BtnDown, DirButton::BtnDown],
         },
         NumpadButton::Btn5 => match end_btn {
-            NumpadButton::Btn0 => vec![],
-            NumpadButton::Btn1 => vec![],
-            NumpadButton::Btn2 => vec![],
-            NumpadButton::Btn3 => vec![],
-            NumpadButton::Btn4 => vec![],
+            NumpadButton::Btn0 => vec![DirButton::BtnDown, DirButton::BtnDown],
+            NumpadButton::Btn1 => vec![DirButton::BtnDown, DirButton::BtnLeft],
+            NumpadButton::Btn2 => vec![DirButton::BtnDown],
+            NumpadButton::Btn3 => vec![DirButton::BtnDown, DirButton::BtnRight],
+            NumpadButton::Btn4 => vec![DirButton::BtnLeft],
             NumpadButton::Btn5 => vec![],
-            NumpadButton::Btn6 => vec![],
-            NumpadButton::Btn7 => vec![],
-            NumpadButton::Btn8 => vec![],
-            NumpadButton::Btn9 => vec![],
-            NumpadButton::BtnA => vec![],
+            NumpadButton::Btn6 => vec![DirButton::BtnRight],
+            NumpadButton::Btn7 => vec![DirButton::BtnUp, DirButton::BtnLeft],
+            NumpadButton::Btn8 => vec![DirButton::BtnUp],
+            NumpadButton::Btn9 => vec![DirButton::BtnUp, DirButton::BtnRight],
+            NumpadButton::BtnA => vec![DirButton::BtnRight, DirButton::BtnDown, DirButton::BtnDown],
         },
         NumpadButton::Btn6 => match end_btn {
-            NumpadButton::Btn0 => vec![],
-            NumpadButton::Btn1 => vec![],
-            NumpadButton::Btn2 => vec![],
-            NumpadButton::Btn3 => vec![],
-            NumpadButton::Btn4 => vec![],
-            NumpadButton::Btn5 => vec![],
+            NumpadButton::Btn0 => vec![DirButton::BtnDown, DirButton::BtnDown, DirButton::BtnLeft],
+            NumpadButton::Btn1 => vec![DirButton::BtnDown, DirButton::BtnLeft, DirButton::BtnLeft],
+            NumpadButton::Btn2 => vec![DirButton::BtnDown, DirButton::BtnLeft],
+            NumpadButton::Btn3 => vec![DirButton::BtnLeft],
+            NumpadButton::Btn4 => vec![DirButton::BtnLeft, DirButton::BtnLeft],
+            NumpadButton::Btn5 => vec![DirButton::BtnLeft],
             NumpadButton::Btn6 => vec![],
-            NumpadButton::Btn7 => vec![],
-            NumpadButton::Btn8 => vec![],
-            NumpadButton::Btn9 => vec![],
-            NumpadButton::BtnA => vec![],
+            NumpadButton::Btn7 => vec![DirButton::BtnUp, DirButton::BtnLeft, DirButton::BtnLeft],
+            NumpadButton::Btn8 => vec![DirButton::BtnUp, DirButton::BtnLeft],
+            NumpadButton::Btn9 => vec![DirButton::BtnUp],
+            NumpadButton::BtnA => vec![DirButton::BtnDown, DirButton::BtnDown],
         },
         NumpadButton::Btn7 => match end_btn {
             NumpadButton::Btn0 => vec![],
