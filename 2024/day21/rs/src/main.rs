@@ -1,138 +1,140 @@
 use input_helpers;
-use std::{env::var, process::ExitCode};
+use core::num;
+use std::process::ExitCode;
 
-type TowelPattern = String;
-type TargetDesign = String;
+#[derive(Clone, Copy, Debug, Hash)]
+enum NumpadButton {
+    Btn0,
+    Btn1,
+    Btn2,
+    Btn3,
+    Btn4,
+    Btn5,
+    Btn6,
+    Btn7,
+    Btn8,
+    Btn9,
+    BtnA,
+}
 
-fn find_invalid_stripe(stripe_seq: &str) -> Option<char> {
-    for stripe_char in stripe_seq.chars() {
-        match stripe_char {
-            'w' | 'u' | 'b' | 'r' | 'g' => continue, // valid towel patterns
-            _ => return Some(stripe_char),
+impl NumpadButton {
+    fn as_char(&self) -> char {
+        match *self {
+            NumpadButton::Btn0 => '0',
+            NumpadButton::Btn1 => '1',
+            NumpadButton::Btn2 => '2',
+            NumpadButton::Btn3 => '3',
+            NumpadButton::Btn4 => '4',
+            NumpadButton::Btn5 => '5',
+            NumpadButton::Btn6 => '6',
+            NumpadButton::Btn7 => '7',
+            NumpadButton::Btn8 => '8',
+            NumpadButton::Btn9 => '9',
+            NumpadButton::BtnA => 'A',
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Hash)]
+enum DirButton {
+    BtnUp,
+    BtnDown,
+    BtnLeft,
+    BtnRight,
+    BtnA,
+}
+
+impl DirButton {
+    fn as_char(&self) -> char {
+        match *self {
+            DirButton::BtnUp => '^',
+            DirButton::BtnDown => 'v',
+            DirButton::BtnLeft => '<',
+            DirButton::BtnRight => '>',
+            DirButton::BtnA => 'A',
+        }
+    }
+}
+
+type Code = [NumpadButton; 4];
+
+fn read_char_as_numpad_btn(c: char) -> Result<NumpadButton, String> {
+    let btn = match c {
+        '0' => NumpadButton::Btn0,
+        '1' => NumpadButton::Btn1,
+        '2' => NumpadButton::Btn2,
+        '3' => NumpadButton::Btn3,
+        '4' => NumpadButton::Btn4,
+        '5' => NumpadButton::Btn5,
+        '6' => NumpadButton::Btn6,
+        '7' => NumpadButton::Btn7,
+        '8' => NumpadButton::Btn8,
+        '9' => NumpadButton::Btn9,
+        'A' => NumpadButton::BtnA,
+        _ => return Err(format!("Invalid btn char! {}", c)),
+    };
+
+    Ok(btn)
+}
+
+fn read_code_line(line: &str) -> Result<Code, String> {
+    if line.len() != 4 {
+        return Err(format!(
+            "Invalid line! Require exactly 4 chars. Had {}",
+            line.len()
+        ));
+    }
+
+    let mut chars_itr = line.chars();
+    let numpad_btns = [ 
+        read_char_as_numpad_btn(chars_itr.next().unwrap())?,
+        read_char_as_numpad_btn(chars_itr.next().unwrap())?,
+        read_char_as_numpad_btn(chars_itr.next().unwrap())?,
+        read_char_as_numpad_btn(chars_itr.next().unwrap())?,
+        ];
+    for (i, btn) in numpad_btns[0..3].iter().enumerate() {
+        if let NumpadButton::BtnA = btn {
+            return Err(format!("Invalid BtnA in position {} in code {}{}{}{}", 
+                i, 
+                numpad_btns[0].as_char(),
+                numpad_btns[1].as_char(),
+                numpad_btns[2].as_char(),
+                numpad_btns[3].as_char()))
         }
     }
 
-    None
+    match numpad_btns[3] {
+        NumpadButton::BtnA => (),
+        _ => return Err(format!("Invalid code {}{}{}{}! Must end in BtnA",
+                numpad_btns[0].as_char(),
+                numpad_btns[1].as_char(),
+                numpad_btns[2].as_char(),
+                numpad_btns[3].as_char())),
+    }
+    
+    Ok(numpad_btns)
 }
 
-fn is_valid_stripe_sequence(stripe_seq: &str) -> bool {
-    find_invalid_stripe(stripe_seq).is_none()
-}
-
-fn read_input(filename: &str) -> Result<(Vec<TowelPattern>, Vec<TargetDesign>), String> {
+fn read_input(filename: &str) -> Result<Vec<Code>, String> {
     let lines: Vec<String> = input_helpers::read_lines(filename).collect();
 
-    if lines.len() < 3 {
+    if lines.len() != 5 {
         return Err(format!(
-            "Invalid input! Require at least 3 lines. Had {}",
+            "Invalid input! Require exactly 5 lines. Had {}",
             lines.len()
         ));
     }
 
-    if lines[1] != "" {
-        return Err(format!("line 2 must be an empty separator"));
-    }
 
-    let towel_patterns: Vec<String> = lines[0].split(", ").map(|s| s.to_string()).collect();
-    for towel_pattern in &towel_patterns {
-        if let Some(invalid_stripe_char) = find_invalid_stripe(&towel_pattern) {
-            return Err(format!(
-                "Invalid towel pattern char '{}'",
-                invalid_stripe_char
-            ));
-        }
-    }
+    let codes = vec![
+        read_code_line(&lines[0])?,
+        read_code_line(&lines[1])?,
+        read_code_line(&lines[2])?,
+        read_code_line(&lines[3])?,
+        read_code_line(&lines[4])?,
+    ];
 
-    let target_designs: Vec<String> = lines[2..].iter().cloned().collect();
-
-    Ok((towel_patterns, target_designs))
-}
-
-type DesignTestMemoizer = std::collections::HashMap<String, bool>;
-fn is_target_design_possible(
-    target_design: &str,
-    available_patterns: &[TowelPattern],
-    memo: &mut DesignTestMemoizer,
-) -> bool {
-    if !is_valid_stripe_sequence(target_design) {
-        return false;
-    }
-
-    fn is_target_design_possible_helper(
-        target_design: &str,
-        available_patterns: &[TowelPattern],
-        memo: &mut DesignTestMemoizer,
-    ) -> bool {
-        if target_design == "" {
-            return true;
-        }
-
-        if let Some(is_design_possible_memo) = memo.get(target_design) {
-            return *is_design_possible_memo;
-        }
-
-        for available_pattern in available_patterns {
-            if target_design.starts_with(available_pattern) {
-                let design_possible = is_target_design_possible_helper(
-                    &target_design[available_pattern.len()..],
-                    available_patterns,
-                    memo,
-                );
-                if design_possible {
-                    memo.insert(target_design.to_string(), true);
-                    return true;
-                }
-            }
-        }
-
-        memo.insert(target_design.to_string(), false);
-        false
-    }
-
-    println!("Testing {}", target_design);
-    is_target_design_possible_helper(target_design, available_patterns, memo)
-}
-
-type DesignVariantMemoizer = std::collections::HashMap<String, usize>;
-
-fn count_and_memo_possible_target_design_variants(
-    target_design: &str,
-    available_patterns: &[TowelPattern],
-    variant_memo: &mut DesignVariantMemoizer,
-) -> usize {
-    if !is_valid_stripe_sequence(target_design) {
-        return 0;
-    }
-
-    fn count_possible_target_design_variants_helper(
-        target_design: &str,
-        available_patterns: &[TowelPattern],
-        variant_memo: &mut DesignVariantMemoizer,
-    ) -> usize {
-        if target_design == "" {
-            return 1;
-        }
-
-        if let Some(memod_count) = variant_memo.get(target_design) {
-            return *memod_count;
-        }
-
-        let mut possible_design_count = 0;
-        for available_pattern in available_patterns {
-            if target_design.starts_with(available_pattern) {
-                possible_design_count += count_possible_target_design_variants_helper(
-                    &target_design[available_pattern.len()..],
-                    available_patterns,
-                    variant_memo,
-                );
-            }
-        }
-
-        variant_memo.insert(target_design.to_string(), possible_design_count);
-        possible_design_count
-    }
-
-    count_possible_target_design_variants_helper(target_design, available_patterns, variant_memo)
+    Ok(codes)
 }
 
 fn run(args: &[String]) -> Result<(), String> {
@@ -146,12 +148,12 @@ fn run(args: &[String]) -> Result<(), String> {
         .find(|a| a.as_str() == "-2" || a.as_str() == "--pt2")
         .is_some();
 
-    let (available_patterns, target_designs) = read_input(filename)?;
+    let codes = read_input(filename)?;
 
-    dbg!(&available_patterns);
-    dbg!(&target_designs);
+    dbg!(&codes);
 
-    let possible_designs = {
+    {
+        /*
         let mut design_test_memo = DesignTestMemoizer::new();
         let possible_designs: Vec<TargetDesign> = target_designs
             .iter()
@@ -170,34 +172,11 @@ fn run(args: &[String]) -> Result<(), String> {
         }
 
         possible_designs
-    };
+        */
+    }
 
     if do_pt2 {
-        let mut variant_count_memo = DesignVariantMemoizer::new();
-        let possible_design_variant_counts: Vec<usize> = possible_designs
-            .iter()
-            .map(|design| {
-                count_and_memo_possible_target_design_variants(
-                    &design,
-                    &available_patterns,
-                    &mut variant_count_memo,
-                )
-            })
-            .collect();
-        let sum_total_design_variant_counts: usize = possible_design_variant_counts.iter().sum();
-        println!(
-            "Pt 2: {} sum total design variants",
-            sum_total_design_variant_counts
-        );
-        if verbose {
-            println!("variant counts:");
-            for (design, variant_count) in possible_designs
-                .iter()
-                .zip(possible_design_variant_counts.iter())
-            {
-                println!("  - ({}) {}", variant_count, design);
-            }
-        }
+        unimplemented!();
     }
 
     Ok(())
