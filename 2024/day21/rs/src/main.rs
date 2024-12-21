@@ -69,6 +69,7 @@ Numpad
     +---+---+
  */
 
+#[rustfmt::skip]
 fn get_numpad_move_btn_sequence(start_btn: NumpadButton, end_btn: NumpadButton) -> Vec<DirButton> {
     match start_btn {
         NumpadButton::Btn0 => match end_btn {
@@ -216,6 +217,57 @@ fn get_numpad_move_btn_sequence(start_btn: NumpadButton, end_btn: NumpadButton) 
         },
     }
 }
+
+/*
+DirPad
+    +---+---+
+    | ^ | A |
++---+---+---+
+| < | v | > |
++---+---+---+
+ */
+
+#[rustfmt::skip]
+fn get_dirpad_move_btn_sequence(start_btn: DirButton, end_btn: DirButton) -> Vec<DirButton> {
+    match start_btn {
+        DirButton::BtnUp => match end_btn {
+            DirButton::BtnUp    => vec![],
+            DirButton::BtnDown  => vec![DirButton::BtnDown],
+            DirButton::BtnLeft  => vec![DirButton::BtnDown, DirButton::BtnLeft],
+            DirButton::BtnRight => vec![DirButton::BtnDown, DirButton::BtnRight],
+            DirButton::BtnA     => vec![DirButton::BtnRight],
+        },
+        DirButton::BtnDown => match end_btn {
+            DirButton::BtnUp    => vec![DirButton::BtnUp],
+            DirButton::BtnDown  => vec![],
+            DirButton::BtnLeft  => vec![DirButton::BtnLeft],
+            DirButton::BtnRight => vec![DirButton::BtnRight],
+            DirButton::BtnA     => vec![DirButton::BtnUp, DirButton::BtnRight],
+        },
+        DirButton::BtnLeft => match end_btn {
+            DirButton::BtnUp    => vec![DirButton::BtnRight, DirButton::BtnUp],
+            DirButton::BtnDown  => vec![DirButton::BtnRight],
+            DirButton::BtnLeft  => vec![],
+            DirButton::BtnRight => vec![DirButton::BtnRight, DirButton::BtnRight],
+            DirButton::BtnA     => vec![DirButton::BtnRight, DirButton::BtnRight, DirButton::BtnUp],
+        },
+        DirButton::BtnRight => match end_btn {
+            DirButton::BtnUp    => vec![DirButton::BtnLeft, DirButton::BtnUp],
+            DirButton::BtnDown  => vec![DirButton::BtnLeft],
+            DirButton::BtnLeft  => vec![DirButton::BtnLeft, DirButton::BtnLeft],
+            DirButton::BtnRight => vec![],
+            DirButton::BtnA     => vec![DirButton::BtnUp],
+        },
+        DirButton::BtnA => match end_btn {
+            DirButton::BtnUp    => vec![DirButton::BtnLeft],
+            DirButton::BtnDown  => vec![DirButton::BtnLeft,DirButton::BtnDown],
+            DirButton::BtnLeft  => vec![DirButton::BtnDown, DirButton::BtnLeft, DirButton::BtnLeft],
+            DirButton::BtnRight => vec![DirButton::BtnDown],
+            DirButton::BtnA     => vec![],
+        },
+    }
+}
+
 
 type Code = [NumpadButton; 4];
 
