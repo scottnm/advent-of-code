@@ -1,5 +1,5 @@
-use input_helpers;
 use core::num;
+use input_helpers;
 use std::{mem::discriminant, process::ExitCode};
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
@@ -305,7 +305,6 @@ fn get_dirpad_move_btn_sequence(start_btn: DirButton, end_btn: DirButton) -> Vec
     }
 }
 
-
 type Code = [NumpadButton; 4];
 
 fn read_char_as_numpad_btn(c: char) -> Result<NumpadButton, String> {
@@ -336,32 +335,38 @@ fn read_code_line(line: &str) -> Result<Code, String> {
     }
 
     let mut chars_itr = line.chars();
-    let numpad_btns = [ 
+    let numpad_btns = [
         read_char_as_numpad_btn(chars_itr.next().unwrap())?,
         read_char_as_numpad_btn(chars_itr.next().unwrap())?,
         read_char_as_numpad_btn(chars_itr.next().unwrap())?,
         read_char_as_numpad_btn(chars_itr.next().unwrap())?,
-        ];
+    ];
     for (i, btn) in numpad_btns[0..3].iter().enumerate() {
         if let NumpadButton::BtnA = btn {
-            return Err(format!("Invalid BtnA in position {} in code {}{}{}{}", 
-                i, 
+            return Err(format!(
+                "Invalid BtnA in position {} in code {}{}{}{}",
+                i,
                 numpad_btns[0].as_char(),
                 numpad_btns[1].as_char(),
                 numpad_btns[2].as_char(),
-                numpad_btns[3].as_char()))
+                numpad_btns[3].as_char()
+            ));
         }
     }
 
     match numpad_btns[3] {
         NumpadButton::BtnA => (),
-        _ => return Err(format!("Invalid code {}{}{}{}! Must end in BtnA",
+        _ => {
+            return Err(format!(
+                "Invalid code {}{}{}{}! Must end in BtnA",
                 numpad_btns[0].as_char(),
                 numpad_btns[1].as_char(),
                 numpad_btns[2].as_char(),
-                numpad_btns[3].as_char())),
+                numpad_btns[3].as_char()
+            ))
+        }
     }
-    
+
     Ok(numpad_btns)
 }
 
@@ -426,19 +431,33 @@ fn run(args: &[String]) -> Result<(), String> {
             if verbose {
                 println!("     code: {}", NumpadButton::stringify_seq(code));
             }
+
             let first_robot_dir_sequence = build_shortest_numpad_control_seq(code);
             if verbose {
-                println!("1st robot: {}", DirButton::stringify_seq(&first_robot_dir_sequence));
+                println!(
+                    "1st robot: {}",
+                    DirButton::stringify_seq(&first_robot_dir_sequence)
+                );
                 println!("           length = {}", first_robot_dir_sequence.len());
             }
-            let second_robot_dir_sequence = build_shortest_dirpad_control_seq(&first_robot_dir_sequence);
+
+            let second_robot_dir_sequence =
+                build_shortest_dirpad_control_seq(&first_robot_dir_sequence);
             if verbose {
-                println!("2nd robot: {}", DirButton::stringify_seq(&second_robot_dir_sequence));
+                println!(
+                    "2nd robot: {}",
+                    DirButton::stringify_seq(&second_robot_dir_sequence)
+                );
                 println!("           length = {}", second_robot_dir_sequence.len());
             }
-            let final_human_dir_sequence = build_shortest_dirpad_control_seq(&second_robot_dir_sequence);
+
+            let final_human_dir_sequence =
+                build_shortest_dirpad_control_seq(&second_robot_dir_sequence);
             if verbose {
-                println!("    human: {}", DirButton::stringify_seq(&final_human_dir_sequence));
+                println!(
+                    "    human: {}",
+                    DirButton::stringify_seq(&final_human_dir_sequence)
+                );
                 println!("           length = {}", final_human_dir_sequence.len());
             }
 
@@ -448,26 +467,6 @@ fn run(args: &[String]) -> Result<(), String> {
 
         let sum_complexity: usize = code_complexities.iter().sum();
         println!("Pt 1: sum of code complexities = {}", sum_complexity);
-        /*
-        let mut design_test_memo = DesignTestMemoizer::new();
-        let possible_designs: Vec<TargetDesign> = target_designs
-            .iter()
-            .filter(|design| {
-                is_target_design_possible(design, &available_patterns, &mut design_test_memo)
-            })
-            .cloned()
-            .collect();
-
-        println!("Pt 1: {} designs possible", possible_designs.len());
-        if verbose {
-            println!("possible designs:");
-            for design in &possible_designs {
-                println!("  - {}", design);
-            }
-        }
-
-        possible_designs
-        */
     }
 
     if do_pt2 {
