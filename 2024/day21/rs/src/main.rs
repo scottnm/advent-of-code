@@ -56,6 +56,167 @@ impl DirButton {
     }
 }
 
+/*
+Numpad
++---+---+---+
+| 7 | 8 | 9 |
++---+---+---+
+| 4 | 5 | 6 |
++---+---+---+
+| 1 | 2 | 3 |
++---+---+---+
+    | 0 | A |
+    +---+---+
+ */
+
+fn get_numpad_move_btn_sequence(start_btn: NumpadButton, end_btn: NumpadButton) -> Vec<DirButton> {
+    match start_btn {
+        NumpadButton::Btn0 => match end_btn {
+            NumpadButton::Btn0 => vec![],
+            NumpadButton::Btn1 => vec![DirButton::BtnUp, DirButton::BtnLeft],
+            NumpadButton::Btn2 => vec![DirButton::BtnUp],
+            NumpadButton::Btn3 => vec![DirButton::BtnUp, DirButton::BtnRight],
+            NumpadButton::Btn4 => vec![DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnLeft],
+            NumpadButton::Btn5 => vec![DirButton::BtnUp, DirButton::BtnUp],
+            NumpadButton::Btn6 => vec![DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnRight],
+            NumpadButton::Btn7 => vec![DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnLeft],
+            NumpadButton::Btn8 => vec![DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnUp],
+            NumpadButton::Btn9 => vec![DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnRight],
+            NumpadButton::BtnA => vec![DirButton::BtnRight],
+        },
+        NumpadButton::Btn1 => match end_btn {
+            NumpadButton::Btn0 => vec![DirButton::BtnRight, DirButton::BtnDown],
+            NumpadButton::Btn1 => vec![],
+            NumpadButton::Btn2 => vec![DirButton::BtnRight],
+            NumpadButton::Btn3 => vec![DirButton::BtnRight],
+            NumpadButton::Btn4 => vec![DirButton::BtnUp],
+            NumpadButton::Btn5 => vec![DirButton::BtnUp, DirButton::BtnRight],
+            NumpadButton::Btn6 => vec![DirButton::BtnUp, DirButton::BtnRight, DirButton::BtnRight],
+            NumpadButton::Btn7 => vec![DirButton::BtnUp, DirButton::BtnUp],
+            NumpadButton::Btn8 => vec![DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnRight],
+            NumpadButton::Btn9 => vec![DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnRight, DirButton::BtnRight],
+            NumpadButton::BtnA => vec![DirButton::BtnRight, DirButton::BtnRight, DirButton::BtnDown],
+        },
+        NumpadButton::Btn2 => match end_btn {
+            NumpadButton::Btn0 => vec![DirButton::BtnDown],
+            NumpadButton::Btn1 => vec![DirButton::BtnLeft],
+            NumpadButton::Btn2 => vec![],
+            NumpadButton::Btn3 => vec![DirButton::BtnRight],
+            NumpadButton::Btn4 => vec![DirButton::BtnUp, DirButton::BtnLeft],
+            NumpadButton::Btn5 => vec![DirButton::BtnUp],
+            NumpadButton::Btn6 => vec![DirButton::BtnUp, DirButton::BtnRight],
+            NumpadButton::Btn7 => vec![DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnLeft],
+            NumpadButton::Btn8 => vec![DirButton::BtnUp, DirButton::BtnUp],
+            NumpadButton::Btn9 => vec![DirButton::BtnUp, DirButton::BtnUp, DirButton::BtnRight],
+            NumpadButton::BtnA => vec![DirButton::BtnRight, DirButton::BtnDown],
+        },
+        NumpadButton::Btn3 => match end_btn {
+            NumpadButton::Btn0 => vec![DirButton::BtnLeft, DirButton::BtnDown],
+            NumpadButton::Btn1 => vec![],
+            NumpadButton::Btn2 => vec![],
+            NumpadButton::Btn3 => vec![],
+            NumpadButton::Btn4 => vec![],
+            NumpadButton::Btn5 => vec![],
+            NumpadButton::Btn6 => vec![],
+            NumpadButton::Btn7 => vec![],
+            NumpadButton::Btn8 => vec![],
+            NumpadButton::Btn9 => vec![],
+            NumpadButton::BtnA => vec![],
+        },
+        NumpadButton::Btn4 => match end_btn {
+            NumpadButton::Btn0 => vec![],
+            NumpadButton::Btn1 => vec![],
+            NumpadButton::Btn2 => vec![],
+            NumpadButton::Btn3 => vec![],
+            NumpadButton::Btn4 => vec![],
+            NumpadButton::Btn5 => vec![],
+            NumpadButton::Btn6 => vec![],
+            NumpadButton::Btn7 => vec![],
+            NumpadButton::Btn8 => vec![],
+            NumpadButton::Btn9 => vec![],
+            NumpadButton::BtnA => vec![],
+        },
+        NumpadButton::Btn5 => match end_btn {
+            NumpadButton::Btn0 => vec![],
+            NumpadButton::Btn1 => vec![],
+            NumpadButton::Btn2 => vec![],
+            NumpadButton::Btn3 => vec![],
+            NumpadButton::Btn4 => vec![],
+            NumpadButton::Btn5 => vec![],
+            NumpadButton::Btn6 => vec![],
+            NumpadButton::Btn7 => vec![],
+            NumpadButton::Btn8 => vec![],
+            NumpadButton::Btn9 => vec![],
+            NumpadButton::BtnA => vec![],
+        },
+        NumpadButton::Btn6 => match end_btn {
+            NumpadButton::Btn0 => vec![],
+            NumpadButton::Btn1 => vec![],
+            NumpadButton::Btn2 => vec![],
+            NumpadButton::Btn3 => vec![],
+            NumpadButton::Btn4 => vec![],
+            NumpadButton::Btn5 => vec![],
+            NumpadButton::Btn6 => vec![],
+            NumpadButton::Btn7 => vec![],
+            NumpadButton::Btn8 => vec![],
+            NumpadButton::Btn9 => vec![],
+            NumpadButton::BtnA => vec![],
+        },
+        NumpadButton::Btn7 => match end_btn {
+            NumpadButton::Btn0 => vec![],
+            NumpadButton::Btn1 => vec![],
+            NumpadButton::Btn2 => vec![],
+            NumpadButton::Btn3 => vec![],
+            NumpadButton::Btn4 => vec![],
+            NumpadButton::Btn5 => vec![],
+            NumpadButton::Btn6 => vec![],
+            NumpadButton::Btn7 => vec![],
+            NumpadButton::Btn8 => vec![],
+            NumpadButton::Btn9 => vec![],
+            NumpadButton::BtnA => vec![],
+        },
+        NumpadButton::Btn8 => match end_btn {
+            NumpadButton::Btn0 => vec![],
+            NumpadButton::Btn1 => vec![],
+            NumpadButton::Btn2 => vec![],
+            NumpadButton::Btn3 => vec![],
+            NumpadButton::Btn4 => vec![],
+            NumpadButton::Btn5 => vec![],
+            NumpadButton::Btn6 => vec![],
+            NumpadButton::Btn7 => vec![],
+            NumpadButton::Btn8 => vec![],
+            NumpadButton::Btn9 => vec![],
+            NumpadButton::BtnA => vec![],
+        },
+        NumpadButton::Btn9 => match end_btn {
+            NumpadButton::Btn0 => vec![],
+            NumpadButton::Btn1 => vec![],
+            NumpadButton::Btn2 => vec![],
+            NumpadButton::Btn3 => vec![],
+            NumpadButton::Btn4 => vec![],
+            NumpadButton::Btn5 => vec![],
+            NumpadButton::Btn6 => vec![],
+            NumpadButton::Btn7 => vec![],
+            NumpadButton::Btn8 => vec![],
+            NumpadButton::Btn9 => vec![],
+            NumpadButton::BtnA => vec![],
+        },
+        NumpadButton::BtnA => match end_btn {
+            NumpadButton::Btn0 => vec![],
+            NumpadButton::Btn1 => vec![],
+            NumpadButton::Btn2 => vec![],
+            NumpadButton::Btn3 => vec![],
+            NumpadButton::Btn4 => vec![],
+            NumpadButton::Btn5 => vec![],
+            NumpadButton::Btn6 => vec![],
+            NumpadButton::Btn7 => vec![],
+            NumpadButton::Btn8 => vec![],
+            NumpadButton::Btn9 => vec![],
+            NumpadButton::BtnA => vec![],
+        },
+    }
+}
+
 type Code = [NumpadButton; 4];
 
 fn read_char_as_numpad_btn(c: char) -> Result<NumpadButton, String> {
