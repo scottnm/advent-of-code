@@ -1,5 +1,5 @@
 use input_helpers;
-use std::{env::join_paths, process::ExitCode};
+use std::process::ExitCode;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -34,7 +34,7 @@ fn run(args: &[String]) -> Result<(), String> {
 
         let final_secret_values_sum: u64 = final_secret_values.iter().sum();
 
-        if initial_secret_values.len() <  20 {
+        if verbose || initial_secret_values.len() <  20 {
             println!("after {} secret gen steps...", secret_gen_count);
             for (initial_secret, final_secret) in initial_secret_values.iter().zip(final_secret_values.iter()) {
                 println!("{}: {}", initial_secret, final_secret);
@@ -62,6 +62,16 @@ fn run(args: &[String]) -> Result<(), String> {
             
             buyer_secret_sequence_price_maps
         };
+
+        if verbose {
+            println!("sell prices for each buyer's known sequence values: ({})", buyer_secret_sequence_price_maps.len());
+            for (buyer_id, sell_sequence_price_map) in buyer_secret_sequence_price_maps.iter() {
+                println!("\t[{}]", buyer_id);
+                for (sell_sequence, price) in sell_sequence_price_map.iter() {
+                    println!("\t\t{},{},{},{} = ${}", sell_sequence.0, sell_sequence.1, sell_sequence.2, sell_sequence.3, price);
+                }
+            }
+        }
 
         let sell_sequence_prices = { 
             let mut sell_sequence_prices = std::collections::HashMap::<SellSequence, std::collections::HashMap<BuyerId, i8>>::new();
@@ -108,7 +118,7 @@ fn run(args: &[String]) -> Result<(), String> {
 
         let max_sell_sequence = sell_sequence_totals
             .iter()
-            .min_by_key(|(_sell_sequence, total_sell_value)| *total_sell_value)
+            .max_by_key(|(_sell_sequence, total_sell_value)| *total_sell_value)
             .map(|(sell_seq_ref, sell_value_ref)| (*sell_seq_ref, *sell_value_ref));
         if let Some((sell_sequence, total)) = max_sell_sequence {
             println!("Pt 2:\t\ntotal={}\t\nseq={},{},{},{}",
@@ -166,7 +176,7 @@ fn prune_secret(secret: u64) -> u64 {
 
 fn gen_nth_secret(initial_secret_value: u64, secret_gen_count: usize) -> u64 {
     let mut curr_secret_value = initial_secret_value;
-    for i in 0..secret_gen_count {
+    for _ in 0..secret_gen_count {
         curr_secret_value = do_secret_gen(curr_secret_value);
     }
 
@@ -175,22 +185,46 @@ fn gen_nth_secret(initial_secret_value: u64, secret_gen_count: usize) -> u64 {
 
 type SellSequence = (i8, i8, i8, i8);
 type BuyerId = u64;
-type BuyerPriceMap = std::collections::HashMap<BuyerId, i8>;
-type SellSequenceValueMap = std::collections::HashMap<SellSequence, BuyerPriceMap>;
 
 fn calculate_sell_sequence_values_for_buyer(buyer_secret_seq: &[u64]) -> (BuyerId, std::collections::HashMap<SellSequence, i8>) {
-    assert!(!buyer_secret_seq.is_empty());
+    if buyer_secret_seq.is_empty() {
+        panic!("Invalid secret sequence! Must at least have initial secret value but secret list is empty");
+    }
+
     let buyer_id = buyer_secret_seq[0];
+
+    // if we don't have at least 5 secret values we can't construct a sell sequence so the returned map should be empty
+    if buyer_secret_seq.len() < 5 {
+        return (buyer_id, std::collections::HashMap::<SellSequence, i8>::new());
+    }
+
     let mut sell_sequence_prices = std::collections::HashMap::<SellSequence, i8>::new();
 
-    unimplemented!();
+    let prices: Vec<i8> = buyer_secret_seq.iter().map(|secret| get_price_from_secret_value(*secret)).collect();
+    let price_changes = {
+        let mut price_changes = Vec::with_capacity(prices.len() - 1);
+        for i in 1..prices.len() {
+            let price_change = prices[i] - prices[i - 1];
+            price_changes.push(price_change);
+        }
+        price_changes
+    };
+
+    for i in 4..prices.len() {
+        let sell_sequence = (price_changes[i-4], price_changes[i-3], price_changes[i-2], price_changes[i-1]);
+        if let std::collections::hash_map::Entry::Vacant(slot) = sell_sequence_prices.entry(sell_sequence) {
+            slot.insert(prices[i]);
+        }
+        assert!(sell_sequence_prices.contains_key(&sell_sequence));
+    }
+
     (buyer_id, sell_sequence_prices)
 }
 
 fn generate_secret_sequence(initial_secret_value: u64, secret_gen_count: usize) -> Vec<u64> {
     let mut curr_secret_value = initial_secret_value;
     let mut seq = vec![ initial_secret_value ];
-    for i in 0..secret_gen_count {
+    for _ in 0..secret_gen_count {
         curr_secret_value = do_secret_gen(curr_secret_value);
         seq.push(curr_secret_value)
     }
