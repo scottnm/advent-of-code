@@ -461,6 +461,12 @@ fn run(args: &[String]) -> Result<(), String> {
                 println!("           length = {}", final_human_dir_sequence.len());
             }
 
+            if !verbose {
+                println!("{}: {}",
+                    NumpadButton::stringify_seq(code),
+                    DirButton::stringify_seq(&final_human_dir_sequence));
+            }
+
             let code_complexity = final_human_dir_sequence.len() * NumpadButton::get_numeric(code);
             code_complexities.push(code_complexity);
         }
