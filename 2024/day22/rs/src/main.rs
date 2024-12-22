@@ -67,5 +67,28 @@ fn read_input(filename: &str) -> Result<Vec<u64>, String> {
 }
 
 fn do_secret_gen(initial_secret_value: u64, secret_gen_count: usize) -> u64 {
-    unimplemented!();
+    let mut curr_secret_value = initial_secret_value;
+    for i in 0..secret_gen_count {
+        // secret gen phase 1
+        curr_secret_value = mix_secret(curr_secret_value, curr_secret_value * 64);
+        curr_secret_value = prune_secret(curr_secret_value);
+
+        // secret gen phase 2
+        curr_secret_value = mix_secret(curr_secret_value, curr_secret_value / 32);
+        curr_secret_value = prune_secret(curr_secret_value);
+
+        // secret gen phase 3
+        curr_secret_value = mix_secret(curr_secret_value, curr_secret_value * 2048);
+        curr_secret_value = prune_secret(curr_secret_value);
+    }
+
+    curr_secret_value
+}
+
+fn mix_secret(secret: u64, mix_value: u64) -> u64 {
+    secret ^ mix_value
+}
+
+fn prune_secret(secret: u64) -> u64 {
+    secret % 16777216
 }
