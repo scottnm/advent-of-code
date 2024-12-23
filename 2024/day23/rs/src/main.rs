@@ -1,6 +1,8 @@
 use input_helpers;
 use std::process::ExitCode;
 
+type CpuName = [char;2];
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match run(&args) {
@@ -23,7 +25,8 @@ fn run(args: &[String]) -> Result<(), String> {
         .find(|a| a.as_str() == "-2" || a.as_str() == "--pt2")
         .is_some();
 
-    let _ = read_input(filename)?;
+    let connections = read_input(filename)?;
+    dbg!(&connections); 
 
     /*
     {
@@ -56,17 +59,21 @@ fn run(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-fn read_input(filename: &str) -> Result<Vec<u64>, String> {
+fn read_input(filename: &str) -> Result<Vec<(String,String)>, String> {
     let lines: Vec<String> = input_helpers::read_lines(filename).collect();
 
-    let mut initial_secrets: Vec<u64> = vec![];
+    let mut connections: Vec<(String, String)> = vec![];
 
     for line in lines {
-        let next_secret: u64 = line
-            .parse()
-            .map_err(|_| format!("Failed to parse '{}' as u64", line))?;
-        initial_secrets.push(next_secret);
+        let mut split_itr = line.split('-');
+        let cpu1 = split_itr.next().ok_or(format!("Missing first cpu on line {}", line))?;
+        let cpu2 = split_itr.next().ok_or(format!("Missing second cpu on line {}", line))?;
+        if let Some(v) = split_itr.next() {
+            return Err(format!("Unexpected values on line {}", line));
+        }
+
+        connections.push((cpu1.to_string(), cpu2.to_string()));
     }
 
-    Ok(initial_secrets)
+    Ok(connections)
 }
