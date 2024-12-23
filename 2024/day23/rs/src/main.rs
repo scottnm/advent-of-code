@@ -1,6 +1,6 @@
 use input_helpers;
-use std::process::ExitCode;
 use itertools::Itertools;
+use std::process::ExitCode;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -25,7 +25,6 @@ fn run(args: &[String]) -> Result<(), String> {
         .is_some();
 
     let connections = read_input(filename)?;
-    dbg!(&connections); 
 
     {
         let parties = find_3p_parties(&connections);
@@ -48,23 +47,29 @@ fn run(args: &[String]) -> Result<(), String> {
     if do_pt2 {
         let largest_party = find_largest_party(&connections);
         let password = get_party_password(&largest_party);
-        println!("Pt 2:\n\tlargest party = [{}]\n\tpassword = {}", 
-            largest_party.join(","), 
-            password);
+        println!(
+            "Pt 2:\n\tlargest party = [{}]\n\tpassword = {}",
+            largest_party.join(","),
+            password
+        );
     }
 
     Ok(())
 }
 
-fn read_input(filename: &str) -> Result<Vec<(String,String)>, String> {
+fn read_input(filename: &str) -> Result<Vec<(String, String)>, String> {
     let lines: Vec<String> = input_helpers::read_lines(filename).collect();
 
     let mut connections: Vec<(String, String)> = vec![];
 
     for line in lines {
         let mut split_itr = line.split('-');
-        let cpu1 = split_itr.next().ok_or(format!("Missing first cpu on line {}", line))?;
-        let cpu2 = split_itr.next().ok_or(format!("Missing second cpu on line {}", line))?;
+        let cpu1 = split_itr
+            .next()
+            .ok_or(format!("Missing first cpu on line {}", line))?;
+        let cpu2 = split_itr
+            .next()
+            .ok_or(format!("Missing second cpu on line {}", line))?;
         if let Some(_) = split_itr.next() {
             return Err(format!("Unexpected values on line {}", line));
         }
@@ -76,29 +81,30 @@ fn read_input(filename: &str) -> Result<Vec<(String,String)>, String> {
 }
 
 fn find_3p_parties(connections: &[(String, String)]) -> Vec<(String, String, String)> {
-    let mut per_pc_connections = std::collections::HashMap::<&str, std::collections::HashSet<&str>>::new();
+    let mut per_pc_connections =
+        std::collections::HashMap::<&str, std::collections::HashSet<&str>>::new();
 
     for (pc, other_pc) in connections.iter() {
         match per_pc_connections.entry(pc) {
             std::collections::hash_map::Entry::Occupied(existing_slot) => {
                 existing_slot.into_mut().insert(&other_pc);
-            },
+            }
             std::collections::hash_map::Entry::Vacant(vacant_slot) => {
                 let mut pc_connection_set = std::collections::HashSet::<&str>::new();
                 pc_connection_set.insert(&other_pc);
                 vacant_slot.insert(pc_connection_set);
-            },
+            }
         }
 
         match per_pc_connections.entry(other_pc) {
             std::collections::hash_map::Entry::Occupied(existing_slot) => {
                 existing_slot.into_mut().insert(&pc);
-            },
+            }
             std::collections::hash_map::Entry::Vacant(vacant_slot) => {
                 let mut pc_connection_set = std::collections::HashSet::<&str>::new();
                 pc_connection_set.insert(&pc);
                 vacant_slot.insert(pc_connection_set);
-            },
+            }
         }
     }
 
@@ -125,15 +131,13 @@ fn find_3p_parties(connections: &[(String, String)]) -> Vec<(String, String, Str
 }
 
 fn party_has_chief(party: &(String, String, String)) -> bool {
-    party.0.starts_with('t') ||
-    party.1.starts_with('t') ||
-    party.2.starts_with('t')
+    party.0.starts_with('t') || party.1.starts_with('t') || party.2.starts_with('t')
 }
 
 fn are_all_pcs_connected(
     pcs: &[&str],
-    connections: &std::collections::HashMap::<&str, std::collections::HashSet<&str>>,
-    ) -> bool {
+    connections: &std::collections::HashMap<&str, std::collections::HashSet<&str>>,
+) -> bool {
     for (pc_a, pc_b) in pcs.iter().tuple_combinations() {
         if let Some(pc_a_connections) = connections.get(pc_a) {
             if !pc_a_connections.contains(pc_b) {
@@ -150,29 +154,30 @@ fn are_all_pcs_connected(
 }
 
 fn find_largest_party(connections: &[(String, String)]) -> Vec<String> {
-    let mut per_pc_connections = std::collections::HashMap::<&str, std::collections::HashSet<&str>>::new();
+    let mut per_pc_connections =
+        std::collections::HashMap::<&str, std::collections::HashSet<&str>>::new();
 
     for (pc, other_pc) in connections.iter() {
         match per_pc_connections.entry(pc) {
             std::collections::hash_map::Entry::Occupied(existing_slot) => {
                 existing_slot.into_mut().insert(&other_pc);
-            },
+            }
             std::collections::hash_map::Entry::Vacant(vacant_slot) => {
                 let mut pc_connection_set = std::collections::HashSet::<&str>::new();
                 pc_connection_set.insert(&other_pc);
                 vacant_slot.insert(pc_connection_set);
-            },
+            }
         }
 
         match per_pc_connections.entry(other_pc) {
             std::collections::hash_map::Entry::Occupied(existing_slot) => {
                 existing_slot.into_mut().insert(&pc);
-            },
+            }
             std::collections::hash_map::Entry::Vacant(vacant_slot) => {
                 let mut pc_connection_set = std::collections::HashSet::<&str>::new();
                 pc_connection_set.insert(&pc);
                 vacant_slot.insert(pc_connection_set);
-            },
+            }
         }
     }
 
@@ -181,8 +186,9 @@ fn find_largest_party(connections: &[(String, String)]) -> Vec<String> {
 
     for (pc_1, pc_1_connections) in per_pc_connections.iter() {
         let pc_1_connections_vec: Vec<&str> = pc_1_connections.iter().cloned().collect();
-        for n in (1..pc_1_connections_vec.len()+1).rev() {
-            for pc_1_connections_n_subparty in pc_1_connections_vec.iter().cloned().combinations(n) {
+        for n in (1..pc_1_connections_vec.len() + 1).rev() {
+            for pc_1_connections_n_subparty in pc_1_connections_vec.iter().cloned().combinations(n)
+            {
                 if known_subparties.contains(&pc_1_connections_n_subparty) {
                     // we've already accounted for this subparty and all subparties within.
                     // don't bother re-checking.
@@ -216,10 +222,7 @@ fn find_largest_party(connections: &[(String, String)]) -> Vec<String> {
         }
     }
 
-    largest_party
-        .iter()
-        .map(|p| p.to_string())
-        .collect()
+    largest_party.iter().map(|p| p.to_string()).collect()
 }
 
 fn get_party_password(pcs_in_party: &[String]) -> String {
