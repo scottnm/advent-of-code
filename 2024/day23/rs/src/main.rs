@@ -28,29 +28,29 @@ fn run(args: &[String]) -> Result<(), String> {
     let connections = read_input(filename)?;
     dbg!(&connections); 
 
-    /*
     {
-        let final_secret_values: Vec<u64> = initial_secret_values
+        let parties = find_parties(&connections);
+        let chiefs_parties: Vec<(String, String, String)> = parties
             .iter()
-            .map(|secret| gen_nth_secret(*secret, secret_gen_count))
+            .filter(|p| party_has_chief(p))
+            .cloned()
             .collect();
 
-        let final_secret_values_sum: u64 = final_secret_values.iter().sum();
-
-        if verbose || initial_secret_values.len() < 20 {
-            println!("after {} secret gen steps...", secret_gen_count);
-            for (initial_secret, final_secret) in
-                initial_secret_values.iter().zip(final_secret_values.iter())
-            {
-                println!("{}: {}", initial_secret, final_secret);
+        let mut parties_with_chief = 0;
+        for p in parties {
+            if party_has_chief(&p) {
+                parties_with_chief += 1;
+                if verbose {
+                    println!(" - {},{},{} (HAS CHIEF)", p.0, p.1, p.2);
+                }
+            } else {
+                if verbose {
+                    println!(" - {},{},{}", p.0, p.1, p.2);
+                }
             }
         }
-
-        println!(
-            "pt 1: {}th secret sums = {}",
-            secret_gen_count, final_secret_values_sum
-        );
-    } */
+        println!("Pt1. # parties with chief: {}", parties_with_chief);
+    }
 
     if do_pt2 {
         unimplemented!();
@@ -76,4 +76,14 @@ fn read_input(filename: &str) -> Result<Vec<(String,String)>, String> {
     }
 
     Ok(connections)
+}
+
+fn find_parties(connections: &[(String, String)]) -> Vec<(String, String, String)> {
+    unimplemented!();
+}
+
+fn party_has_chief(party: &(String, String, String)) -> bool {
+    party.0.starts_with('t') ||
+    party.1.starts_with('t') ||
+    party.2.starts_with('t')
 }
