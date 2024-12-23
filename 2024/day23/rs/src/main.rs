@@ -1,5 +1,5 @@
 use input_helpers;
-use std::process::ExitCode;
+use std::process::{exit, ExitCode};
 
 type CpuName = [char;2];
 
@@ -81,6 +81,30 @@ fn read_input(filename: &str) -> Result<Vec<(String,String)>, String> {
 fn find_parties(connections: &[(String, String)]) -> Vec<(String, String, String)> {
     let mut per_pc_connections = std::collections::HashMap::<&str, std::collections::HashSet<&str>>::new();
 
+    for (pc, other_pc) in connections.iter() {
+        match per_pc_connections.entry(pc) {
+            std::collections::hash_map::Entry::Occupied(existing_slot) => {
+                existing_slot.into_mut().insert(&other_pc);
+            },
+            std::collections::hash_map::Entry::Vacant(vacant_slot) => {
+                let mut pc_connection_set = std::collections::HashSet::<&str>::new();
+                pc_connection_set.insert(&other_pc);
+                vacant_slot.insert(pc_connection_set);
+            },
+        }
+
+        match per_pc_connections.entry(other_pc) {
+            std::collections::hash_map::Entry::Occupied(existing_slot) => {
+                existing_slot.into_mut().insert(&pc);
+            },
+            std::collections::hash_map::Entry::Vacant(vacant_slot) => {
+                let mut pc_connection_set = std::collections::HashSet::<&str>::new();
+                pc_connection_set.insert(&pc);
+                vacant_slot.insert(pc_connection_set);
+            },
+        }
+    }
+
     // FIXME: remove
     if per_pc_connections.is_empty() {
         unimplemented!("need to fill per_pc_connections");
@@ -88,9 +112,18 @@ fn find_parties(connections: &[(String, String)]) -> Vec<(String, String, String
 
     let mut parties = std::collections::HashSet::<(&str, &str, &str)>::new();
 
-    // FIXME: remove
-    if parties.is_empty() {
-        unimplemented!("need to fill parties");
+    for (pc_1, pc_1_connections) in per_pc_connections.iter() {
+        let pc_1_connections_vec: Vec<&str> = pc_1_connections.iter().cloned().collect();
+        for (pc_2_index, pc_2) in pc_1_connections_vec.iter().enumerate() {
+            for pc_3 in &pc_1_connections_vec[pc_2_index..] {
+                if per_pc_connections.get(pc_2).unwrap().contains(pc_3) {
+                    let mut pcs = [pc_1, pc_2, pc_3];
+                    pcs.sort();
+
+                    parties.insert((pcs[0], pcs[1], pcs[2]));
+                }
+            }
+        }
     }
 
     parties
