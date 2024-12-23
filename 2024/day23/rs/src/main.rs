@@ -79,7 +79,24 @@ fn read_input(filename: &str) -> Result<Vec<(String,String)>, String> {
 }
 
 fn find_parties(connections: &[(String, String)]) -> Vec<(String, String, String)> {
-    unimplemented!();
+    let mut per_pc_connections = std::collections::HashMap::<&str, std::collections::HashSet<&str>>::new();
+
+    // FIXME: remove
+    if per_pc_connections.is_empty() {
+        unimplemented!("need to fill per_pc_connections");
+    }
+
+    let mut parties = std::collections::HashSet::<(&str, &str, &str)>::new();
+
+    // FIXME: remove
+    if parties.is_empty() {
+        unimplemented!("need to fill parties");
+    }
+
+    parties
+        .iter()
+        .map(|p| (p.0.to_string(), p.1.to_string(), p.2.to_string()))
+        .collect()
 }
 
 fn party_has_chief(party: &(String, String, String)) -> bool {
