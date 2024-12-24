@@ -31,50 +31,8 @@ fn run(args: &[String]) -> Result<(), String> {
 
     {
         let result_wire_values = run_wire_operations(&operations, &initial_wire_states);
-        
-        let mut next_z_wire_position = 0;
-        let mut z_value = 0;
-        loop {
-            let next_z_wire_name = format!("z{:02}", next_z_wire_position);
-            if let Some(next_z_wire_set) = result_wire_values.get(&next_z_wire_name) {
-                if *next_z_wire_set {
-                    let bit_value = (2 as usize).pow(next_z_wire_position);
-                    z_value += bit_value;
-                    if verbose {
-                        println!("z-bit {} set! New z-value {} ({})", next_z_wire_name, z_value, z_value);
-                    }
-                } else {
-                    if verbose {
-                        println!("z-bit {} not set. Z-value still {} ({})", next_z_wire_name, z_value, z_value);
-                    }
-                }
-            } else {
-                if verbose {
-                    println!("Z-bit {} not found! Assuming end of z-bits", next_z_wire_name);
-                }
-                break;
-            }
-            next_z_wire_position += 1;
-        }
-
+        let z_value = sum_wire_bits_as_binary_value('z', &result_wire_values);
         println!("Pt1. z value: {} ({:#b})", z_value, z_value);
-        /*
-        let parties = find_3p_parties(&connections);
-        let mut parties_with_chief = 0;
-        for p in parties {
-            if party_has_chief(&p) {
-                parties_with_chief += 1;
-                if verbose {
-                    println!(" - {},{},{} (HAS CHIEF)", p.0, p.1, p.2);
-                }
-            } else {
-                if verbose {
-                    println!(" - {},{},{}", p.0, p.1, p.2);
-                }
-            }
-        }
-        println!("Pt1. # parties with chief: {}", parties_with_chief);
-        */
     }
 
     if do_pt2 {
@@ -228,4 +186,25 @@ fn run_wire_operations(operations: &[Operation], initial_wire_values: &WireValue
     }
 
     wire_values
+}
+
+fn sum_wire_bits_as_binary_value(wire_set_char: char, wire_values: &WireValues) -> usize {
+    let mut next_wire_position = 0;
+    let mut wire_set_value = 0;
+    loop {
+        let next_wire_name = format!("{}{:02}", 
+            wire_set_char, 
+            next_wire_position);
+        if let Some(next_wire_is_set) = wire_values.get(&next_wire_name) {
+            if *next_wire_is_set {
+                let bit_value = (2 as usize).pow(next_wire_position);
+                wire_set_value += bit_value;
+            } 
+        } else {
+            break;
+        }
+        next_wire_position += 1;
+    }
+
+    wire_set_value
 }
