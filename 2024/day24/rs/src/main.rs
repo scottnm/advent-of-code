@@ -30,6 +30,34 @@ fn run(args: &[String]) -> Result<(), String> {
     dbg!(&operations);
 
     {
+        let result_wire_values = run_wire_operations(&operations, &initial_wire_states);
+        
+        let mut next_z_wire_position = 0;
+        let mut z_value = 0;
+        loop {
+            let next_z_wire_name = format!("z{:02}", next_z_wire_position);
+            if let Some(next_z_wire_set) = result_wire_values.get(&next_z_wire_name) {
+                if *next_z_wire_set {
+                    let bit_value = (2 as usize).pow(next_z_wire_position);
+                    z_value += bit_value;
+                    if verbose {
+                        println!("z-bit {} set! New z-value {} ({})", next_z_wire_name, z_value, z_value);
+                    }
+                } else {
+                    if verbose {
+                        println!("z-bit {} not set. Z-value still {} ({})", next_z_wire_name, z_value, z_value);
+                    }
+                }
+            } else {
+                if verbose {
+                    println!("Z-bit {} not found! Assuming end of z-bits", next_z_wire_name);
+                }
+                break;
+            }
+            next_z_wire_position += 1;
+        }
+
+        println!("Pt1. z value: {} ({:#b})", z_value, z_value);
         /*
         let parties = find_3p_parties(&connections);
         let mut parties_with_chief = 0;
@@ -154,4 +182,9 @@ fn read_input(filename: &str) -> Result<(WireValues, Vec<Operation>), String> {
     }
 
     Ok((initial_wire_values, operations))
+}
+
+fn run_wire_operations(operations: &[Operation], initial_wire_values: &WireValues) -> WireValues {
+    let mut wire_values = initial_wire_values.clone();
+    wire_values
 }
