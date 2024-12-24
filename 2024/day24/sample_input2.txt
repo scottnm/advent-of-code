@@ -1,0 +1,9 @@
+ta-aa
+ta-bb
+aa-bb
+tb-aa
+tc-bb
+tc-tb
+dd-ee
+dd-ff
+ee-ff
