@@ -1,6 +1,6 @@
 use input_helpers;
-use std::process::ExitCode;
 use regex;
+use std::process::ExitCode;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -79,14 +79,8 @@ fn read_input(filename: &str) -> Result<(WireValues, Vec<Operation>), String> {
         let wire_line_match = wire_value_line_re
             .captures(line)
             .ok_or(format!("Invalid wire line {}", line))?;
-        let wire = wire_line_match
-            .get(1)
-            .unwrap()
-            .as_str();
-        let is_wire_set_value = wire_line_match
-            .get(2)
-            .unwrap()
-            .as_str();
+        let wire = wire_line_match.get(1).unwrap().as_str();
+        let is_wire_set_value = wire_line_match.get(2).unwrap().as_str();
         let is_wire_set = match is_wire_set_value {
             "1" => true,
             "0" => false,
@@ -95,39 +89,27 @@ fn read_input(filename: &str) -> Result<(WireValues, Vec<Operation>), String> {
 
         let old_wire_value = initial_wire_values.insert(wire.to_string(), is_wire_set);
         if let Some(old_wire_value) = old_wire_value {
-            return Err(format!("Wire value {} initialized twice! (first {}, then {})", 
-                wire, 
-                old_wire_value, 
-                is_wire_set));
+            return Err(format!(
+                "Wire value {} initialized twice! (first {}, then {})",
+                wire, old_wire_value, is_wire_set
+            ));
         }
     }
 
-    let operation_lines = &lines[separator_line_idx+1..];
+    let operation_lines = &lines[separator_line_idx + 1..];
 
     for line in operation_lines {
-        let operation_line_match = operation_line_re 
+        let operation_line_match = operation_line_re
             .captures(line)
             .ok_or(format!("Invalid operation line {}", line))?;
 
-        let wire_a = operation_line_match
-            .get(1)
-            .unwrap()
-            .as_str();
+        let wire_a = operation_line_match.get(1).unwrap().as_str();
 
-        let operation_type_value = operation_line_match  
-            .get(2)
-            .unwrap()
-            .as_str();
+        let operation_type_value = operation_line_match.get(2).unwrap().as_str();
 
-        let wire_b = operation_line_match
-            .get(3)
-            .unwrap()
-            .as_str();
+        let wire_b = operation_line_match.get(3).unwrap().as_str();
 
-        let result_wire = operation_line_match
-            .get(4)
-            .unwrap()
-            .as_str();
+        let result_wire = operation_line_match.get(4).unwrap().as_str();
 
         let operation_type = match operation_type_value {
             "AND" => OperationType::And,
@@ -136,7 +118,12 @@ fn read_input(filename: &str) -> Result<(WireValues, Vec<Operation>), String> {
             _ => panic!("Unexpected operation type match {}", operation_type_value),
         };
 
-        let operation = Operation { op: operation_type, wire_a: wire_a.to_string(), wire_b: wire_b.to_string(), result_wire: result_wire.to_string() };
+        let operation = Operation {
+            op: operation_type,
+            wire_a: wire_a.to_string(),
+            wire_b: wire_b.to_string(),
+            result_wire: result_wire.to_string(),
+        };
         operations.push(operation);
     }
 
@@ -192,14 +179,12 @@ fn sum_wire_bits_as_binary_value(wire_set_char: char, wire_values: &WireValues) 
     let mut next_wire_position = 0;
     let mut wire_set_value = 0;
     loop {
-        let next_wire_name = format!("{}{:02}", 
-            wire_set_char, 
-            next_wire_position);
+        let next_wire_name = format!("{}{:02}", wire_set_char, next_wire_position);
         if let Some(next_wire_is_set) = wire_values.get(&next_wire_name) {
             if *next_wire_is_set {
                 let bit_value = (2 as usize).pow(next_wire_position);
                 wire_set_value += bit_value;
-            } 
+            }
         } else {
             break;
         }
