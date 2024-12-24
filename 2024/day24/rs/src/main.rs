@@ -23,6 +23,7 @@ fn run(args: &[String]) -> Result<(), String> {
         .iter()
         .find(|a| a.as_str() == "-2" || a.as_str() == "--pt2")
         .is_some();
+    let pt2_pair_count: Option<usize> = input_helpers::get_parsed_arg_by_key(args, "pt2")?;
 
     let (initial_wire_states, operations) = read_input(filename)?;
 
@@ -35,8 +36,23 @@ fn run(args: &[String]) -> Result<(), String> {
         println!("Pt1. z value: {} ({:#b})", z_value, z_value);
     }
 
-    if do_pt2 {
-        unimplemented!();
+    if let Some(pair_count) = pt2_pair_count {
+        let swapped_wire_names: Vec<String> = {
+            let swapped_wire_pairs =
+                find_pt2_wire_pairs(pair_count, &operations, &initial_wire_states);
+            let mut swapped_wires = vec![];
+            for (wire_a, wire_b) in &swapped_wire_pairs {
+                swapped_wires.push(wire_a.as_str());
+                swapped_wires.push(wire_b.as_str());
+            }
+
+            swapped_wires.sort();
+
+            swapped_wires.iter().map(|s| s.to_string()).collect()
+        };
+
+        let pt2_result = swapped_wire_names.join(",");
+        println!("Pt2. result={} ({} pairs)", pt2_result, pair_count);
     }
 
     Ok(())
@@ -192,4 +208,14 @@ fn sum_wire_bits_as_binary_value(wire_set_char: char, wire_values: &WireValues) 
     }
 
     wire_set_value
+}
+
+fn find_pt2_wire_pairs(
+    pair_count: usize,
+    operations: &[Operation],
+    initial_wire_values: &WireValues,
+) -> Vec<(String, String)> {
+    let mut wire_pairs = vec![];
+
+    wire_pairs
 }

@@ -104,6 +104,30 @@ where
     }
 }
 
+pub fn get_parsed_arg_by_key<T>(args: &[String], key: &str) -> Result<Option<T>, String>
+where
+    T: std::str::FromStr,
+{
+    let key_prefix = format!("{}=", key);
+    let mut arg_value = None;
+    for a in args {
+        if a.starts_with(&key_prefix) {
+            arg_value = Some(a[key_prefix.len()..].to_string());
+            break;
+        }
+    }
+
+    if let Some(arg_value) = arg_value {
+        match arg_value.parse() {
+            Ok(v) => Ok(Some(v)),
+            Err(_) => Err(format!("Failed to parse arg value! '{}'", arg_value)),
+        }
+    } else {
+        Ok(None)
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     #[test]
