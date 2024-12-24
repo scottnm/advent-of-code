@@ -86,18 +86,19 @@ fn run(args: &[String]) -> Result<(), String> {
 
 type WireValues = std::collections::HashMap<String, bool>;
 
-#[derive(Debug)]
-struct OperationData {
-    wire_1: String,
-    wire_2: String,
+#[derive(Debug, Clone)]
+struct Operation {
+    op: OperationType,
+    wire_a: String,
+    wire_b: String,
     result_wire: String,
 }
 
-#[derive(Debug)]
-enum Operation {
-    And(OperationData),
-    Or(OperationData),
-    Xor(OperationData),
+#[derive(Debug, Clone)]
+enum OperationType {
+    And,
+    Or,
+    Xor,
 }
 
 fn read_input(filename: &str) -> Result<(WireValues, Vec<Operation>), String> {
@@ -150,17 +151,17 @@ fn read_input(filename: &str) -> Result<(WireValues, Vec<Operation>), String> {
             .captures(line)
             .ok_or(format!("Invalid operation line {}", line))?;
 
-        let wire_1 = operation_line_match
+        let wire_a = operation_line_match
             .get(1)
             .unwrap()
             .as_str();
 
-        let operation_type = operation_line_match  
+        let operation_type_value = operation_line_match  
             .get(2)
             .unwrap()
             .as_str();
 
-        let wire_2 = operation_line_match
+        let wire_b = operation_line_match
             .get(3)
             .unwrap()
             .as_str();
@@ -170,14 +171,14 @@ fn read_input(filename: &str) -> Result<(WireValues, Vec<Operation>), String> {
             .unwrap()
             .as_str();
 
-        let operation_data = OperationData { wire_1: wire_1.to_string(), wire_2: wire_2.to_string(), result_wire: result_wire.to_string() };
-        let operation = match operation_type {
-            "AND" => Operation::And(operation_data),
-            "OR" => Operation::Or(operation_data),
-            "XOR" => Operation::Xor(operation_data),
-            _ => panic!("Unexpected operation type match {}", operation_type),
+        let operation_type = match operation_type_value {
+            "AND" => OperationType::And,
+            "OR" => OperationType::Or,
+            "XOR" => OperationType::Xor,
+            _ => panic!("Unexpected operation type match {}", operation_type_value),
         };
 
+        let operation = Operation { op: operation_type, wire_a: wire_a.to_string(), wire_b: wire_b.to_string(), result_wire: result_wire.to_string() };
         operations.push(operation);
     }
 
@@ -186,5 +187,45 @@ fn read_input(filename: &str) -> Result<(WireValues, Vec<Operation>), String> {
 
 fn run_wire_operations(operations: &[Operation], initial_wire_values: &WireValues) -> WireValues {
     let mut wire_values = initial_wire_values.clone();
+
+    let mut operations_remaining = operations.to_vec();
+
+    // FIXME: rather than looping and relooping, there are smarter ways to process this to run faster.
+    // For every new result, check which operations are affected by that result and do those first
+    while !operations_remaining.is_empty() {
+        let prev_operations_remaining_count = operations_remaining.len();
+
+        let mut next_operation_idx = 0;
+        while next_operation_idx < operations_remaining.len() {
+            let next_operation = &operations_remaining[next_operation_idx];
+
+            // any remaining operations should not write to an already calculated wire value
+            assert!(!wire_values.contains_key(&next_operation.result_wire));
+
+            let mut operation_completed = false;
+            if let Some(wire_a_set) = wire_values.get(&next_operation.wire_a) {
+                if let Some(wire_b_set) = wire_values.get(&next_operation.wire_b) {
+                    let result = match next_operation.op {
+                        OperationType::And => *wire_a_set && *wire_b_set,
+                        OperationType::Or => *wire_a_set || *wire_b_set,
+                        OperationType::Xor => *wire_a_set != *wire_b_set,
+                    };
+
+                    wire_values.insert(next_operation.result_wire.clone(), result);
+                    operation_completed = true;
+                }
+            }
+
+            if operation_completed {
+                operations_remaining.remove(next_operation_idx);
+            } else {
+                next_operation_idx += 1;
+            }
+        }
+
+        // This has to change across loop iterations or we've gotten stuck and aren't making progress.
+        assert!(operations_remaining.len() != prev_operations_remaining_count);
+    }
+
     wire_values
 }
