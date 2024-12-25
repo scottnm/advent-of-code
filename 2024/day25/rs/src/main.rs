@@ -1,15 +1,36 @@
 use input_helpers;
-use regex;
-use std::{fmt::format, process::ExitCode};
+use std::process::ExitCode;
 
 #[derive(Clone, Copy, Debug)]
 struct Lock {
     pin_heights: (u8, u8, u8, u8, u8),
 }
 
+impl std::fmt::Display for Lock {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Lock(pins={},{},{},{},{})", 
+            self.pin_heights.0,
+            self.pin_heights.1,
+            self.pin_heights.2,
+            self.pin_heights.3,
+            self.pin_heights.4)
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 struct Key {
     notch_heights: (u8, u8, u8, u8, u8),
+}
+
+impl std::fmt::Display for Key {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Key(notches={},{},{},{},{})", 
+            self.notch_heights.0,
+            self.notch_heights.1,
+            self.notch_heights.2,
+            self.notch_heights.3,
+            self.notch_heights.4)
+    }
 }
 
 fn main() -> ExitCode {
@@ -36,14 +57,27 @@ fn run(args: &[String]) -> Result<(), String> {
 
     let (locks, keys) = read_input(filename)?;
 
-    dbg!(&locks);
-    dbg!(&keys);
+    // dbg!(&locks);
+    // dbg!(&keys);
 
     {
-        /*
-        let result_wire_values = run_wire_operations(&operations, &initial_wire_states);
-        let z_value = sum_wire_bits_as_binary_value('z', &result_wire_values);
-        println!("Pt1. z value: {} ({:#b})", z_value, z_value); */
+        let mut compatible_lock_key_pairs = vec![];
+        for lock in &locks {
+            for key in &keys {
+                if do_key_lock_pair_fit(lock, key) {
+                    compatible_lock_key_pairs.push((lock, key));
+                    if verbose {
+                        println!("{} and {} fit together!", lock, key);
+                    }
+                } else {
+                    if verbose {
+                        println!("{} and {} do not fit together.", lock, key);
+                    }
+                }
+            }
+        }
+
+        println!("Pt 1. # compatible pairs = {}", compatible_lock_key_pairs.len());
     }
 
     if do_pt2 {
@@ -159,4 +193,12 @@ fn read_key_lines(lines: &[String]) -> Result<Key, String> {
     );
 
     Ok(Key { notch_heights })
+}
+
+fn do_key_lock_pair_fit(lock: &Lock, key: &Key) -> bool {
+    (lock.pin_heights.0 + key.notch_heights.0 <= 5) &&
+    (lock.pin_heights.1 + key.notch_heights.1 <= 5) &&
+    (lock.pin_heights.2 + key.notch_heights.2 <= 5) &&
+    (lock.pin_heights.3 + key.notch_heights.3 <= 5) &&
+    (lock.pin_heights.4 + key.notch_heights.4 <= 5)
 }
