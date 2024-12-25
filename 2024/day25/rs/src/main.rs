@@ -61,14 +61,15 @@ fn read_input(filename: &str) -> Result<(Vec<Lock>, Vec<Key>), String> {
 
     let mut line_idx = 0;
     while line_idx <= lines.len() - 7 {
-        let item_lines = &lines[line_idx..line_idx+7];
+        let item_lines = &lines[line_idx..line_idx + 7];
         line_idx += 7;
 
         if line_idx < lines.len() {
             if lines[line_idx] != "" {
-                return Err(format!("Unexpected line at {}! Expected empty separator. Found {}", 
-                    line_idx, 
-                    lines[line_idx]));
+                return Err(format!(
+                    "Unexpected line at {}! Expected empty separator. Found {}",
+                    line_idx, lines[line_idx]
+                ));
             }
             line_idx += 1;
         }
@@ -77,18 +78,23 @@ fn read_input(filename: &str) -> Result<(Vec<Lock>, Vec<Key>), String> {
             let lock = read_lock_lines(&item_lines[1..])?;
             locks.push(lock);
         } else if item_lines.last().unwrap() == "#####" {
-            let key = read_key_lines(&item_lines[..item_lines.len()-1])?;
+            let key = read_key_lines(&item_lines[..item_lines.len() - 1])?;
             keys.push(key);
         } else {
-            return Err(format!("Invalid lines! Either first or last line in group should be all #'s! lines={:?}", 
-                item_lines));
+            return Err(format!(
+                "Invalid lines! Either first or last line in group should be all #'s! lines={:?}",
+                item_lines
+            ));
         }
     }
 
     Ok((locks, keys))
 }
 
-fn read_column_height<'a>(row_iter: impl Iterator<Item=&'a String>, column_idx: usize) -> Result<u8, String> {
+fn read_column_height<'a>(
+    row_iter: impl Iterator<Item = &'a String>,
+    column_idx: usize,
+) -> Result<u8, String> {
     let mut column_height = 0;
 
     for row in row_iter {
@@ -105,11 +111,17 @@ fn read_column_height<'a>(row_iter: impl Iterator<Item=&'a String>, column_idx: 
 
 fn read_lock_lines(lines: &[String]) -> Result<Lock, String> {
     if lines.len() != 6 {
-        return Err(format!("Invalid number of lines for lock! Found {}", lines.len()));
+        return Err(format!(
+            "Invalid number of lines for lock! Found {}",
+            lines.len()
+        ));
     }
 
     if lines.iter().any(|line| line.len() != 5) {
-        return Err(format!("Invalid lock lines! All lines must have 5 chars {:?}", lines));
+        return Err(format!(
+            "Invalid lock lines! All lines must have 5 chars {:?}",
+            lines
+        ));
     }
 
     let pin_heights = (
@@ -120,16 +132,22 @@ fn read_lock_lines(lines: &[String]) -> Result<Lock, String> {
         read_column_height(lines.iter(), 4)?,
     );
 
-    Ok(Lock{pin_heights})
+    Ok(Lock { pin_heights })
 }
 
 fn read_key_lines(lines: &[String]) -> Result<Key, String> {
     if lines.len() != 6 {
-        return Err(format!("Invalid number of lines for key! Found {}", lines.len()));
+        return Err(format!(
+            "Invalid number of lines for key! Found {}",
+            lines.len()
+        ));
     }
 
     if lines.iter().any(|line| line.len() != 5) {
-        return Err(format!("Invalid key lines! All lines must have 5 chars {:?}", lines));
+        return Err(format!(
+            "Invalid key lines! All lines must have 5 chars {:?}",
+            lines
+        ));
     }
 
     let notch_heights = (
@@ -140,5 +158,5 @@ fn read_key_lines(lines: &[String]) -> Result<Key, String> {
         read_column_height(lines.iter().rev(), 4)?,
     );
 
-    Ok(Key{notch_heights})
+    Ok(Key { notch_heights })
 }
