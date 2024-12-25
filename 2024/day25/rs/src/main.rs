@@ -8,12 +8,15 @@ struct Lock {
 
 impl std::fmt::Display for Lock {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Lock(pins={},{},{},{},{})", 
+        write!(
+            f,
+            "Lock(pins={},{},{},{},{})",
             self.pin_heights.0,
             self.pin_heights.1,
             self.pin_heights.2,
             self.pin_heights.3,
-            self.pin_heights.4)
+            self.pin_heights.4
+        )
     }
 }
 
@@ -24,12 +27,15 @@ struct Key {
 
 impl std::fmt::Display for Key {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Key(notches={},{},{},{},{})", 
+        write!(
+            f,
+            "Key(notches={},{},{},{},{})",
             self.notch_heights.0,
             self.notch_heights.1,
             self.notch_heights.2,
             self.notch_heights.3,
-            self.notch_heights.4)
+            self.notch_heights.4
+        )
     }
 }
 
@@ -77,7 +83,10 @@ fn run(args: &[String]) -> Result<(), String> {
             }
         }
 
-        println!("Pt 1. # compatible pairs = {}", compatible_lock_key_pairs.len());
+        println!(
+            "Pt 1. # compatible pairs = {}",
+            compatible_lock_key_pairs.len()
+        );
     }
 
     if do_pt2 {
@@ -196,9 +205,9 @@ fn read_key_lines(lines: &[String]) -> Result<Key, String> {
 }
 
 fn do_key_lock_pair_fit(lock: &Lock, key: &Key) -> bool {
-    (lock.pin_heights.0 + key.notch_heights.0 <= 5) &&
-    (lock.pin_heights.1 + key.notch_heights.1 <= 5) &&
-    (lock.pin_heights.2 + key.notch_heights.2 <= 5) &&
-    (lock.pin_heights.3 + key.notch_heights.3 <= 5) &&
-    (lock.pin_heights.4 + key.notch_heights.4 <= 5)
+    (lock.pin_heights.0 + key.notch_heights.0 <= 5)
+        && (lock.pin_heights.1 + key.notch_heights.1 <= 5)
+        && (lock.pin_heights.2 + key.notch_heights.2 <= 5)
+        && (lock.pin_heights.3 + key.notch_heights.3 <= 5)
+        && (lock.pin_heights.4 + key.notch_heights.4 <= 5)
 }
