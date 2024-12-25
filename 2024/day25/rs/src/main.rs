@@ -1,6 +1,6 @@
 use input_helpers;
 use regex;
-use std::process::ExitCode;
+use std::{fmt::format, process::ExitCode};
 
 #[derive(Clone, Copy, Debug)]
 struct Lock {
@@ -88,10 +88,57 @@ fn read_input(filename: &str) -> Result<(Vec<Lock>, Vec<Key>), String> {
     Ok((locks, keys))
 }
 
+fn read_column_height<'a>(row_iter: impl Iterator<Item=&'a String>, column_idx: usize) -> Result<u8, String> {
+    let mut column_height = 0;
+
+    for row in row_iter {
+        let column_char: char = row.as_bytes()[column_idx] as char;
+        match column_char {
+            '#' => column_height += 1,
+            '.' => break,
+            _ => return Err(format!("Invalid column char {}", column_char)),
+        }
+    }
+
+    Ok(column_height)
+}
+
 fn read_lock_lines(lines: &[String]) -> Result<Lock, String> {
-    unimplemented!();
+    if lines.len() != 6 {
+        return Err(format!("Invalid number of lines for lock! Found {}", lines.len()));
+    }
+
+    if lines.iter().any(|line| line.len() != 5) {
+        return Err(format!("Invalid lock lines! All lines must have 5 chars {:?}", lines));
+    }
+
+    let pin_heights = (
+        read_column_height(lines.iter(), 0)?,
+        read_column_height(lines.iter(), 1)?,
+        read_column_height(lines.iter(), 2)?,
+        read_column_height(lines.iter(), 3)?,
+        read_column_height(lines.iter(), 4)?,
+    );
+
+    Ok(Lock{pin_heights})
 }
 
 fn read_key_lines(lines: &[String]) -> Result<Key, String> {
-    unimplemented!();
+    if lines.len() != 6 {
+        return Err(format!("Invalid number of lines for key! Found {}", lines.len()));
+    }
+
+    if lines.iter().any(|line| line.len() != 5) {
+        return Err(format!("Invalid key lines! All lines must have 5 chars {:?}", lines));
+    }
+
+    let notch_heights = (
+        read_column_height(lines.iter().rev(), 0)?,
+        read_column_height(lines.iter().rev(), 1)?,
+        read_column_height(lines.iter().rev(), 2)?,
+        read_column_height(lines.iter().rev(), 3)?,
+        read_column_height(lines.iter().rev(), 4)?,
+    );
+
+    Ok(Key{notch_heights})
 }
