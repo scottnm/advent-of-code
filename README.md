@@ -4,9 +4,9 @@ Solutions to Advent-of-Code problems when I participate. <https://adventofcode.c
 
 ## Summary
 
-✅ = completed day, both parts solved.
-🚧 = part one solved, part two unsolved.
-❌ = day attempted, no parts solved.
+✅ = completed day, both parts solved.<br/>
+🚧 = part one solved, part two unsolved.<br/>
+❌ = day attempted, no parts solved.<br/>
 
 |        |  2020 |  2022 |  2024 |
 |--------|-------|-------|-------|
