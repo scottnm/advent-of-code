@@ -1,2 +1,2 @@
 import util
-util.HelloWorld(#file);
+util.printHelloWorld(#file);

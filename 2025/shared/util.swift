@@ -1,4 +1,16 @@
-public func HelloWorld(_ extra: String?) {
+import Foundation
+
+public func printHelloWorld(_ extra: String?) {
     let trailer = extra ?? "(util)"
-    print("Hello, World! \(trailer)"); 
+    print("Hello, World! \(trailer)") 
+}
+
+public func readTextFile(atPath filePath: String) throws -> String {
+    let fileURL = URL(fileURLWithPath: filePath)
+    return try String(contentsOf: fileURL, encoding: .utf8)
+}
+
+public func readBinaryFile(atPath filePath: String) throws -> Data {
+    let fileURL = URL(fileURLWithPath: filePath)
+    return try Data(contentsOf: fileURL)
 }
