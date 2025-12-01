@@ -4,6 +4,9 @@ project(AdventOfCode2025 LANGUAGES Swift)
 
 set(ROOT_DIR "${CMAKE_SOURCE_DIR}")
 
+# enable regex for all projects
+add_compile_options(-enable-bare-slash-regex)
+
 add_subdirectory(shared)
 
 if (BUILD_DAY STREQUAL "all" OR BUILD_DAY STREQUAL "1")
