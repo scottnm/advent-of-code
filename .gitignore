@@ -18,5 +18,8 @@ zig-cache/
 # Odin
 *.bin
 
+# Python
+__pycache__/
+
 # MacOS
 .DS_Store
