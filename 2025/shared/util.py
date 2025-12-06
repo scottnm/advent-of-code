@@ -1,5 +1,8 @@
 import dataclasses
 import typing
+import contextlib
+import time
+import logging
 
 TCell = typing.TypeVar('TCell')
 UCell = typing.TypeVar('UCell')
@@ -60,3 +63,20 @@ def read_grid_from_lines(lines: list[str]) -> Grid[str]:
 def map_grid(grid: Grid[TCell], xform: typing.Callable[[TCell], UCell]) -> Grid[UCell]:
     new_cells: list[UCell] = [xform(c) for c in grid.cells]
     return Grid(width=grid.width, height=grid.height, cells=new_cells)
+
+def get_normalized_file_lines(filepath: str) -> list[str]:
+    with open(filepath, "r", encoding="utf8") as f:
+        lines = f.readlines()
+        return [ l.rstrip("\r\n") for l in lines ]
+
+
+@contextlib.contextmanager
+def time_section(section_title: str):
+    time_start = time.perf_counter()
+    try:
+        yield  # Code before yield is __enter__, after yield is __exit__
+    finally:
+        time_end = time.perf_counter()
+        logging.info("%s time %.6f seconds", 
+            section_title, 
+            time_end - time_start)
