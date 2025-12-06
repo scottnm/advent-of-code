@@ -123,7 +123,7 @@ def main() -> None:
     logging.info("Pt1. sum invalid ids(%d): %d", len(invalid_ids_pt1), sum(invalid_ids_pt1))
 
     invalid_ids_pt2 = find_invalid_ids_pt2(id_ranges)
-    logging.debug("invalid ids pt2: %s", invalid_ids_pt2)
+    logging.debug("invalid ids pt2: %s", sorted(invalid_ids_pt2))
     logging.info("Pt2. sum invalid ids(%d): %d", len(invalid_ids_pt2), sum(invalid_ids_pt2))
 
 
