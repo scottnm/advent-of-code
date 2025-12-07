@@ -8,10 +8,33 @@ TCell = typing.TypeVar('TCell')
 UCell = typing.TypeVar('UCell')
 
 @dataclasses.dataclass
+class GridCellPos:
+    row: int
+    col: int
+
+    def __eq__(self, other):
+        return (self.row, self.col) == (other.row, other.col)
+    
+    def __hash__(self) -> int:
+        return hash((self.row, self.col))
+
+@dataclasses.dataclass
 class Grid(typing.Generic[TCell]):
     width: int
     height: int
     cells: list[TCell]
+
+    def index_to_coord(self, i: int) -> GridCellPos:
+        assert 0 <= i <= len(self.cells)
+        col = i % self.width
+        row = i // self.width
+        return GridCellPos(row=row, col=col)
+
+    def find_pos(self, find_pred: typing.Callable[[int, TCell], bool]) -> GridCellPos | None:
+        for i, c in enumerate(self.cells):
+            if find_pred(i, c):
+                return self.index_to_coord(i)
+        return None
 
     def at(self, row: int, col: int) -> TCell:
         assert self.in_bounds(row=row, col=col)
