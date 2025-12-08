@@ -3,6 +3,7 @@ import typing
 import contextlib
 import time
 import logging
+import sys
 
 TCell = typing.TypeVar('TCell')
 UCell = typing.TypeVar('UCell')
@@ -87,7 +88,7 @@ def map_grid(grid: Grid[TCell], xform: typing.Callable[[TCell], UCell]) -> Grid[
     new_cells: list[UCell] = [xform(c) for c in grid.cells]
     return Grid(width=grid.width, height=grid.height, cells=new_cells)
 
-def get_normalized_file_lines(filepath: str) -> list[str]:
+def read_normalized_file_lines(filepath: str) -> list[str]:
     with open(filepath, "r", encoding="utf8") as f:
         lines = f.readlines()
         return [ l.rstrip("\r\n") for l in lines ]
@@ -103,3 +104,7 @@ def time_section(section_title: str):
         logging.info("%s time %.6f seconds", 
             section_title, 
             time_end - time_start)
+
+def fatal_error(fmt_string: str, *fmt_args) -> typing.NoReturn:
+    logging.error(fmt_string, *fmt_args)
+    sys.exit(1)

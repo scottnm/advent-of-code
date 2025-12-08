@@ -142,7 +142,7 @@ def main() -> None:
     logging.basicConfig(level=log_level)
 
     filename = sys.argv[1]
-    input_lines = util.get_normalized_file_lines(filename)
+    input_lines = util.read_normalized_file_lines(filename)
     logging.debug("input_lines: %s", input_lines)
 
     with util.time_section("pt1"):
