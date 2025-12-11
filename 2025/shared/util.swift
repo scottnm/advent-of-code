@@ -1,5 +1,10 @@
 import Foundation
 
+public func timeSection(_ description: String, _ work: () throws -> Void) rethrows {
+    let elapsed = try ContinuousClock().measure(work)
+    print("\(description) time \(elapsed) seconds")
+}
+
 public func printHelloWorld(_ extra: String?) {
     let trailer = extra ?? "(util)"
     print("Hello, World! \(trailer)") 
