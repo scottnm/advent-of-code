@@ -65,9 +65,12 @@ class Grid(typing.Generic[TCell]):
 
 
 def read_grid_from_file(filepath: str) -> Grid[str]:
-    with open(filepath, "r", encoding="utf8") as f:
-        lines = f.readlines()
-        return read_grid_from_lines(lines)
+    try:
+        with open(filepath, "r", encoding="utf8") as f:
+            lines = f.readlines()
+            return read_grid_from_lines(lines)
+    except FileNotFoundError as e:
+        fatal_error("Could not find file '%s'", e.filename)
 
 def read_grid_from_lines(lines: list[str]) -> Grid[str]:
     width = None
@@ -89,9 +92,12 @@ def map_grid(grid: Grid[TCell], xform: typing.Callable[[TCell], UCell]) -> Grid[
     return Grid(width=grid.width, height=grid.height, cells=new_cells)
 
 def read_normalized_file_lines(filepath: str) -> list[str]:
-    with open(filepath, "r", encoding="utf8") as f:
-        lines = f.readlines()
-        return [ l.rstrip("\r\n") for l in lines ]
+    try:
+        with open(filepath, "r", encoding="utf8") as f:
+            lines = f.readlines()
+            return [ l.rstrip("\r\n") for l in lines ]
+    except FileNotFoundError as e:
+        fatal_error("Could not find file '%s'", e.filename)
 
 
 @contextlib.contextmanager
@@ -108,3 +114,42 @@ def time_section(section_title: str):
 def fatal_error(fmt_string: str, *fmt_args) -> typing.NoReturn:
     logging.error(fmt_string, *fmt_args)
     sys.exit(1)
+
+class AocLoggingFormatter(logging.Formatter):
+
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+
+    @staticmethod
+    def make_formatter(color_str) -> logging.Formatter:
+        format_str = '[%(asctime)s] %(levelname)s: %(message)s'
+        reset = "\x1b[0m"
+        return logging.Formatter(
+            color_str + format_str + reset,
+            datefmt='%H:%M:%S'
+            )
+
+    FORMATTERS = {
+        logging.DEBUG: make_formatter(grey),
+        logging.INFO: make_formatter(""),
+        logging.WARNING: make_formatter(yellow),
+        logging.ERROR: make_formatter(red),
+        logging.CRITICAL: make_formatter(bold_red),
+    }
+
+    def format(self, record):
+        formatter = self.FORMATTERS.get(record.levelno)
+        return formatter.format(record)
+
+def setup_aoc_logger(log_verbose: bool):
+    log_level = logging.DEBUG if log_verbose else logging.INFO
+
+    log_handler = logging.StreamHandler()
+    log_handler.setLevel(log_level)
+    log_handler.setFormatter(AocLoggingFormatter())
+
+    logger = logging.getLogger()
+    logger.setLevel(log_level)
+    logger.addHandler(log_handler)

@@ -18,7 +18,7 @@ def main() -> None:
         print("need input file")
         sys.exit(-1)
 
-    log_verbose = "--verbose" in sys.argv
+    log_verbose = any(v_arg in sys.argv for v_arg in ("-v", "--verbose"))
     log_level = logging.DEBUG if log_verbose else logging.INFO
     logging.basicConfig(level=log_level)
 
